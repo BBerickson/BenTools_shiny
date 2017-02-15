@@ -1,11 +1,7 @@
 
 
 load file and build data list ... plot with controls
-  learn more about accept = c('.table') how can I use radio buttons to control (are all files an avalible option)
-  add .table test and then load file function to helper.R that returns master_list
-    learn more about multiple = TRUE and how to make it work
-    
-  update checkbox and figure out how to control it
+  update checkbox
   then add bin slider that only trigers once
   
 
@@ -20,3 +16,8 @@ load gene lists and plot controls
 load color files
 
 gene tools ...
+
+# test loading multiple files
+# load remote files TODO
+# warning messages TODO
+# load bg files TODO

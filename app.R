@@ -19,36 +19,41 @@ suppressPackageStartupMessages(my_packages(
   )
 ))
 
+
 # server ----
 server <- function(input, output) {
+  
+  # loads file
   first_file <- reactive({
     req(input$file$datapath)
-    read.table(input$file$datapath, header = TRUE, stringsAsFactors= FALSE, comment.char = "")
+    # add warnings for total size of LIST_DATA
+    LIST_DATA <<- LoadTableFile(input$file$datapath, input$file$name, LIST_DATA)
+    names(LIST_DATA$table_file)
   })
   
+  # renders text
   output$txtout <- renderText({
     paste(input$txt, input$slider, format(input$date), sep = ", ")
   })
+  
+  # renders table
   output$table <- renderTable({
-    if(is.null(first_file())){
-      head(cars, 4)
-    } else{
-      head(first_file(),4)
-    }
-    
-    
-  })
-  observe({
-    if(is.null(first_file())){
-      print(head(first_file()))
-    }
+    first_file()
+    head(LIST_DATA[[1]][[1]],4)
+   
   })
   
+  # sets fileType based on radio button
+  observe({
+    
+  })
+  
+  # renders check box
   output$fileNames <- renderUI({
     req(input$file$name)
-    
-      checkboxGroupInput("checkGroup", label = h3("plot on/off"), 
-                         choices = input$file$name,selected=input$file$name)
+    check_on <- c(sapply((LIST_DATA$gene_info), function(g) sapply(g, "[[",4)))
+    checkboxGroupInput("checkGroup", label = h3("plot on/off"), 
+                         choices = first_file(), selected = check_on) # build and use control list TODO
    
   })
   
@@ -63,12 +68,8 @@ ui <- tagList(
              sidebarPanel(
                tabsetPanel(
                  tabPanel("load file",
-               fileInput("file", "File input:", accept = c('.table')),
-               radioButtons('fileType', 'File type',
-                            c('Table' = '.table',
-                              'Gene list' = '.txt',
-                              'color file' = '.color.txt'),
-                            '.table')
+               fileInput("file", "File input:", accept = c('.table'), multiple = TRUE)
+               
              )),
              tabsetPanel(
                tabPanel("Common Gene list",
