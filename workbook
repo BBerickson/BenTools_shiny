@@ -1,6 +1,9 @@
 
 
 load file and build data list ... plot with controls
+remove loading file size restriction
+add test.table files to github
+deal with NA's to 0 when reading in a file
   update checkbox
   then add bin slider that only trigers once
   

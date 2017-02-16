@@ -1,24 +1,9 @@
 
 # setwd("~/Desktop/BenToolsTab/dockerTest")
+# setwd("~/BenTools gh/BenTools_shiny")
 
 # runApp("BenTools_shiny")
 source("helper.R")
-
-# run load needed pakages using my_pakages(x) ----
-suppressPackageStartupMessages(my_packages(
-  c(
-    "shiny",
-    "shinythemes",
-    "ggplot2",
-    "tcltk2",
-    "dplyr",
-    "tidyr",
-    "readr",
-    "fastcluster",
-    "RColorBrewer"
-  )
-))
-
 
 # server ----
 server <- function(input, output) {
@@ -45,7 +30,7 @@ server <- function(input, output) {
   
   # sets fileType based on radio button
   observe({
-    
+    #print(input$checkGroup)
   })
   
   # renders check box

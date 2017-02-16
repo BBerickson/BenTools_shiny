@@ -1,4 +1,33 @@
 # globals ----
+# program for loading packages
+my_packages <- function(x) {
+  for (i in x) {
+    #  require returns TRUE invisibly if it was able to load package
+    if (!require(i , character.only = TRUE)) {
+      #  If package was not able to be loaded then re-install
+      install.packages(i , dependencies = TRUE)
+      print(paste("installing ", i, " : please wait"))
+      #  Load package after installing
+      require(i , character.only = TRUE)
+    }
+  }
+}
+
+# run load needed pakages using my_pakages(x)
+suppressPackageStartupMessages(my_packages(
+  c(
+    "shiny",
+    "shinythemes",
+    "ggplot2",
+    "tcltk2",
+    "dplyr",
+    "tidyr",
+    "readr",
+    "fastcluster",
+    "RColorBrewer"
+  )
+))
+
 # TODO do I need all theses lists
 LIST_DATA <- list(
   table_file = list(),
@@ -54,33 +83,6 @@ kMathOptions <- c("mean", "sum", "median", "var")
 
 # functions ----
 
-# program for loading packages
-my_packages <- function(x) {
-  for (i in x) {
-    #  require returns TRUE invisibly if it was able to load package
-    if (!require(i , character.only = TRUE)) {
-      #  If package was not able to be loaded then re-install
-      install.packages(i , dependencies = TRUE)
-      print(paste("installing ", i, " : please wait"))
-      #  Load package after installing
-      require(i , character.only = TRUE)
-    }
-  }
-  # # run load needed pakages using my_pakages(x) ----
-  # suppressPackageStartupMessages(my_packages(
-  #   c(
-  #     "shiny",
-  #     "shinythemes",
-  #     "ggplot2",
-  #     "tcltk2",
-  #     "dplyr",
-  #     "tidyr",
-  #     "readr",
-  #     "fastcluster",
-  #     "RColorBrewer"
-  #   )
-  # ))
-}
 
 
 # reads in file, tests, fills out info and returns list_data
@@ -102,7 +104,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
                      n_max = 1,
                      skip = 1,
                      tokenizer = tokenizer_tsv()) - 1
-      
+
       tablefile <- suppressMessages(read_tsv(x,
                                              col_names = c("gene", 1:(num_bins)),
                                              skip = 1) %>%
@@ -117,6 +119,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     zero_genes <-
       group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test !=
                                                                                          0)
+    
     tablefile <- semi_join(tablefile, zero_genes, by = "gene")
     gene_names <- collapse(distinct(tablefile, gene))[[1]]
     if (file_count > 0) {
