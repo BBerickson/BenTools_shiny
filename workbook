@@ -1,18 +1,12 @@
 
 
 load file and build data list ... plot with controls
-remove loading file size restriction
-add test.table files to github
-deal with NA's to 0 when reading in a file
-  update checkbox
-  then add bin slider that only trigers once
-  
 
-load data function, building lists, set bin sliders, info and check boxes
 
 math functions and options, 
 
-plot with on/off, color, line/dot type, axises hight width and lables
+plot with on/off, color, math, smooth , rf, rg, log2, line/dot type, axises hight width and lables
+save plot ... make markdown file
 
 load gene lists and plot controls
 
@@ -21,6 +15,7 @@ load color files
 gene tools ...
 
 # test loading multiple files
+# file size restriction the set correctly?
 # load remote files TODO
 # warning messages TODO
 # load bg files TODO
