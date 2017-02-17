@@ -192,11 +192,10 @@ CheckBoxOnOff <- function(gene_set, check_box, list_data) {
 
 # Makes data frame and gathers plot settings for plotting active samples
 MakeDataFrame <-
-  function(sel_list = NULL,
-           table_file = LIST_DATA$table_file,
-           gene_file = LIST_DATA$gene_file,
-           gene_info = LIST_DATA$gene_info,
-           nickname = NULL) {
+  function(list_data, sel_list = NULL, nickname = NULL) {
+    table_file = list_data$table_file
+    gene_file = list_data$gene_file
+    gene_info = list_data$gene_info
     if (is.null(names(table_file))) {
       return ()
     } else {
@@ -212,7 +211,6 @@ MakeDataFrame <-
       for (i in names(gene_file)) {
         # checks to see if at least one file in list is acitve
         if (sum(sapply(gene_info[[i]], "[[", 4) != 0) == 0) {
-          print("nothing to plot")
           next ()
         } else {
           if (!is.null(sel_list)) {
@@ -261,17 +259,30 @@ MakeDataFrame <-
         use_x_label <- paste(nickname, use_x_label)
       }
       if (!is.null(names(list_data_frame))) {
-        ApplyMath(
-          list_data_frame,
-          use_col,
-          use_dot,
-          use_line,
-          use_size,
-          use_nickname,
-          use_x_label,
-          legend_space
-        )
-      } 
+        names(use_col) <- use_nickname
+        names(use_dot) <- use_nickname
+        names(use_line) <- use_nickname
+        # ApplyMath(
+        #   list_data_frame,
+        #   use_col,
+        #   use_dot,
+        #   use_line,
+        #   use_size,
+        #   use_nickname,
+        #   use_x_label,
+        #   legend_space
+        # )
+        return(list(list_data_frame = list_data_frame,
+                    use_col = use_col,
+                    use_dot = use_dot,
+                    use_line = use_line,
+                    use_size = use_size,
+                    use_x_label = use_x_label,
+                    legend_space = legend_space))
+      } else {
+        print("nothing to plot")
+        return()
+      }
     }
   }
 
@@ -282,7 +293,6 @@ ApplyMath <-
            use_dot,
            use_line,
            use_size,
-           use_nickname,
            use_x_label,
            legend_space) {
     # math set and y label
@@ -424,28 +434,38 @@ ApplyMath <-
       use_virtical_line_color,
       stringsAsFactors = FALSE
     )
-    names(use_col) <- use_nickname
-    names(use_dot) <- use_nickname
-    names(use_line) <- use_nickname
     # if(tclvalue(tcl_smooth) == 1){
     #   use_y_label <- paste0("smoothed(", use_y_label, ")")
     # }
     
-    GGplotF(
-      list_long_data_frame,
-      use_col,
-      use_dot,
-      use_line,
-      use_size,
-      use_y_label,
-      use_x_label,
-      use_plot_breaks,
-      virtical_line_data_frame,
-      use_plot_breaks_labels,
-      use_plot_limits,
-      use_y_limits,
-      legend_space
-    )
+    # GGplotF(
+    #   list_long_data_frame,
+    #   use_col,
+    #   use_dot,
+    #   use_line,
+    #   use_size,
+    #   use_y_label,
+    #   use_x_label,
+    #   use_plot_breaks,
+    #   virtical_line_data_frame,
+    #   use_plot_breaks_labels,
+    #   use_plot_limits,
+    #   use_y_limits,
+    #   legend_space
+    # )
+    return(list(list_long_data_frame = list_long_data_frame,
+                use_col=use_col,
+                use_dot=use_dot,
+                use_line=use_line,
+                use_size=use_size,
+                use_y_label=use_y_label,
+                use_x_label=use_x_label,
+                use_plot_breaks=use_plot_breaks,
+                virtical_line_data_frame=virtical_line_data_frame,
+                use_plot_breaks_labels=use_plot_breaks_labels,
+                use_plot_limits=use_plot_limits,
+                use_y_limits=use_y_limits,
+                legend_space=legend_space))
   }
 
 # main ggplot function

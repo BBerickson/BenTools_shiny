@@ -22,25 +22,73 @@ server <- function(input, output) {
     names(LIST_DATA$table_file)
   })
   
-  # records check box on/off for common list
+  # records check box on/off for common list and builds data frame and info for plot
   observe({
     input$checkGroupCommon
     LIST_DATA$gene_info <<-
       CheckBoxOnOff("common", input$checkGroupCommon, LIST_DATA$gene_info)
+    
+    print("hi")
+    
   })
+  
+  make_data_frame <- reactive({
+    tt <- first_file()  #MakeDataFrame(LIST_DATA)
+    print((tt))
+    c(tt,tt)
+  })
+  
+  
+  # makes applied math data frame
+  apply_math <- reactive({
+    req(input$file$name)
+    makedataframe <- make_data_frame()
+    print(names(makedataframe))
+    # ApplyMath(
+    #   makedataframe$list_data_frame,
+    #   makedataframe$use_col,
+    #   makedataframe$use_dot,
+    #   makedataframe$use_line,
+    #   makedataframe$use_size,
+    #   makedataframe$use_x_label,
+    #   makedataframe$legend_space
+    #   )
+  })
+  
+  # renders plot
+  observe({
+    req(input$file$name)
+    # applymath <- apply_math()
+    # print(names(applymath))
+    # output$plot <- renderPlot({
+    #   GGplotF(
+    #     applymath$list_long_data_frame,
+    #     applymath$use_col,
+    #     applymath$use_dot,
+    #     applymath$use_line,
+    #     applymath$use_size,
+    #     applymath$use_y_label,
+    #     applymath$use_x_label,
+    #     applymath$use_plot_breaks,
+    #     applymath$virtical_line_data_frame,
+    #     applymath$use_plot_breaks_labels,
+    #     applymath$use_plot_limits,
+    #     applymath$use_y_limits,
+    #     applymath$legend_space
+    #   )
+    # })
+  })
+  
   
   # renders check box
   output$fileNamesCommon <- renderUI({
     req(input$file$name)
-    check_on <-
-      unique(c(sapply(LIST_DATA$gene_info, function(g)
-        sapply(g, "[[", 4)), last(first_file()), "!NULL"))
     checkboxGroupInput(
       "checkGroupCommon",
       label = h3("Plot on/off"),
       choices = first_file(),
-      selected = check_on
-    ) # build and use control list TODO
+      selected = "!NULL"
+    )
   })
   
   observe({
@@ -55,10 +103,7 @@ server <- function(input, output) {
                 min = kplotBinRange[1], max = kplotBinRange[2], value = kplotBinRange[3:4])
   })
   
-  output$plot <- renderPlot({
-    req(input$file$name)
-    MakeDataFrame()
-  })
+  
 }
 
 # UI ----
@@ -89,6 +134,7 @@ ui <- tagList(
       tabsetPanel(tabPanel(
         "Common Gene list",
         uiOutput("fileNamesCommon"),
+        #submitButton("Update View"),
         uiOutput("rangeBin")
         
       ))
