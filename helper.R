@@ -211,7 +211,8 @@ MakeDataFrame <-
       
       for (i in names(gene_file)) {
         # checks to see if at least one file in list is acitve
-        if (sum(sapply(gene_info[[i]], "[[", 4) == 0) != 0) {
+        if (sum(sapply(gene_info[[i]], "[[", 4) != 0) == 0) {
+          print("nothing to plot")
           next ()
         } else {
           if (!is.null(sel_list)) {
@@ -260,7 +261,6 @@ MakeDataFrame <-
         use_x_label <- paste(nickname, use_x_label)
       }
       if (!is.null(names(list_data_frame))) {
-        print("tt")
         ApplyMath(
           list_data_frame,
           use_col,
@@ -534,5 +534,6 @@ GGplotF <-
         legend.text = element_text(size = 9)
       ) +
       coord_cartesian(xlim = use_plot_limits, ylim = unlist(use_y_limits))
-    suppressMessages(print(gp))
+    #suppressMessages(print(gp))
+    return(gp)
   }

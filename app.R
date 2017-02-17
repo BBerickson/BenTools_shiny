@@ -12,6 +12,7 @@ options(shiny.maxRequestSize = 20*1024^2)
 
 # server ----
 server <- function(input, output) {
+  
   # loads file
   first_file <- reactive({
     req(input$file$datapath)
@@ -19,18 +20,6 @@ server <- function(input, output) {
     LIST_DATA <<-
       LoadTableFile(input$file$datapath, input$file$name, LIST_DATA)
     names(LIST_DATA$table_file)
-  })
-  
-  # renders text
-  output$txtout <- renderText({
-    paste(input$txt, input$slider, format(input$date), sep = ", ")
-  })
-  
-  # renders table
-  output$table <- renderTable({
-    first_file()
-    head(LIST_DATA[[1]][[1]], 4)
-    
   })
   
   # records check box on/off for common list
@@ -44,8 +33,8 @@ server <- function(input, output) {
   output$fileNamesCommon <- renderUI({
     req(input$file$name)
     check_on <-
-      c(sapply((LIST_DATA$gene_info), function(g)
-        sapply(g, "[[", 4)), "!NULL")
+      unique(c(sapply(LIST_DATA$gene_info, function(g)
+        sapply(g, "[[", 4)), last(first_file()), "!NULL"))
     checkboxGroupInput(
       "checkGroupCommon",
       label = h3("Plot on/off"),
@@ -66,6 +55,10 @@ server <- function(input, output) {
                 min = kplotBinRange[1], max = kplotBinRange[2], value = kplotBinRange[3:4])
   })
   
+  output$plot <- renderPlot({
+    req(input$file$name)
+    MakeDataFrame()
+  })
 }
 
 # UI ----
@@ -103,15 +96,8 @@ ui <- tagList(
       mainPanel(tabsetPanel(
         tabPanel(
           "Tab 1",
-          h4("Table"),
-          tableOutput("table"),
-          h4("Verbatim text output"),
-          verbatimTextOutput("txtout"),
-          h1("Header 1"),
-          h2("Header 2"),
-          h3("Header 3"),
-          h4("Header 4"),
-          h5("Header 5")
+          h4("Table Plot"),
+          plotOutput("plot")
         ),
         tabPanel("Tab 2"),
         tabPanel("Tab 3")
