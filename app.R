@@ -1,5 +1,6 @@
 
 
+
 # setwd("~/Desktop/BenToolsTab/dockerTest")
 # setwd("~/BenTools gh/BenTools_shiny")
 
@@ -8,143 +9,151 @@ source("helper.R")
 
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 20MB.
-options(shiny.maxRequestSize = 20*1024^2)
+options(shiny.maxRequestSize = 20 * 1024 ^ 2)
 
 # server ----
 server <- function(input, output) {
-  
-  # loads file
+  # load file, save data and set up info ----
+  LIST_DATA <- reactiveValues(
+    table_file = list(),
+    # [[]] gene X1 X2 ...
+    gene_file = list(),
+    # holds $common genes from files and $gene file(s)
+    gene_info = list(),
+    # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("dot", "line", "color", plot?, NickName,nrom)]
+    clust = list()
+    # Cluster holder
+  )
+  # loads file(s) 
   first_file <- reactive({
     req(input$file$datapath)
     # add warnings for total size of LIST_DATA
-    LIST_DATA <<-
+    LIST_DATA <-
       LoadTableFile(input$file$datapath, input$file$name, LIST_DATA)
     names(LIST_DATA$table_file)
   })
   
   # records check box on/off for common list and builds data frame and info for plot
   observe({
-    input$checkGroupCommon
-    LIST_DATA$gene_info <<-
+    req(first_file())
+    LIST_DATA$gene_info <-
       CheckBoxOnOff("common", input$checkGroupCommon, LIST_DATA$gene_info)
-    
-    print("hi")
-    
-  })
-  
-  make_data_frame <- reactive({
-    tt <- first_file()  #MakeDataFrame(LIST_DATA)
-    print((tt))
-    c(tt,tt)
+    if (!is.null(LIST_DATA$table_file)) {
+      Make_Data_Frame <<- MakeDataFrame(LIST_DATA) # set out
+      if (!is.null(Make_Data_Frame[[1]])) {
+        Apply_Math <<- ApplyMath(Make_Data_Frame, input$myMath)
+      }
+    }
   })
   
   
-  # makes applied math data frame
-  apply_math <- reactive({
-    req(input$file$name)
-    makedataframe <- make_data_frame()
-    print(names(makedataframe))
-    # ApplyMath(
-    #   makedataframe$list_data_frame,
-    #   makedataframe$use_col,
-    #   makedataframe$use_dot,
-    #   makedataframe$use_line,
-    #   makedataframe$use_size,
-    #   makedataframe$use_x_label,
-    #   makedataframe$legend_space
-    #   )
-  })
-  
-  # renders plot
+
   observe({
-    req(input$file$name)
-    # applymath <- apply_math()
-    # print(names(applymath))
-    # output$plot <- renderPlot({
-    #   GGplotF(
-    #     applymath$list_long_data_frame,
-    #     applymath$use_col,
-    #     applymath$use_dot,
-    #     applymath$use_line,
-    #     applymath$use_size,
-    #     applymath$use_y_label,
-    #     applymath$use_x_label,
-    #     applymath$use_plot_breaks,
-    #     applymath$virtical_line_data_frame,
-    #     applymath$use_plot_breaks_labels,
-    #     applymath$use_plot_limits,
-    #     applymath$use_y_limits,
-    #     applymath$legend_space
-    #   )
-    # })
+    input$myMath
+    if (!is.null(Make_Data_Frame[[1]])) {
+      Apply_Math <<- ApplyMath(Make_Data_Frame, input$myMath)
+      print(GGplotLineDot(Apply_Math)) # renderplot
+    }
+    
   })
+  # set up and control check box actions common ----
   
-  
-  # renders check box
+  # renders check box when file is loaded
   output$fileNamesCommon <- renderUI({
-    req(input$file$name)
+    print("hi")
     checkboxGroupInput(
       "checkGroupCommon",
       label = h3("Plot on/off"),
       choices = first_file(),
-      selected = "!NULL"
+      selected = unique(c(
+        sapply(isolate(LIST_DATA$gene_info$common), "[[", 4),
+        last(first_file())))
     )
   })
   
+  # plots when acction button is pressed
   observe({
-    input$plotBinRange
-    kplotBinRange <<- c(kplotBinRange[1:2], input$plotBinRange)
+    req(input$myplot)
+    if (!is.null(Apply_Math)) {
+      Y_Axis_Lable <<- YAxisLable()
+      Lines_Lables_List <<- LinesLablesList()
+      print(GGplotLineDot(Apply_Math)) # renderplot
+    }
   })
+  
+  # set up and control bin range action ----
   
   # Specification of range within an interval to plot
-  output$rangeBin <- renderUI({ 
-    req(input$file$name) # way of triggering only once ? TODO
-    sliderInput("plotBinRange", label = h3("Plot Range:"),
-                min = kplotBinRange[1], max = kplotBinRange[2], value = kplotBinRange[3:4])
+  output$rangeBin <- renderUI({
+    req(input$file$name)
+    sliderInput( #  try and only render 1 time? how to update min max and values?
+      "plotBinRange",
+      label = h3("Plot Range:"),
+      min = kplotBinRange[1],
+      max = kplotBinRange[2],
+      value = kplotBinRange[3:4]
+    )
   })
-  
+  # plots when range bin slider is triggered
+  observe({
+    req(input$plotBinRange)
+    kplotBinRange <<- c(kplotBinRange[1:2], input$plotBinRange)
+    if (!is.null(Make_Data_Frame[[1]])) {
+      print(GGplotLineDot(Apply_Math)) # renderplot
+    }
+  })
   
 }
 
-# UI ----
+# UI -----
 ui <- tagList(
   navbarPage(
     theme = shinythemes::shinytheme("cerulean"),
     "BenTools",
     tabPanel(
       "Navbar 1",
-      sidebarPanel(tabsetPanel(tabPanel(
-        "Load file(s)",
-        fileInput(
-          "file",
-          "File input:",
-          accept = c('.table'),
-          multiple = TRUE
-        )
-        
-      ), tabPanel(
-        "Plot Options",
-        radioButtons("myMath", 
-                     "Set math function", 
-                     choices = c("mean", "sum", "median", "var"), 
-                     selected = "mean")
-        
-      )
-      ),
-      tabsetPanel(tabPanel(
-        "Common Gene list",
-        uiOutput("fileNamesCommon"),
-        #submitButton("Update View"),
-        uiOutput("rangeBin")
-        
-      ))
-      ),
-      mainPanel(tabsetPanel(
+      sidebarPanel(
+        tabsetPanel(
+          
+        # load file(s) tab ----
         tabPanel(
-          "Tab 1",
-          h4("Table Plot"),
-          plotOutput("plot")
+          "Load file(s)",
+          fileInput(
+            "file",
+            label = "File input:",
+            accept = c('.table'),
+            multiple = TRUE
+          ),
+          uiOutput("rangeBin")
         ),
+        
+        # plot options tab ----
+        tabPanel(
+          "Plot Options",
+          radioButtons(
+            "myMath",
+            "Set math function",
+            choices = c("mean", "sum", "median", "var"),
+            selected = "mean"
+          )
+          
+        )
+      ),
+      
+      #common genes tab ----
+      tabsetPanel(
+        tabPanel(
+          "Common Gene list",
+          uiOutput("fileNamesCommon"),
+          actionButton("myplot", "Update Plot")
+          
+        )
+      )),
+      # main panel for plot ----
+      mainPanel(tabsetPanel(
+        tabPanel("Tab 1",
+                 h4("Table Plot"),
+                 plotOutput("plot")),
         tabPanel("Tab 2"),
         tabPanel("Tab 3")
       ))
