@@ -27,15 +27,7 @@ suppressPackageStartupMessages(my_packages(
   )
 ))
 
-
-# plot varible holders
-Y_Axis_Lable <- NULL
-Make_Data_Frame <- list(NULL)
-Apply_Math <- NULL
-Lines_Lables_List <- NULL
-
-kplotBinRange <- c(0, 0, 0, 0)
-
+# types of dots to be used in plotting
 kDotOptions <-
   c(
     "none",

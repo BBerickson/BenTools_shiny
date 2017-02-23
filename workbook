@@ -1,7 +1,7 @@
 
 
 load file and build data list ... plot with controls
-
+ restrict gene list to all loaded files or just plotted option 
 plot button
 plot with slider change ... need to rework functions so each of the two? stages before ploting are returned so less work is requred if poramitors are changed
 
