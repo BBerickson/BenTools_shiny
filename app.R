@@ -53,7 +53,7 @@ server <- function(input, output) {
     reactive_values$Make_Data_Frame <- MakeDataFrame(LIST_DATA)
     reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
-        reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), isolate(input$myMath))
+        reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), isolate(input$myMath),isolate(reactive_values$Plot_Options))
       }
   }
   })
@@ -63,7 +63,7 @@ server <- function(input, output) {
     if (length(LIST_DATA$table_file) > 0) {
     print("math")
     if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
-      reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), input$myMath)
+      reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), input$myMath,isolate(reactive_values$Plot_Options))
       #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
       output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), xBinRange = LIST_DATA$x_plot_range[3:4])})
     }

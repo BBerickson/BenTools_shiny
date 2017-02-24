@@ -245,11 +245,13 @@ MakePlotOptionFrame <- function(list_data){
     return(NULL)
   }
 }
-
+LS <- NULL
+OS <- NULL
 # Applys math to long list
 ApplyMath <-
   function(list_data_frame, 
            use_math, 
+           use_options,
            r_checkbox_relative_frequency = 0, 
            r_checkbox_gene_relative_frequency = 0,
            norm_bin = 0) {
@@ -286,7 +288,8 @@ ApplyMath <-
     }
     
 
-    
+    LS <<- list_long_data_frame
+    OS <<- use_options
     return(list_long_data_frame)
   }
 
