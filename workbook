@@ -1,9 +1,11 @@
 
 
 load file and build data list ... plot with controls
- restrict gene list to all loaded files or just plotted option 
-plot button
-plot with slider change ... need to rework functions so each of the two? stages before ploting are returned so less work is requred if poramitors are changed
+
+get the plot options in to a state that can be reconized by ggplot starting with color
+c(red, blue) <- names(common/nb, common/na)
+
+then get function of changeing color working ... then dot and line 
 
 math functions and options, 
 
@@ -21,3 +23,4 @@ gene tools ...
 # load remote files TODO
 # warning messages TODO
 # load bg files TODO
+# restrict gene list to all loaded files or just plotted option? 

@@ -20,16 +20,18 @@ server <- function(input, output) {
     # holds $common genes from files and $gene file(s)
     gene_info = list(),
     # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("dot", "line", "color", plot?, NickName,nrom)]
-    clust = list()
-  )      # Cluster holder
+    clust = list(), # Cluster holder
+    x_plot_range = c(0, 0, 0, 0),
+    STATE = 0
+  )      
   Y_Axis_Lable <- NULL
   Lines_Lables_List <- NULL
-  kplotBinRange <- c(0, 0, 0, 0)
   
   
   # load file, save data and set up info ----
   reactive_values <- reactiveValues(Make_Data_Frame = list(NULL),
-                                    Apply_Math = NULL)
+                                    Apply_Math = NULL,
+                                    Plot_Options = NULL)
   
   # loads file(s) 
   first_file <- reactive({
@@ -48,7 +50,8 @@ server <- function(input, output) {
     print("checkbox on/off")
     LIST_DATA$gene_info <<-
       CheckBoxOnOff("common", input$checkGroupCommon, LIST_DATA$gene_info)
-    reactive_values$Make_Data_Frame <- MakeDataFrame(LIST_DATA) 
+    reactive_values$Make_Data_Frame <- MakeDataFrame(LIST_DATA)
+    reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
         reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), isolate(input$myMath))
       }
@@ -62,7 +65,7 @@ server <- function(input, output) {
     if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
       reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), input$myMath)
       #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math))})
+      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), xBinRange = LIST_DATA$x_plot_range[3:4])})
     }
     }
   })
@@ -70,7 +73,7 @@ server <- function(input, output) {
   # set up and control check box actions common ----
   
   # renders check box when file is loaded
-  output$fileNamesCommon <- renderUI({
+  output$fileOnOffCommon <- renderUI({
     req(first_file())
     print("render checkbox")
     checkboxGroupInput(
@@ -89,9 +92,10 @@ server <- function(input, output) {
     print("plot button")
     if (!is.null(isolate(reactive_values$Apply_Math))) {
       Y_Axis_Lable <<- YAxisLable()
-      Lines_Lables_List <<- LinesLablesList()
+      Lines_Lables_List <<- LinesLablesList(use_pos_plot_ticks = c(LIST_DATA$x_plot_range[1:2]),
+                                            use_label_plot_ticks = c(LIST_DATA$x_plot_range[1:2]))
       #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math))})
+      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), xBinRange = LIST_DATA$x_plot_range[3:4])})
     }
   })
   
@@ -104,9 +108,9 @@ server <- function(input, output) {
     sliderInput( #  try and only render 1 time? how to update min max and values?
       "plotBinRange",
       label = h3("Plot Range:"),
-      min = kplotBinRange[1],
-      max = kplotBinRange[2],
-      value = kplotBinRange[3:4]
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = LIST_DATA$x_plot_range[3:4]
     )
   })
   
@@ -114,15 +118,33 @@ server <- function(input, output) {
   observe({
     input$plotBinRange
     if (length(LIST_DATA$table_file) > 0) {
+      if(LIST_DATA$STATE == 1) {
     print("slider")
-    kplotBinRange <<- c(kplotBinRange[1:2], input$plotBinRange)
+    LIST_DATA$x_plot_range <<- c(LIST_DATA$x_plot_range[1:2], input$plotBinRange)
     if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
       #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math))})
+      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), xBinRange = LIST_DATA$x_plot_range[3:4])})
     }
+      } else {
+        LIST_DATA$STATE <<- 1
+      }
     }
   })
   
+  # common file plot options ----
+  output$fileOptionsCommon <- renderUI({
+    req(input$file$name)
+    print("common options")
+    tagList(
+      radioButtons("commonOptionsSelect",
+                   "choose",
+                   choices = first_file()),
+      selectInput("commonColor",
+                  "Color",
+                  choices = kListColorSet)
+    )
+    
+  })
 }
 
 # UI -----
@@ -157,6 +179,18 @@ ui <- tagList(
             selected = "mean"
           )
           
+        ),
+        
+        # file options tab ----
+        tabPanel(
+          "File Options",
+          tabsetPanel(
+            tabPanel(
+              "Common Gene list",
+              uiOutput("fileOptionsCommon")
+            )
+          )
+          
         )
       ),
       
@@ -164,7 +198,7 @@ ui <- tagList(
       tabsetPanel(
         tabPanel(
           "Common Gene list",
-          uiOutput("fileNamesCommon"),
+          uiOutput("fileOnOffCommon"),
           actionButton("myplot", "Update Plot")
           
         )

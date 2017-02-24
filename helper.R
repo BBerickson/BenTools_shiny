@@ -117,7 +117,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         break()
       }
     } else {
-      kplotBinRange <<- c(1, num_bins, 1, num_bins)
+      list_data$x_plot_range <- c(1, num_bins, 1, num_bins)
     }
     color_safe <-
       (length(list_data$table_file) + 1) %% length(kListColorSet)
@@ -219,6 +219,33 @@ MakeDataFrame <-
       }
   }
 
+# gather relavent plot option data
+MakePlotOptionFrame <- function(list_data){
+  gene_info = list_data$gene_info
+  list_data_frame <- NULL
+  
+  for (i in names(gene_info)) {
+    # checks to see if at least one file in list is acitve
+    if (sum(sapply(gene_info[[i]], "[[", 4) != 0) == 0) {
+      next ()
+    } else {
+      truefalse <-
+        c(sapply(
+          gene_info[[i]], "[[", 4
+        ) != 0)
+      list_data_frame[[i]] <-
+        gene_info[[i]][truefalse]
+    }
+  }
+  
+  if (!is.null(names(list_data_frame))) {
+    return(bind_rows(list_data_frame))
+  } else {
+    #print("nothing to plot")
+    return(NULL)
+  }
+}
+
 # Applys math to long list
 ApplyMath <-
   function(list_data_frame, 
@@ -291,8 +318,8 @@ YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
 }
 
 # Sets plot lines and lables fix
-LinesLablesList <- function(use_pos_plot_ticks = c(kplotBinRange[1:2]),
-                        use_label_plot_ticks = c(kplotBinRange[1:2]),
+LinesLablesList <- function(use_pos_plot_ticks,
+                        use_label_plot_ticks,
                         use_virtical_line_type = c(1,1,1,1)
                                                ){
   
@@ -341,7 +368,7 @@ LinesLablesList <- function(use_pos_plot_ticks = c(kplotBinRange[1:2]),
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, use_smooth = 0, legend_space = 1) {
+  function(list_long_data_frame, use_smooth = 0, legend_space = 1, xBinRange) {
     gp <-
         ggplot(
           list_long_data_frame,
@@ -399,7 +426,7 @@ GGplotLineDot <-
         legend.key.height = unit(legend_space, "line"),
         legend.text = element_text(size = 9)
       )  +
-      coord_cartesian(xlim = kplotBinRange[3:4])
+      coord_cartesian(xlim = xBinRange)
       #coord_cartesian(xlim = use_x_limits, ylim = unlist(use_y_limits))
     #suppressMessages(print(gp))
     return(gp)
