@@ -2,15 +2,12 @@
 
 load file and build data list ... plot with controls
 
-get the plot options in to a state that can be reconized by ggplot starting with color
-c(red, blue) <- names(common/nb, common/na)
+work on layout
 
-then get function of changeing color working ... then dot and line 
+ 
 
-math functions and options, 
-
-plot with on/off, color, math, smooth , rf, rg, log2, line/dot type, axises hight width and lables
-save plot ... make markdown file
+plot with smooth , rf, rg, log2, line/dot type, axises hight and lables
+save plot ... make markdown file?
 
 load gene lists (don't have on to start with) and plot controls
 

@@ -23,6 +23,8 @@ suppressPackageStartupMessages(my_packages(
     "tidyr",
     "readr",
     "fastcluster",
+    "shinyjs",
+    "colourpicker",
     "RColorBrewer"
   )
 ))
@@ -69,7 +71,23 @@ kListColorSet <- brewer.pal(8, kBrewerList[3])
 kMathOptions <- c("mean", "sum", "median", "var")
 
 # functions ----
-
+RgbToHex <- function(my_hex = NULL, my_rgb = NULL){
+  if(!is.null(my_hex)){
+    return(paste(col2rgb(c(my_hex)),collapse = ","))
+  }
+  if(!is.null(my_rgb)){
+    red_green_blue <- strsplit(my_rgb, ",")[[1]]
+    if (length(red_green_blue) == 3 & sum(between(as.numeric(red_green_blue),0,255))== 3) {
+      my_hex <- rgb(
+        as.numeric(red_green_blue)[1],
+        as.numeric(red_green_blue)[2],
+        as.numeric(red_green_blue)[3],
+        maxColorValue = 255
+      )
+    }
+    return(my_hex)
+  }
+}
 # reads in file, tests, fills out info and returns list_data
 LoadTableFile <- function(file_path, file_name, list_data) {
   # load remote files TODO
@@ -129,13 +147,15 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     list_data$table_file[[legend_nickname]] <- tablefile
     list_data$gene_file$common$use <- gene_names
     list_data$gene_info$common[[legend_nickname]] <-
-      c(
-        kDotOptions[1],
-        kLineOptions[1],
-        color_select,
-        legend_nickname,
-        legend_nickname,
-        "none"
+      # don't change the order of postions
+      tibble(
+        set = gsub("(.{17})", "\\1\n", legend_nickname),
+        mydot = kDotOptions[1],
+        myline = kLineOptions[1],
+        mycol = color_select,
+        onoff = legend_nickname,
+        nickname = legend_nickname,
+        rnorm = "none"
       )
     
     # generate info for new file for loaded gene list(s)
@@ -145,13 +165,14 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         enesg <- enesg[duplicated(enesg)]
         list_data$gene_file[[g]]$use <<- enesg
         list_data$gene_info[[g]][[legend_nickname]] <<-
-          c(
-            kDotOptions[1],
-            kLineOptions[1],
-            color_select,
-            legend_nickname,
-            legend_nickname,
-            "none"
+          tibble(
+            set = gsub("(.{17})", "\\1\n", legend_nickname),
+            mydot = kDotOptions[1],
+            myline = kLineOptions[1],
+            mycol = color_select,
+            onoff = legend_nickname,
+            nickname = legend_nickname,
+            rnorm = "none"
           )
         
         # if 0 length message and remove file TODO
@@ -167,9 +188,9 @@ CheckBoxOnOff <- function(gene_set, check_box, list_data) {
   for (i in names(list_data[[gene_set]])) {
     # make function
     if (!i %in% check_box) {
-      list_data[[gene_set]][[i]][4] <- 0
+      list_data[[gene_set]][[i]]["onoff"] <- 0
     } else {
-      list_data[[gene_set]][[i]][4] <- i
+      list_data[[gene_set]][[i]]["onoff"] <- i
     }
   }
   list_data
@@ -183,10 +204,9 @@ MakeDataFrame <-
     gene_file = list_data$gene_file
     gene_info = list_data$gene_info
     list_data_frame <- NULL
-      
       for (i in names(gene_file)) {
         # checks to see if at least one file in list is acitve
-        if (sum(sapply(gene_info[[i]], "[[", 4) != 0) == 0) {
+        if (sum(sapply(gene_info[[i]], "[[", 5) != 0) == 0) {
           next ()
         } else {
           if (!is.null(sel_list)) { # fix label
@@ -202,7 +222,7 @@ MakeDataFrame <-
           }
           truefalse <-
             c(sapply(
-              gene_info[[i]], "[[", 4
+              gene_info[[i]], "[[", 5
             ) != 0)
           list_data_frame[[i]] <-
             bind_rows(table_file[truefalse]) %>%
@@ -221,23 +241,28 @@ MakeDataFrame <-
 
 # gather relavent plot option data
 MakePlotOptionFrame <- function(list_data){
-  gene_info = list_data$gene_info
+  gene_info <- list_data$gene_info
   list_data_frame <- NULL
-  
   for (i in names(gene_info)) {
     # checks to see if at least one file in list is acitve
-    if (sum(sapply(gene_info[[i]], "[[", 4) != 0) == 0) {
+    if (sum(sapply(gene_info[[i]], "[[", 5) != 0) == 0) {
       next ()
     } else {
       truefalse <-
         c(sapply(
-          gene_info[[i]], "[[", 4
+          gene_info[[i]], "[[", 5
         ) != 0)
+      my_lines <- match(sapply(gene_info[[i]][truefalse], "[[", 3), kLineOptions)
+      my_dots <- match(sapply(gene_info[[i]][truefalse], "[[", 2), kDotOptions)
+     
       list_data_frame[[i]] <-
-        gene_info[[i]][truefalse]
+        bind_rows(gene_info[[i]][truefalse]) %>%
+        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), set, sep = '-\n'),
+               nickname = paste(gsub("(.{17})", "\\1\n", i), nickname, sep = '-\n'),
+               myline = if_else(my_lines > 6, 0, as.double(my_lines)),
+               mydot = if_else(my_dots == 1, 0, my_dots + 13))
     }
   }
-  
   if (!is.null(names(list_data_frame))) {
     return(bind_rows(list_data_frame))
   } else {
@@ -245,8 +270,7 @@ MakePlotOptionFrame <- function(list_data){
     return(NULL)
   }
 }
-LS <- NULL
-OS <- NULL
+
 # Applys math to long list
 ApplyMath <-
   function(list_data_frame, 
@@ -287,9 +311,6 @@ ApplyMath <-
         ungroup()
     }
     
-
-    LS <<- list_long_data_frame
-    OS <<- use_options
     return(list_long_data_frame)
   }
 
@@ -371,7 +392,7 @@ LinesLablesList <- function(use_pos_plot_ticks,
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, use_smooth = 0, legend_space = 1, xBinRange) {
+  function(list_long_data_frame, xBinRange, plot_options, use_smooth = 0, legend_space = 1) {
     gp <-
         ggplot(
           list_long_data_frame,
@@ -380,9 +401,9 @@ GGplotLineDot <-
             y = value,
             color = set,
             shape = set,
+            #size = set
             linetype = set
-            # ,
-            # size = set
+            
           )
         )
     if (use_smooth == 1) { #fix
@@ -397,9 +418,9 @@ GGplotLineDot <-
     gp <- gp +
       geom_point(stroke = .001) +
       # scale_size_manual(name = "Sample", values = use_size) +
-      # scale_color_manual(name = "Sample", values = use_col) +
-      # scale_shape_manual(name = "Sample", values = use_dot) +
-      # scale_linetype_manual(name = "Sample", values = use_line) +
+      scale_color_manual(name = "Sample", values = plot_options$mycol) + # do I need to add names to keep things straight? 
+      scale_shape_manual(name = "Sample", values = plot_options$mydot) +
+      scale_linetype_manual(name = "Sample", values = plot_options$myline) +
       # xlab(use_x_label) + ylab(use_y_label) +  # Set axis labels
       # scale_x_continuous(breaks = use_plot_breaks,
       #                    labels = use_plot_breaks_labels) +
@@ -434,3 +455,4 @@ GGplotLineDot <-
     #suppressMessages(print(gp))
     return(gp)
   }
+

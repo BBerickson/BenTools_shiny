@@ -11,7 +11,7 @@ source("helper.R")
 options(shiny.maxRequestSize = 20 * 1024 ^ 2)
 
 # server ----
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   LIST_DATA <- list(
     table_file = list(),
@@ -65,7 +65,7 @@ server <- function(input, output) {
     if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
       reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), input$myMath,isolate(reactive_values$Plot_Options))
       #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), xBinRange = LIST_DATA$x_plot_range[3:4])})
+      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
     }
     }
   })
@@ -81,7 +81,7 @@ server <- function(input, output) {
       label = h3("Plot on/off"),
       choices = first_file(),
       selected = unique(c(
-        sapply(LIST_DATA$gene_info$common, "[[", 4),
+        sapply(LIST_DATA$gene_info$common, "[[", 5),
         last(first_file())))
     )
   })
@@ -95,7 +95,7 @@ server <- function(input, output) {
       Lines_Lables_List <<- LinesLablesList(use_pos_plot_ticks = c(LIST_DATA$x_plot_range[1:2]),
                                             use_label_plot_ticks = c(LIST_DATA$x_plot_range[1:2]))
       #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), xBinRange = LIST_DATA$x_plot_range[3:4])})
+      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
     }
   })
   
@@ -123,7 +123,7 @@ server <- function(input, output) {
     LIST_DATA$x_plot_range <<- c(LIST_DATA$x_plot_range[1:2], input$plotBinRange)
     if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
       #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), xBinRange = LIST_DATA$x_plot_range[3:4])})
+      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
     }
       } else {
         LIST_DATA$STATE <<- 1
@@ -138,12 +138,66 @@ server <- function(input, output) {
     tagList(
       radioButtons("commonOptionsSelect",
                    "choose",
-                   choices = first_file()),
-      selectInput("commonColor",
-                  "Color",
-                  choices = kListColorSet)
+                   choices = first_file())
     )
     
+  })
+  
+  # quick color set change
+  observe({
+    col <- input$kbrewer
+    if (!is.null(isolate(reactive_values$Apply_Math))) {
+    print("kbrewer")
+    kListColorSet <<- brewer.pal(8, col)
+    lapply(names(LIST_DATA$gene_info), function(i) {
+      lapply(seq_along(LIST_DATA$gene_info[[i]]), function(j) {
+        color_safe <- j %% length(kListColorSet)
+        if (color_safe == 0) {
+          color_safe <- 1
+        }
+        LIST_DATA$gene_info[[i]][[j]][4] <<- kListColorSet[color_safe]
+      })
+    })
+    reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+    
+    output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
+    }
+  })
+  
+  # update color shown
+  observe({
+    input$kbrewer
+    my_sel <- input$commonOptionsSelect
+    if(is.null(my_sel)){
+      my_sel <- names(LIST_DATA$gene_info$common)[1]
+    }
+    
+    if (!is.null(isolate(reactive_values$Apply_Math))) {
+    print("color update")
+    updateColourInput(session, "col", value = paste(LIST_DATA$gene_info$common[[my_sel]][4]))
+    updateTextInput(session, "rgbtohex",value = RgbToHex(my_hex = input$col))  
+    }
+  })
+  
+  observe({
+    req(input$myrgb)
+    print("color rgb")
+    if (!is.null(isolate(reactive_values$Apply_Math))) {
+      updateColourInput(session, "col", value = RgbToHex(my_rgb = isolate(input$rgbtohex)))
+    }
+  })
+  
+  # update color selected
+  observe({
+    input$col
+    if (!is.null(isolate(reactive_values$Apply_Math))) {
+      if(input$col != LIST_DATA$gene_info$common[[isolate(input$commonOptionsSelect)]][4]){
+        print("color new")
+        LIST_DATA$gene_info$common[[isolate(input$commonOptionsSelect)]][4] <<- input$col
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+        output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
+      }
+    }
   })
 }
 
@@ -177,7 +231,8 @@ ui <- tagList(
             "Set math function",
             choices = c("mean", "sum", "median", "var"),
             selected = "mean"
-          )
+          ),
+          selectInput("kbrewer", "quick color set", choices = kBrewerList, selected = kBrewerList[3])
           
         ),
         
@@ -187,7 +242,10 @@ ui <- tagList(
           tabsetPanel(
             tabPanel(
               "Common Gene list",
-              uiOutput("fileOptionsCommon")
+              uiOutput("fileOptionsCommon"),
+              colourInput("col", "Select color HEX"),
+              textInput("rgbtohex", "RGB"),
+              actionButton("myrgb", "Update HEX color")
             )
           )
           
