@@ -2,7 +2,7 @@
 
 load file and build data list ... plot with controls
 
-work on layout
+work on layout "shinydashboard"
 
  
 

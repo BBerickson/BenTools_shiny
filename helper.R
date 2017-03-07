@@ -17,7 +17,7 @@ my_packages <- function(x) {
 suppressPackageStartupMessages(my_packages(
   c(
     "shiny",
-    "shinythemes",
+    "shinydashboard",
     "ggplot2",
     "dplyr",
     "tidyr",

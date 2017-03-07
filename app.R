@@ -35,11 +35,11 @@ server <- function(input, output, session) {
   
   # loads file(s) 
   first_file <- reactive({
-    req(input$file$datapath)
+    req(input$tablefile$datapath)
     print("load file")
     # add warnings for total size of LIST_DATA
     LIST_DATA <<-
-      LoadTableFile(input$file$datapath, input$file$name, LIST_DATA)
+      LoadTableFile(input$tablefile$datapath, input$tablefile$name, LIST_DATA)
     names(LIST_DATA$table_file)
   })
   
@@ -103,7 +103,7 @@ server <- function(input, output, session) {
   
   # Specification of range within an interval to plot
   output$rangeBin <- renderUI({
-    req(input$file$name)
+    req(input$tablefile$name)
     print("render slider")
     sliderInput( #  try and only render 1 time? how to update min max and values?
       "plotBinRange",
@@ -133,7 +133,7 @@ server <- function(input, output, session) {
   
   # common file plot options ----
   output$fileOptionsCommon <- renderUI({
-    req(input$file$name)
+    req(input$tablefile$name)
     print("common options")
     tagList(
       radioButtons("commonOptionsSelect",
@@ -202,77 +202,72 @@ server <- function(input, output, session) {
 }
 
 # UI -----
-ui <- tagList(
-  navbarPage(
-    theme = shinythemes::shinytheme("cerulean"),
-    "BenTools",
-    tabPanel(
-      "Navbar 1",
-      sidebarPanel(
-        tabsetPanel(
-          
-        # load file(s) tab ----
-        tabPanel(
-          "Load file(s)",
-          fileInput(
-            "file",
-            label = "File input:",
-            accept = c('.table'),
-            multiple = TRUE
-          ),
-          uiOutput("rangeBin")
-        ),
-        
-        # plot options tab ----
-        tabPanel(
-          "Plot Options",
-          radioButtons(
-            "myMath",
-            "Set math function",
-            choices = c("mean", "sum", "median", "var"),
-            selected = "mean"
-          ),
-          selectInput("kbrewer", "quick color set", choices = kBrewerList, selected = kBrewerList[3])
-          
-        ),
-        
-        # file options tab ----
-        tabPanel(
-          "File Options",
-          tabsetPanel(
-            tabPanel(
-              "Common Gene list",
-              uiOutput("fileOptionsCommon"),
-              colourInput("col", "Select color HEX"),
-              textInput("rgbtohex", "RGB"),
-              actionButton("myrgb", "Update HEX color")
+ui <- dashboardPage(
+  dashboardHeader(title = "Ben Tools"),
+  dashboardSidebar(sidebarMenu(
+    id = "tabs",
+    menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
+    
+    menuItem("Plot", tabName = "mainplot", icon = icon("area-chart"))
+  )),
+  dashboardBody(tabItems(
+    # load data tab
+    tabItem(tabName = "loaddata",
+            fluidRow(
+              box(
+                width = 4,
+                fileInput(
+                  "tablefile",
+                  label = "Load table file",
+                  accept = c('.table'),
+                  multiple = TRUE
+                ),
+                fileInput("genefile",
+                          label = "Load gene list",
+                          accept = c('.txt')),
+                fileInput(
+                  "colorfile",
+                  label = "Load color list",
+                  accept = c('.color.txt')
+                )
+              ),
+              box(
+                colourInput("col", "Select color HEX"),
+                textInput("rgbtohex", "RGB"),
+                actionButton("myrgb", "Update HEX color")
+                
+              )
+            )),
+    
+    # First tab content
+    tabItem(tabName = "mainplot",
+            fluidRow(
+              box(width = 12, plotOutput("plot"))
+              ),
+            fluidRow(
+              box(width = 4,
+                uiOutput("rangeBin")
+              ),
+              box(width = 4,
+                uiOutput("fileOptionsCommon"),
+                uiOutput("fileOnOffCommon"),
+                actionButton("myplot", "Update Plot")
+              ),
+              box(
+                title = "math", collapsed = TRUE,
+                collapsible = T,
+                width = 3,
+                radioButtons(
+                  "myMath",
+                  "Set math function",
+                  choices = c("mean", "sum", "median", "var"),
+                  selected = "mean"
+                )
+              ),
+              box(width= 3, selectInput("kbrewer", "quick color set", choices = kBrewerList, selected = kBrewerList[3]))
             )
-          )
-          
-        )
-      ),
-      
-      #common genes tab ----
-      tabsetPanel(
-        tabPanel(
-          "Common Gene list",
-          uiOutput("fileOnOffCommon"),
-          actionButton("myplot", "Update Plot")
-          
-        )
-      )),
-      # main panel for plot ----
-      mainPanel(tabsetPanel(
-        tabPanel("Tab 1",
-                 h4("Table Plot"),
-                 plotOutput("plot")),
-        tabPanel("Tab 2"),
-        tabPanel("Tab 3")
-      ))
-    ),
-    tabPanel("Navbar 2"),
-    tabPanel("Navbar 3")
-  )
+            )
+  ))
 )
 
 # exicute ----
