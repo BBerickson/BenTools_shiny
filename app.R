@@ -19,10 +19,10 @@ server <- function(input, output, session) {
     gene_file = list(),
     # holds $common genes from files and $gene file(s)
     gene_info = list(),
-    # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("dot", "line", "color", plot?, NickName,nrom)]
+    # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
     clust = list(), # Cluster holder
     x_plot_range = c(0, 0, 0, 0),
-    STATE = 0
+    STATE = c(0, "common")
   )      
   Y_Axis_Lable <- NULL
   Lines_Lables_List <- NULL
@@ -33,57 +33,140 @@ server <- function(input, output, session) {
                                     Apply_Math = NULL,
                                     Plot_Options = NULL)
   
-  # loads file(s) 
+  # loads data file(s) 
   first_file <- reactive({
-    req(input$tablefile$datapath)
+    req(input$filetable$datapath)
     print("load file")
     # add warnings for total size of LIST_DATA
     LIST_DATA <<-
-      LoadTableFile(input$tablefile$datapath, input$tablefile$name, LIST_DATA)
+      LoadTableFile(input$filetable$datapath, input$filetable$name, LIST_DATA)
     names(LIST_DATA$table_file)
   })
   
-  # records check box on/off for common list and builds data frame and info for plot
+  # loads data file(s) 
+  gene_file <- reactive({
+    req(input$filegene$datapath)
+    print("load gene file")
+    # add warnings for total size of LIST_DATA
+    names(LIST_DATA$gene_info)
+  })
+  
+  # update when data file is loaded
+  observe({ 
+    req(first_file())
+    print("update load file")
+    updateRadioButtons(session, "radiodataoption", choices = first_file(), selected = last(first_file()))
+    updateCheckboxGroupInput(session,"checkboxonoff", choices = first_file(), 
+                             selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
+    if(LIST_DATA$STATE[1] == 0){
+      print("set slider")
+      updateSliderInput(session, "sliderplotBinRange",
+        min = LIST_DATA$x_plot_range[1],
+        max = LIST_DATA$x_plot_range[2],
+        value = LIST_DATA$x_plot_range[3:4]
+      )
+      LIST_DATA$STATE[1] <<- 1
+    } else{
+      print("slider already set")
+    }
+  })
+  
+  # update when gene list is loaded
+  observe({ 
+    req(gene_file())
+    print("select gene list options")
+    updateSelectInput(session, "selectgenelistoptions", choices = names(LIST_DATA$gene_info))
+    updateSelectInput(session, "selectgenelistonoff", choices = names(LIST_DATA$gene_info))
+  })
+  
+  
+  # update desplay selected item info
   observe({
-    input$checkGroupCommon
-    if (length(LIST_DATA$table_file) > 0) {
-    print("checkbox on/off")
-    LIST_DATA$gene_info <<-
-      CheckBoxOnOff("common", input$checkGroupCommon, LIST_DATA$gene_info)
-    reactive_values$Make_Data_Frame <- MakeDataFrame(LIST_DATA)
-    reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+    my_sel <- input$radiodataoption
+    req(isolate(first_file()))
+    my_list <- isolate(input$selectgenelistoptions)
+    print("options update")
+    updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mycol"]))
+    updateTextInput(session, "textrgbtohex",value = RgbToHex(my_hex = isolate(input$colourhex)))
+    updateTextInput(session, "textnickname", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["set"]))
+    updateSelectInput(session, "selectdot", selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mydot"]))
+    updateSelectInput(session, "selectline", selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
+  })
+  
+  observe({
+    req(isolate(first_file()))
+    input$selectgenelistoptions
+    print("update options on gene list change")
+    updateRadioButtons(session, "radiodataoption", selected = isolate(input$radiodataoption))
+  })
+  
+  # save new plot options
+  observe({
+    req(input$actionoptions)
+    isolate(if (!is.null(names(LIST_DATA$gene_info))) {
+      print("new options")
+      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"] <<- input$textnickname
+      LIST_DATA$table_file[[input$radiodataoption]]["set"] <<- paste(input$textnickname)
+      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mydot"] <<- input$selectdot
+      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["myline"] <<- input$selectline
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+    })
+  })
+  
+  # update color based on rgb input
+  observe({
+    req(input$actionmyrgb)
+    print("color rgb")
+    isolate(
+    if (!is.null(reactive_values$Apply_Math)) {
+      updateColourInput(session, "colourhex", value = RgbToHex(my_rgb = input$textrgbtohe))
+    })
+  })
+  
+  # update and save color selected
+  observe({
+    input$colourhex
+    if (!is.null(isolate(reactive_values$Apply_Math))) {
+      if(input$colourhex != LIST_DATA$gene_info[[input$selectgenelistoptions]][[isolate(input$radiodataoption)]]["mycol"]){
+        print("color new")
+        LIST_DATA$gene_info[[input$selectgenelistoptions]][[isolate(input$radiodataoption)]]["mycol"] <<- input$colourhex
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+        output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
+      }
+    }
+  })
+  
+  
+  # update check box on off with selecting gene list
+  observe({
+    input$selectgenelistonoff
+    req(isolate(first_file()))
+    print("update on off check box on gene list change")
+    updateCheckboxGroupInput(session,"checkboxonoff", 
+                             selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
+  })
+  
+  #records check box on/off for common list and builds data frame and info for plot
+  observe({
+    input$checkboxonoff
+    req(isolate(first_file()))
+    if(LIST_DATA$STATE[2] == isolate(input$selectgenelistonoff)){
+      print("checkbox on/off")
+      LIST_DATA$gene_info <<-
+        CheckBoxOnOff(isolate(input$selectgenelistonoff), input$checkboxonoff, LIST_DATA$gene_info)
+      reactive_values$Make_Data_Frame <- MakeDataFrame(LIST_DATA)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
         reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), isolate(input$myMath),isolate(reactive_values$Plot_Options))
+      print(reactive_values$Plot_Options)
+      print(GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))) # renderplot
       }
-  }
-  })
-  
-  observe({
-    input$myMath
-    if (length(LIST_DATA$table_file) > 0) {
-    print("math")
-    if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
-      reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), input$myMath,isolate(reactive_values$Plot_Options))
-      #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
+      print(isolate(reactive_values$Make_Data_Frame[[1]]))
+      print(reactive_values$Apply_Math)
+    } else {
+      print("just updating what is seen")
+      LIST_DATA$STATE[2] <<- isolate(input$selectgenelistonoff)
     }
-    }
-  })
-  
-  # set up and control check box actions common ----
-  
-  # renders check box when file is loaded
-  output$fileOnOffCommon <- renderUI({
-    req(first_file())
-    print("render checkbox")
-    checkboxGroupInput(
-      "checkGroupCommon",
-      label = h3("Plot on/off"),
-      choices = first_file(),
-      selected = unique(c(
-        sapply(LIST_DATA$gene_info$common, "[[", 5),
-        last(first_file())))
-    )
   })
   
   # plots when acction button is pressed
@@ -99,49 +182,29 @@ server <- function(input, output, session) {
     }
   })
   
-  # set up and control bin range action ----
-  
-  # Specification of range within an interval to plot
-  output$rangeBin <- renderUI({
-    req(input$tablefile$name)
-    print("render slider")
-    sliderInput( #  try and only render 1 time? how to update min max and values?
-      "plotBinRange",
-      label = h3("Plot Range:"),
-      min = LIST_DATA$x_plot_range[1],
-      max = LIST_DATA$x_plot_range[2],
-      value = LIST_DATA$x_plot_range[3:4]
-    )
-  })
-  
-  # plots when range bin slider is triggered
   observe({
-    input$plotBinRange
+    input$myMath
     if (length(LIST_DATA$table_file) > 0) {
-      if(LIST_DATA$STATE == 1) {
-    print("slider")
-    LIST_DATA$x_plot_range <<- c(LIST_DATA$x_plot_range[1:2], input$plotBinRange)
-    if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
-      #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
-      output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
-    }
-      } else {
-        LIST_DATA$STATE <<- 1
+      print("math")
+      if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
+        reactive_values$Apply_Math <- ApplyMath(isolate(reactive_values$Make_Data_Frame), input$myMath,isolate(reactive_values$Plot_Options))
+        output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
       }
     }
   })
   
-  # common file plot options ----
-  output$fileOptionsCommon <- renderUI({
-    req(input$tablefile$name)
-    print("common options")
-    tagList(
-      radioButtons("commonOptionsSelect",
-                   "choose",
-                   choices = first_file())
-    )
-    
-  })
+
+  # plots when range bin slider is triggered
+  # observe({
+  #   input$sliderplotBinRange
+  #   req(isolate(first_file()))
+  #   print("slider")
+  #   LIST_DATA$x_plot_range <<- c(LIST_DATA$x_plot_range[1:2], input$plotBinRange)
+  #   if (!is.null(isolate(reactive_values$Make_Data_Frame[[1]]))) {
+  #     #print(GGplotLineDot(isolate(reactive_values$Apply_Math))) # renderplot
+  #     output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
+  #   }
+  # })
   
   # quick color set change
   observe({
@@ -158,47 +221,17 @@ server <- function(input, output, session) {
         LIST_DATA$gene_info[[i]][[j]][4] <<- kListColorSet[color_safe]
       })
     })
+    updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[isolate(input$selectgenelistoptions)]][[isolate(input$radiodataoption)]]["mycol"]))
+    updateTextInput(session, "textrgbtohex",value = RgbToHex(my_hex = input$colourhex))
     reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
     
     output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
     }
   })
   
-  # update color shown
-  observe({
-    input$kbrewer
-    my_sel <- input$commonOptionsSelect
-    if(is.null(my_sel)){
-      my_sel <- names(LIST_DATA$gene_info$common)[1]
-    }
-    
-    if (!is.null(isolate(reactive_values$Apply_Math))) {
-    print("color update")
-    updateColourInput(session, "col", value = paste(LIST_DATA$gene_info$common[[my_sel]][4]))
-    updateTextInput(session, "rgbtohex",value = RgbToHex(my_hex = input$col))  
-    }
-  })
+  # data and list plot options ----
   
-  observe({
-    req(input$myrgb)
-    print("color rgb")
-    if (!is.null(isolate(reactive_values$Apply_Math))) {
-      updateColourInput(session, "col", value = RgbToHex(my_rgb = isolate(input$rgbtohex)))
-    }
-  })
   
-  # update color selected
-  observe({
-    input$col
-    if (!is.null(isolate(reactive_values$Apply_Math))) {
-      if(input$col != LIST_DATA$gene_info$common[[isolate(input$commonOptionsSelect)]][4]){
-        print("color new")
-        LIST_DATA$gene_info$common[[isolate(input$commonOptionsSelect)]][4] <<- input$col
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-        output$plot <- renderPlot({GGplotLineDot(isolate(reactive_values$Apply_Math), LIST_DATA$x_plot_range[3:4], isolate(reactive_values$Plot_Options))})
-      }
-    }
-  })
 }
 
 # UI -----
@@ -217,40 +250,52 @@ ui <- dashboardPage(
               box(
                 width = 4,
                 fileInput(
-                  "tablefile",
+                  "filetable",
                   label = "Load table file",
                   accept = c('.table'),
                   multiple = TRUE
                 ),
-                fileInput("genefile",
+                fileInput("filegene",
                           label = "Load gene list",
                           accept = c('.txt')),
                 fileInput(
-                  "colorfile",
+                  "filecolor",
                   label = "Load color list",
                   accept = c('.color.txt')
                 )
               ),
               box(
-                colourInput("col", "Select color HEX"),
-                textInput("rgbtohex", "RGB"),
-                actionButton("myrgb", "Update HEX color")
-                
+                selectInput("selectgenelistoptions", "Select Gene list", choices = "common"),
+                radioButtons("radiodataoption","select data", choices = "Load data file"),
+                selectInput("selectdot", "Select dot type", choices = kDotOptions),
+                selectInput("selectline", "Select line type", choices = kLineOptions),
+                textInput("textnickname", "Nick Name"),
+                actionButton("actionoptions", "Update nick name")
+              ),
+              box(
+                colourInput("colourhex", "Select color HEX"),
+                textInput("textrgbtohex", "RGB"),
+                actionButton("actionmyrgb", "Update HEX color")
               )
             )),
     
-    # First tab content
+    # main plot tab
     tabItem(tabName = "mainplot",
             fluidRow(
               box(width = 12, plotOutput("plot"))
               ),
             fluidRow(
               box(width = 4,
-                uiOutput("rangeBin")
+                  sliderInput("sliderplotBinRange",
+                    label = h3("Plot Range:"),
+                    min = 0,
+                    max = 80,
+                    value = c(0,80)
+                  )
               ),
               box(width = 4,
-                uiOutput("fileOptionsCommon"),
-                uiOutput("fileOnOffCommon"),
+                selectInput("selectgenelistonoff", "Select Gene list", choices = "common"),
+                checkboxGroupInput("checkboxonoff", h3("Plot on/off"), choices = "Load data file"),
                 actionButton("myplot", "Update Plot")
               ),
               box(

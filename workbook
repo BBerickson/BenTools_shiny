@@ -2,6 +2,17 @@
 
 load file and build data list ... plot with controls
 
+make gene lists trigers 
+make orgonize trigers to loading data file, changing disply options, and changing option
+1 load data file ... updates LIST_DATA and checkbox option (0), and radiobutton along with the items info
+2 updating an item saves only that update change and updates reactive plot options -> plot (nickname)?
+3 switching selected item/list only updates display isolate()
+4 plot button and change math only place applymath is updated -> plot (nickname)?
+5 slider updates plot
+6 color selecter saves color and updates plot
+
+remove saving intermedate data frame takes up too much memory for little speed impruvement 
+
 work on layout "shinydashboard"
 
  
@@ -11,7 +22,7 @@ save plot ... make markdown file?
 
 load gene lists (don't have on to start with) and plot controls
 
-load color files
+load color files (add option for names to match)
 
 gene tools ...
 

@@ -113,7 +113,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
                                              skip = 1) %>%
                                       gather(., bin, score, 2:(num_bins + 1))) %>%
         mutate(
-          set = gsub("(.{17})", "\\1\n", legend_nickname),
+          set = legend_nickname,
           bin = as.numeric(bin),
           score = as.numeric(score)
         ) %>%
@@ -149,12 +149,11 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     list_data$gene_info$common[[legend_nickname]] <-
       # don't change the order of postions
       tibble(
-        set = gsub("(.{17})", "\\1\n", legend_nickname),
+        set = legend_nickname,
         mydot = kDotOptions[1],
         myline = kLineOptions[1],
         mycol = color_select,
-        onoff = legend_nickname,
-        nickname = legend_nickname,
+        onoff = 0,
         rnorm = "none"
       )
     
@@ -166,12 +165,11 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         list_data$gene_file[[g]]$use <<- enesg
         list_data$gene_info[[g]][[legend_nickname]] <<-
           tibble(
-            set = gsub("(.{17})", "\\1\n", legend_nickname),
+            set = legend_nickname,
             mydot = kDotOptions[1],
             myline = kLineOptions[1],
             mycol = color_select,
-            onoff = legend_nickname,
-            nickname = legend_nickname,
+            onoff = 0,
             rnorm = "none"
           )
         
@@ -227,7 +225,7 @@ MakeDataFrame <-
           list_data_frame[[i]] <-
             bind_rows(table_file[truefalse]) %>%
             semi_join(., enesg, by = "gene") %>%
-            mutate(., set = paste(gsub("(.{17})", "\\1\n", i), set, sep = '-\n'))
+            mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
         }
       }
       
@@ -257,10 +255,9 @@ MakePlotOptionFrame <- function(list_data){
      
       list_data_frame[[i]] <-
         bind_rows(gene_info[[i]][truefalse]) %>%
-        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), set, sep = '-\n'),
-               nickname = paste(gsub("(.{17})", "\\1\n", i), nickname, sep = '-\n'),
-               myline = if_else(my_lines > 6, 0, as.double(my_lines)),
-               mydot = if_else(my_dots == 1, 0, my_dots + 13))
+        mutate(myline = if_else(my_lines > 6, 0, as.double(my_lines)),
+               mydot = if_else(my_dots == 1, 0, my_dots + 13),
+               set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
     }
   }
   if (!is.null(names(list_data_frame))) {
