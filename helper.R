@@ -29,6 +29,20 @@ suppressPackageStartupMessages(my_packages(
   )
 ))
 
+LIST_DATA <- list(
+  table_file = list(),
+  # [[]] gene X1 X2 ...
+  gene_file = list(),
+  # holds $common genes from files and $gene file(s)
+  gene_info = list(),
+  # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
+  clust = list(), # Cluster holder
+  x_plot_range = c(0, 0, 0, 0),
+  STATE = c(0, "common")
+)      
+Y_Axis_Lable <- NULL
+Lines_Lables_List <- NULL
+
 # types of dots to be used in plotting
 kDotOptions <-
   c(
@@ -102,6 +116,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       # tkmessageBox(message = "This file has already been loaded", icon = "info") TODO
       next()
     } else {
+      # TODO numbins test
       num_bins <-
         count_fields(x,
                      n_max = 1,
@@ -153,7 +168,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         mydot = kDotOptions[1],
         myline = kLineOptions[1],
         mycol = color_select,
-        onoff = 0,
+        onoff = legend_nickname,
         rnorm = "none"
       )
     
@@ -232,7 +247,7 @@ MakeDataFrame <-
       if (!is.null(names(list_data_frame))) {
         return(list_data_frame)
       } else {
-        #print("nothing to plot")
+        print("nothing to plot")
         return(list(NULL))
       }
   }
@@ -263,7 +278,7 @@ MakePlotOptionFrame <- function(list_data){
   if (!is.null(names(list_data_frame))) {
     return(bind_rows(list_data_frame))
   } else {
-    #print("nothing to plot")
+    print("no options")
     return(NULL)
   }
 }
