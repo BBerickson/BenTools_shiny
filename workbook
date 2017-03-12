@@ -4,34 +4,29 @@ load file and build data list ... plot with controls
 
 make orgonize trigers to loading data file, changing disply options, and changing option
 
-remove saving intermedate data frame takes up too much memory for little speed impruvement 
 
-plot flow control
-updates apply math -> plot options -> plot
+wrap objects to be hiden as hiden when created
+have show be a list of items
+
+###plot flow control###
 
 plot is updated by
-axis, hight, width, smooth, rf, log2, labels
+axis, hight, width, smooth, rf, norm bin, log2, labels
 
 plot options is updated by
-color, line, dot, 
+: and triggers plot 
 
 apply math updated by
-nickname(button), math, checkbox(button), rg
+rg, norm factor: and triggers plot
 
 
 
-
-
-work on layout "shinydashboard"
-
-load file num bins test 
-
-plot with smooth , rf, rg, log2, line/dot type, axises hight and lables
 save plot ... make markdown file?
 
-load gene lists (don't have on to start with) and plot controls
+load gene lists, info update and plot controls working?
+add editable nickname
 
-load color files (add option for names to match)
+load color files (add option for names to match?)
 
 gene tools ...
 

@@ -37,11 +37,10 @@ LIST_DATA <- list(
   gene_info = list(),
   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
   clust = list(), # Cluster holder
-  x_plot_range = c(0, 0, 0, 0),
+  x_plot_range = c(0, 0),
   STATE = c(0, "common")
 )      
-Y_Axis_Lable <- NULL
-Lines_Lables_List <- NULL
+
 
 # types of dots to be used in plotting
 kDotOptions <-
@@ -150,7 +149,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         break()
       }
     } else {
-      list_data$x_plot_range <- c(1, num_bins, 1, num_bins)
+      list_data$x_plot_range <- c(1, num_bins)
     }
     color_safe <-
       (length(list_data$table_file) + 1) %% length(kListColorSet)
@@ -209,9 +208,12 @@ CheckBoxOnOff <- function(gene_set, check_box, list_data) {
   list_data
 }
 
-# Makes data frame and gathers plot settings for plotting active samples
-MakeDataFrame <-
-  function(list_data, sel_list = NULL) {
+# Applys math to on data in each gene list
+ApplyMath <-
+  function(list_data, 
+           use_math, 
+           r_checkbox_gene_relative_frequency,
+           sel_list = NULL) {
     
     table_file = list_data$table_file
     gene_file = list_data$gene_file
@@ -222,11 +224,9 @@ MakeDataFrame <-
         if (sum(sapply(gene_info[[i]], "[[", 5) != 0) == 0) {
           next ()
         } else {
-          if (!is.null(sel_list)) { # fix label
+          if (!is.null(sel_list)) { 
             enesg <- c(sel_list, gene_file[[i]]$use)
             enesg <- data_frame(gene = enesg[duplicated(enesg)])
-            # use_x_label <- paste(use_x_label, paste(i, "n = ",
-            #                                         length(enesg[[1]])), sep = '  ')
             if (length(enesg[[1]]) == 0) {
               break()
             }
@@ -244,12 +244,28 @@ MakeDataFrame <-
         }
       }
       
-      if (!is.null(names(list_data_frame))) {
-        return(list_data_frame)
-      } else {
+      if (is.null(names(list_data_frame))) {
         print("nothing to plot")
-        return(list(NULL))
+        return(NULL)
       }
+    # applys math to pared down data file
+    if (r_checkbox_gene_relative_frequency == 1) {
+      list_long_data_frame <- bind_rows(list_data_frame) %>%
+        group_by(set, gene) %>%
+        mutate(score = score / sum(score, na.rm = TRUE)) %>%
+        ungroup() %>%
+        group_by(set, bin) %>%
+        summarise(value = get(use_math)(score, na.rm = T)) %>%
+        ungroup()
+      
+    } else {
+      list_long_data_frame <- bind_rows(list_data_frame) %>%
+        group_by(set, bin) %>%
+        summarise(value = get(use_math)(score, na.rm = T)) %>%
+        ungroup()
+    }
+    
+    return(list_long_data_frame)
   }
 
 # gather relavent plot option data
@@ -282,49 +298,6 @@ MakePlotOptionFrame <- function(list_data){
     return(NULL)
   }
 }
-
-# Applys math to long list
-ApplyMath <-
-  function(list_data_frame, 
-           use_math, 
-           use_options,
-           r_checkbox_relative_frequency = 0, 
-           r_checkbox_gene_relative_frequency = 0,
-           norm_bin = 0) {
- 
-    if (r_checkbox_gene_relative_frequency == 1) {
-      list_long_data_frame <- bind_rows(list_data_frame) %>%
-        group_by(set, gene) %>%
-        mutate(score = score / sum(score, na.rm = TRUE)) %>%
-        ungroup() %>%
-        group_by(set, bin) %>%
-        summarise(value = get(use_math)(score, na.rm = T)) %>%
-        ungroup()
-      
-    } else {
-      list_long_data_frame <- bind_rows(list_data_frame) %>%
-        group_by(set, bin) %>%
-        summarise(value = get(use_math)(score, na.rm = T)) %>%
-        ungroup()
-    }
-    
-    if (r_checkbox_relative_frequency == 1) {
-      list_long_data_frame <-
-        group_by(list_long_data_frame, set) %>%
-        mutate(value = value / sum(value)) %>%
-        ungroup()
-    } else if (norm_bin > 0) {
-      if (r_checkbox_relative_frequency == 1) {
-        # tktoggle(checkbox_relative_frequency) # fix
-      }
-      list_long_data_frame <-
-        group_by(list_long_data_frame, set) %>%
-        mutate(value = value / nth(value, norm_bin)) %>%
-        ungroup()
-    }
-    
-    return(list_long_data_frame)
-  }
 
 # Sets y lable fix
 YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
@@ -405,6 +378,7 @@ LinesLablesList <- function(use_pos_plot_ticks,
 # main ggplot function
 GGplotLineDot <-
   function(list_long_data_frame, xBinRange, plot_options, use_smooth = 0, legend_space = 1) {
+    print("ggplot")
     gp <-
         ggplot(
           list_long_data_frame,
