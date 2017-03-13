@@ -25,7 +25,7 @@ server <- function(input, output, session) {
   )
   
   # show hide checkbox and action button ----
-  observe({
+  observeEvent(input$tabs,{
     req(first_file())
     toggle("checkboxonoff",condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
     toggle("selectgenelistonoff",condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
@@ -75,9 +75,7 @@ server <- function(input, output, session) {
   })
   
   # update when data file is loaded ----
-  observe({
-    req(first_file())
-    isolate({
+  observeEvent(first_file(),{
       print("update load file")
       updateRadioButtons(
         session,
@@ -91,13 +89,10 @@ server <- function(input, output, session) {
         choices = first_file(),
         selected = c(sapply(LIST_DATA$gene_info[[input$selectgenelistonoff]], "[[", 5))
       )
-    })
   })
   
   # update when gene list is loaded ----
-  observe({
-    req(gene_file())
-    isolate({
+  observeEvent(gene_file(),{
       print("select gene list options")
       updateSelectInput(session,
                         "selectgenelistoptions",
@@ -105,14 +100,12 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "selectgenelistonoff",
                         choices = names(LIST_DATA$gene_info))
-    })
   })
   
   # update desplay selected item info ----
-  observe({
-    my_sel <- input$radiodataoption
-    isolate({
+  observeEvent(input$radiodataoption,{
       req(first_file())
+      my_sel <- input$radiodataoption
       my_list <- input$selectgenelistoptions
       print("options update")
       updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mycol"]))
@@ -125,23 +118,17 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "selectline",
                         selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
-    })
   })
   
   # triggers update on changing gene list ----
-  observe({
-    input$selectgenelistoptions
-    isolate({
+  observeEvent(input$selectgenelistoptions,{
       req(first_file())
       print("update options on gene list change")
       updateRadioButtons(session, "radiodataoption", selected = input$radiodataoption)
-    })
   })
   
   # record new nickname ----
-  observe({
-    req(input$actionoptions)
-    isolate({
+  observeEvent(input$actionoptions,{
       req(first_file())
       print("new nickname")
       LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"] <<-
@@ -163,13 +150,10 @@ server <- function(input, output, session) {
           )
         }
       }
-    })
   })
   
   # records new dot options ----
-  observe({
-    input$selectdot
-    isolate({
+  observeEvent(input$selectdot,{
       if (!is.null(names(LIST_DATA$gene_info))) {
         if (input$selectdot != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mydot"]) {
           print("new dot")
@@ -186,14 +170,11 @@ server <- function(input, output, session) {
             }
           }
       }
-    })
   })
   
   # records new line options ----
-  observe({
-    input$selectline
-    isolate({
-      if (!is.null(names(LIST_DATA$gene_info))) {
+  observeEvent(input$selectline,{
+    if (!is.null(names(LIST_DATA$gene_info))) {
         if (input$selectline != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["myline"]) {
           print("new line")
           LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["myline"] <<-
@@ -209,23 +190,17 @@ server <- function(input, output, session) {
           }
         }
       }
-    })
   })
   
   # update color based on rgb text input ----
-  observe({
-    req(input$actionmyrgb)
-    isolate({
-      print("color rgb")
-      updateColourInput(session, "colourhex", value = RgbToHex(my_rgb = input$textrgbtohe))
-    })
+  observeEvent(input$actionmyrgb,{
+    print("color rgb")
+      updateColourInput(session, "colourhex", value = RgbToHex(my_rgb = input$textrgbtohex))
   })
   
   # update and save color selected ----
-  observe({
-    input$colourhex
-    isolate({
-      print("update text color")
+  observeEvent(input$colourhex,{
+    print("update text color")
       updateTextInput(session,
                       "textrgbtohex",
                       value = RgbToHex(my_hex = input$colourhex))
@@ -245,25 +220,21 @@ server <- function(input, output, session) {
           }
         }
       }
-    })
   })
   
   # update check box on off with selecting gene list ----
-  observe({
-    input$selectgenelistonoff
-    isolate({
-      req(first_file())
+  observeEvent(input$selectgenelistonoff,{
+    req(first_file())
       print("update on off check box on gene list change")
       updateCheckboxGroupInput(session, "checkboxonoff",
                                selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
-    })
   })
   
   #records check box on/off ----
   observe({
     input$checkboxonoff
     isolate({
-      req(first_file())
+    req(first_file())
       if (LIST_DATA$STATE[2] == input$selectgenelistonoff) {
           print("checkbox on/off")
           LIST_DATA$gene_info <<-
@@ -281,10 +252,8 @@ server <- function(input, output, session) {
   })
   
   # plots when acction button is pressed ----
-  observe({
-    req(input$actionmyplot)
-    isolate({
-      req(first_file())
+  observeEvent(input$actionmyplot,{
+    req(first_file())
       print("plot button")
       reactive_values$Apply_Math <-
         ApplyMath(LIST_DATA,
@@ -304,7 +273,6 @@ server <- function(input, output, session) {
       }
       hide("actionmyplot")
       LIST_DATA$STATE[1] <<- 1
-    })
   })
   
   # renders plot ----
@@ -313,10 +281,8 @@ server <- function(input, output, session) {
   })
   
   #update plot with math selection ----
-  observe({
-    input$myMath
-    isolate({
-      req(first_file())
+  observeEvent(input$myMath,{
+    req(first_file())
       print("math")
         reactive_values$Apply_Math <-
           ApplyMath(LIST_DATA,
@@ -331,15 +297,12 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options
             )
         }
-    })
   })
   
   
   #plots when range bin slider is triggered ----
-  observe({
-    input$sliderplotBinRange
-    isolate({
-      req(first_file())
+  observeEvent(input$sliderplotBinRange,{
+    req(first_file())
       print("slider")
       if (!is.null(reactive_values$Apply_Math)) {
         reactive_values$Plot_controler <-
@@ -349,16 +312,13 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options
           )
       }
-    })
   })
   
   # quick color set change ----
-  observe({
-    col <- input$kbrewer
-    isolate({
-      req(first_file())
+  observeEvent(input$kbrewer,{
+    req(first_file())
       print("kbrewer")
-      kListColorSet <<- brewer.pal(8, col)
+      kListColorSet <<- brewer.pal(8, input$kbrewer)
       if (!is.null(LIST_DATA$gene_info[[1]])) {
         print("kbrewer update")
         lapply(names(LIST_DATA$gene_info), function(i) {
@@ -382,7 +342,6 @@ server <- function(input, output, session) {
             )
         }
       }
-    })
   })
   
   

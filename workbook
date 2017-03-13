@@ -4,7 +4,13 @@ load file and build data list ... plot with controls
 
 make orgonize trigers to loading data file, changing disply options, and changing option
 
-
+ update with observeEvent()
+ observeEvent(input$do, {
+    session$sendCustomMessage(type = 'testmessage',
+      message = 'Thank you for clicking')
+  })
+  
+  
 wrap objects to be hiden as hiden when created
 have show be a list of items
 
