@@ -14,7 +14,6 @@ options(shiny.maxRequestSize = 20 * 1024 ^ 2)
 
 # server ----
 server <- function(input, output, session) {
-  
   # Globals and reacive values ----
   reactive_values <- reactiveValues(
     Y_Axis_Lable = NULL,
@@ -25,12 +24,17 @@ server <- function(input, output, session) {
   )
   
   # show hide checkbox and action button ----
-  observeEvent(input$tabs,{
+  observeEvent(input$tabs, {
     req(first_file())
-    toggle("checkboxonoff",condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
-    toggle("selectgenelistonoff",condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
-    toggle("actionmyplot",condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] == 2 ))
-    })
+    toggle("checkboxonoff",
+           condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
+    toggle(
+      "selectgenelistonoff",
+      condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
+    )
+    toggle("actionmyplot",
+           condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] == 2))
+  })
   
   # loads data file(s) ----
   first_file <- reactive({
@@ -75,204 +79,219 @@ server <- function(input, output, session) {
   })
   
   # update when data file is loaded ----
-  observeEvent(first_file(),{
-      print("update load file")
-      updateRadioButtons(
-        session,
-        "radiodataoption",
-        choices = first_file(),
-        selected = last(first_file())
-      )
-      updateCheckboxGroupInput(
-        session,
-        "checkboxonoff",
-        choices = first_file(),
-        selected = c(sapply(LIST_DATA$gene_info[[input$selectgenelistonoff]], "[[", 5))
-      )
+  observeEvent(first_file(), {
+    print("update load file")
+    updateRadioButtons(
+      session,
+      "radiodataoption",
+      choices = first_file(),
+      selected = last(first_file())
+    )
+    updateCheckboxGroupInput(session,
+                             "checkboxonoff",
+                             choices = first_file(),
+                             selected = c(sapply(LIST_DATA$gene_info[[input$selectgenelistonoff]], "[[", 5)))
   })
   
   # update when gene list is loaded ----
-  observeEvent(gene_file(),{
-      print("select gene list options")
-      updateSelectInput(session,
-                        "selectgenelistoptions",
-                        choices = names(LIST_DATA$gene_info))
-      updateSelectInput(session,
-                        "selectgenelistonoff",
-                        choices = names(LIST_DATA$gene_info))
+  observeEvent(gene_file(), {
+    print("select gene list options")
+    updateSelectInput(session,
+                      "selectgenelistoptions",
+                      choices = names(LIST_DATA$gene_info))
+    updateSelectInput(session,
+                      "selectgenelistonoff",
+                      choices = names(LIST_DATA$gene_info))
   })
   
   # update desplay selected item info ----
-  observeEvent(input$radiodataoption,{
-      req(first_file())
-      my_sel <- input$radiodataoption
-      my_list <- input$selectgenelistoptions
-      print("options update")
-      updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mycol"]))
-      updateTextInput(session,
-                      "textnickname",
-                      value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["set"]))
-      updateSelectInput(session,
-                        "selectdot",
-                        selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mydot"]))
-      updateSelectInput(session,
-                        "selectline",
-                        selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
+  observeEvent(input$radiodataoption, {
+    req(first_file())
+    my_sel <- input$radiodataoption
+    my_list <- input$selectgenelistoptions
+    print("options update")
+    updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mycol"]))
+    updateTextInput(session,
+                    "textnickname",
+                    value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["set"]))
+    updateSelectInput(session,
+                      "selectdot",
+                      selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mydot"]))
+    updateSelectInput(session,
+                      "selectline",
+                      selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
   })
   
   # triggers update on changing gene list ----
-  observeEvent(input$selectgenelistoptions,{
-      req(first_file())
-      print("update options on gene list change")
-      updateRadioButtons(session, "radiodataoption", selected = input$radiodataoption)
+  observeEvent(input$selectgenelistoptions, {
+    req(first_file())
+    print("update options on gene list change")
+    updateRadioButtons(session, "radiodataoption", selected = input$radiodataoption)
   })
   
   # record new nickname ----
-  observeEvent(input$actionoptions,{
-      req(first_file())
-      print("new nickname")
-      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"] <<-
-        input$textnickname
-      LIST_DATA$table_file[[input$radiodataoption]]["set"] <<-
-        paste(input$textnickname)
-      if(LIST_DATA$STATE[1] == 1){
+  observeEvent(input$actionoptions, {
+    req(first_file())
+    print("new nickname")
+    LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"] <<-
+      input$textnickname
+    LIST_DATA$table_file[[input$radiodataoption]]["set"] <<-
+      paste(input$textnickname)
+    if (LIST_DATA$STATE[1] == 1) {
       reactive_values$Apply_Math <-
         ApplyMath(LIST_DATA,
                   input$myMath,
                   r_checkbox_gene_relative_frequency = 0)
       if (!is.null(reactive_values$Apply_Math)) {
+      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
+       updateSliderInput(session,
+                          "sliderplotYRange",
+                          min = myYBinRange[1],
+                          max = myYBinRange[2],
+                          value = myYBinRange,
+                         step = ((myYBinRange[2]-myYBinRange[1])/10))
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-            reactive_values$Plot_Options
+             reactive_values$Plot_Options, myYBinRange
           )
-        }
       }
+    }
   })
   
   # records new dot options ----
-  observeEvent(input$selectdot,{
-      if (!is.null(names(LIST_DATA$gene_info))) {
-        if (input$selectdot != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mydot"]) {
-          print("new dot")
-          LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mydot"] <<-
-            input$selectdot
-          if(LIST_DATA$STATE[1] == 1 & !is.null(reactive_values$Apply_Math)) {
-              reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-              reactive_values$Plot_controler <-
-                GGplotLineDot(
-                  reactive_values$Apply_Math,
-                  input$sliderplotBinRange,
-                  reactive_values$Plot_Options
-                )
-            }
-          }
+  observeEvent(input$selectdot, {
+    if (!is.null(names(LIST_DATA$gene_info))) {
+      if (input$selectdot != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mydot"]) {
+        print("new dot")
+        LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mydot"] <<-
+          input$selectdot
+        if (LIST_DATA$STATE[1] == 1 &
+            !is.null(reactive_values$Apply_Math)) {
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+          reactive_values$Plot_controler <-
+            GGplotLineDot(
+              reactive_values$Apply_Math,
+              input$sliderplotBinRange,
+               reactive_values$Plot_Options, input$sliderplotYRange
+            )
+        }
       }
+    }
   })
   
   # records new line options ----
-  observeEvent(input$selectline,{
+  observeEvent(input$selectline, {
     if (!is.null(names(LIST_DATA$gene_info))) {
-        if (input$selectline != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["myline"]) {
-          print("new line")
-          LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["myline"] <<-
-            input$selectline
-          if(LIST_DATA$STATE[1] == 1 & !is.null(reactive_values$Apply_Math)) {
-            reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-            reactive_values$Plot_controler <-
-              GGplotLineDot(
-                reactive_values$Apply_Math,
-                input$sliderplotBinRange,
-                reactive_values$Plot_Options
-              )
-          }
+      if (input$selectline != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["myline"]) {
+        print("new line")
+        LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["myline"] <<-
+          input$selectline
+        if (LIST_DATA$STATE[1] == 1 &
+            !is.null(reactive_values$Apply_Math)) {
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+          reactive_values$Plot_controler <-
+            GGplotLineDot(
+              reactive_values$Apply_Math,
+              input$sliderplotBinRange,
+               reactive_values$Plot_Options, input$sliderplotYRange
+            )
         }
       }
+    }
   })
   
   # update color based on rgb text input ----
-  observeEvent(input$actionmyrgb,{
+  observeEvent(input$actionmyrgb, {
     print("color rgb")
-      updateColourInput(session, "colourhex", value = RgbToHex(my_rgb = input$textrgbtohex))
+    updateColourInput(session, "colourhex", value = RgbToHex(my_rgb = input$textrgbtohex))
   })
   
   # update and save color selected ----
-  observeEvent(input$colourhex,{
+  observeEvent(input$colourhex, {
     print("update text color")
-      updateTextInput(session,
-                      "textrgbtohex",
-                      value = RgbToHex(my_hex = input$colourhex))
-      if (!is.null(names(LIST_DATA$gene_info))) {
-        if (input$colourhex != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"]) {
-          print("color new")
-          LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"] <<-
-            input$colourhex
-          if(LIST_DATA$STATE[1] == 1 & !is.null(reactive_values$Apply_Math)) {
-            reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-            reactive_values$Plot_controler <-
-              GGplotLineDot(
-                reactive_values$Apply_Math,
-                input$sliderplotBinRange,
-                reactive_values$Plot_Options
-              )
-          }
+    updateTextInput(session,
+                    "textrgbtohex",
+                    value = RgbToHex(my_hex = input$colourhex))
+    if (!is.null(names(LIST_DATA$gene_info))) {
+      if (input$colourhex != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"]) {
+        print("color new")
+        LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"] <<-
+          input$colourhex
+        if (LIST_DATA$STATE[1] == 1 &
+            !is.null(reactive_values$Apply_Math)) {
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+          reactive_values$Plot_controler <-
+            GGplotLineDot(
+              reactive_values$Apply_Math,
+              input$sliderplotBinRange,
+               reactive_values$Plot_Options, input$sliderplotYRange
+            )
         }
       }
+    }
   })
   
   # update check box on off with selecting gene list ----
-  observeEvent(input$selectgenelistonoff,{
+  observeEvent(input$selectgenelistonoff, {
     req(first_file())
-      print("update on off check box on gene list change")
-      updateCheckboxGroupInput(session, "checkboxonoff",
-                               selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
+    print("update on off check box on gene list change")
+    updateCheckboxGroupInput(session, "checkboxonoff",
+                             selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
   })
   
   #records check box on/off ----
   observe({
     input$checkboxonoff
     isolate({
-    req(first_file())
+      req(first_file())
       if (LIST_DATA$STATE[2] == input$selectgenelistonoff) {
-          print("checkbox on/off")
-          LIST_DATA$gene_info <<-
-            CheckBoxOnOff(input$selectgenelistonoff,
-                          input$checkboxonoff,
-                          LIST_DATA$gene_info)
-          LIST_DATA$STATE[1] <<- 2
-          toggle("actionmyplot",condition = (input$tabs == "mainplot"))
-          disable("hidemainplot")
-        } else {
-          print("just updating what is seen")
-          LIST_DATA$STATE[2] <<- input$selectgenelistonoff
-        }
+        print("checkbox on/off")
+        LIST_DATA$gene_info <<-
+          CheckBoxOnOff(input$selectgenelistonoff,
+                        input$checkboxonoff,
+                        LIST_DATA$gene_info)
+        LIST_DATA$STATE[1] <<- 2
+        toggle("actionmyplot", condition = (input$tabs == "mainplot"))
+        disable("hidemainplot")
+      } else {
+        print("just updating what is seen")
+        LIST_DATA$STATE[2] <<- input$selectgenelistonoff
+      }
     })
   })
   
   # plots when acction button is pressed ----
-  observeEvent(input$actionmyplot,{
+  observeEvent(input$actionmyplot, {
     req(first_file())
-      print("plot button")
-      reactive_values$Apply_Math <-
-        ApplyMath(LIST_DATA,
-                  input$myMath,
-                  r_checkbox_gene_relative_frequency = 0)
-      if (!is.null(reactive_values$Apply_Math)) {
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-        reactive_values$Plot_controler <-
-          GGplotLineDot(
-            reactive_values$Apply_Math,
-            input$sliderplotBinRange,
-            reactive_values$Plot_Options
-          )
-        enable("hidemainplot")
-      } else{
-        disable("hidemainplot")
-      }
-      hide("actionmyplot")
-      LIST_DATA$STATE[1] <<- 1
+    print("plot button")
+    reactive_values$Apply_Math <-
+      ApplyMath(LIST_DATA,
+                input$myMath,
+                r_checkbox_gene_relative_frequency = 0)
+    if (!is.null(reactive_values$Apply_Math)) {
+      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
+      updateSliderInput(session,
+                        "sliderplotYRange",
+                        min = myYBinRange[1],
+                        max = myYBinRange[2],
+                        value = myYBinRange,
+                        step = ((myYBinRange[2]-myYBinRange[1])/10))
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+           reactive_values$Plot_Options, myYBinRange
+        )
+      enable("hidemainplot")
+    } else{
+      disable("hidemainplot")
+    }
+    hide("actionmyplot")
+    LIST_DATA$STATE[1] <<- 1
   })
   
   # renders plot ----
@@ -281,67 +300,88 @@ server <- function(input, output, session) {
   })
   
   #update plot with math selection ----
-  observeEvent(input$myMath,{
+  observeEvent(input$myMath, {
     req(first_file())
-      print("math")
-        reactive_values$Apply_Math <-
-          ApplyMath(LIST_DATA,
-                    input$myMath,
-                    r_checkbox_gene_relative_frequency = 0)
-        if (!is.null(reactive_values$Apply_Math)) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-          reactive_values$Plot_controler <-
-            GGplotLineDot(
-              reactive_values$Apply_Math,
-              input$sliderplotBinRange,
-              reactive_values$Plot_Options
-            )
-        }
+    print("math")
+    reactive_values$Apply_Math <-
+      ApplyMath(LIST_DATA,
+                input$myMath,
+                r_checkbox_gene_relative_frequency = 0)
+    if (!is.null(reactive_values$Apply_Math)) {
+      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
+      updateSliderInput(session,
+                        "sliderplotYRange",
+                        min = myYBinRange[1],
+                        max = myYBinRange[2],
+                        value = myYBinRange,
+                        step = ((myYBinRange[2]-myYBinRange[1])/10))
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+           reactive_values$Plot_Options, myYBinRange
+        )
+    }
   })
   
   
   #plots when range bin slider is triggered ----
-  observeEvent(input$sliderplotBinRange,{
+  observeEvent(input$sliderplotBinRange, {
     req(first_file())
-      print("slider")
+    print("slider")
+    if (!is.null(reactive_values$Apply_Math)) {
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+           reactive_values$Plot_Options, input$sliderplotYRange
+        )
+    }
+  })
+  
+  #plots when Y range slider is triggered ----
+  observeEvent(input$sliderplotYRange, {
+    req(first_file())
+    print("slider")
+    if (!is.null(reactive_values$Apply_Math)) {
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+           reactive_values$Plot_Options, input$sliderplotYRange
+        )
+    }
+  })
+
+  # quick color set change ----
+  observeEvent(input$kbrewer, {
+    req(first_file())
+    print("kbrewer")
+    kListColorSet <<- brewer.pal(8, input$kbrewer)
+    if (!is.null(LIST_DATA$gene_info[[1]])) {
+      print("kbrewer update")
+      lapply(names(LIST_DATA$gene_info), function(i) {
+        lapply(seq_along(LIST_DATA$gene_info[[i]]), function(j) {
+          color_safe <- j %% length(kListColorSet)
+          if (color_safe == 0) {
+            color_safe <- 1
+          }
+          LIST_DATA$gene_info[[i]][[j]][4] <<-
+            kListColorSet[color_safe]
+        })
+      })
+      updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math)) {
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-            reactive_values$Plot_Options
+             reactive_values$Plot_Options, input$sliderplotYRange
           )
       }
-  })
-  
-  # quick color set change ----
-  observeEvent(input$kbrewer,{
-    req(first_file())
-      print("kbrewer")
-      kListColorSet <<- brewer.pal(8, input$kbrewer)
-      if (!is.null(LIST_DATA$gene_info[[1]])) {
-        print("kbrewer update")
-        lapply(names(LIST_DATA$gene_info), function(i) {
-          lapply(seq_along(LIST_DATA$gene_info[[i]]), function(j) {
-            color_safe <- j %% length(kListColorSet)
-            if (color_safe == 0) {
-              color_safe <- 1
-            }
-            LIST_DATA$gene_info[[i]][[j]][4] <<-
-              kListColorSet[color_safe]
-          })
-        })
-        updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"]))
-        if(!is.null(reactive_values$Apply_Math)) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-          reactive_values$Plot_controler <-
-            GGplotLineDot(
-              reactive_values$Apply_Math,
-              input$sliderplotBinRange,
-              reactive_values$Plot_Options
-            )
-        }
-      }
+    }
   })
   
   
@@ -350,19 +390,17 @@ server <- function(input, output, session) {
 # UI -----
 ui <- dashboardPage(
   dashboardHeader(title = "Ben Tools"),
-  dashboardSidebar(
-    sidebarMenu(
-      id = "tabs",
-      menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
-      
-     menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
-     hidden( 
+  dashboardSidebar(sidebarMenu(
+    id = "tabs",
+    menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
+    
+    menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
+    hidden(
       checkboxGroupInput("checkboxonoff", h3("Plot on/off"), choices = "Load data file"),
       selectInput("selectgenelistonoff", "Select Gene list", choices = "common"),
       actionButton("actionmyplot", "Update Plot")
-     )
     )
-  ),
+  )),
   dashboardBody(useShinyjs(),
                 tabItems(
                   # load data tab
@@ -376,28 +414,34 @@ ui <- dashboardPage(
                                 accept = c('.table'),
                                 multiple = TRUE
                               ),
-                              fileInput("filegene",
-                                        label = "Load gene list",
-                                        accept = c('.txt')),
-                              fileInput(
+                              hidden(fileInput(
+                                "filegene",
+                                label = "Load gene list",
+                                accept = c('.txt')
+                              )),
+                              hidden(fileInput(
                                 "filecolor",
                                 label = "Load color list",
                                 accept = c('.color.txt')
+                              ))
+                            )
+                            ,
+                            hidden(div(
+                              id = "startoff",
+                              box(
+                                selectInput("selectgenelistoptions", "Select Gene list", choices = "common"),
+                                radioButtons("radiodataoption", "select data", choices = "Load data file"),
+                                selectInput("selectdot", "Select dot type", choices = kDotOptions),
+                                selectInput("selectline", "Select line type", choices = kLineOptions),
+                                textInput("textnickname", "Nick Name"),
+                                actionButton("actionoptions", "Update nick name")
+                              ),
+                              box(
+                                colourInput("colourhex", "Select color HEX"),
+                                textInput("textrgbtohex", "RGB"),
+                                actionButton("actionmyrgb", "Update HEX color")
                               )
-                            ),
-                            hidden(div(id = "startoff", box(
-                              selectInput("selectgenelistoptions", "Select Gene list", choices = "common"),
-                              radioButtons("radiodataoption", "select data", choices = "Load data file"),
-                              selectInput("selectdot", "Select dot type", choices = kDotOptions),
-                              selectInput("selectline", "Select line type", choices = kLineOptions),
-                              textInput("textnickname", "Nick Name"),
-                              actionButton("actionoptions", "Update nick name")
-                            ),
-                            box(
-                              colourInput("colourhex", "Select color HEX"),
-                              textInput("textrgbtohex", "RGB"),
-                              actionButton("actionmyrgb", "Update HEX color")
-                            )))
+                            ))
                           )),
                   
                   # main plot tab
@@ -405,39 +449,48 @@ ui <- dashboardPage(
                           fluidRow(box(
                             width = 12, plotOutput("plot")
                           )),
-                          hidden( div( id = "hidemainplot",  fluidRow(
-                            box(
-                              width = 4,
-                              sliderInput(
-                                "sliderplotBinRange",
-                                label = h3("Plot Range:"),
-                                min = 0,
-                                max = 80,
-                                value = c(0, 80)
-                              )
-                            ),
-                            box(
-                              title = "math",
-                              collapsed = TRUE,
-                              collapsible = T,
-                              width = 3,
-                              radioButtons(
-                                "myMath",
-                                "Set math function",
-                                choices = c("mean", "sum", "median", "var"),
-                                selected = "mean"
-                              )
-                            ),
-                            box(
-                              width = 3,
-                              selectInput(
-                                "kbrewer",
-                                "quick color set",
-                                choices = kBrewerList,
-                                selected = kBrewerList[3]
+                          hidden(div(
+                            id = "hidemainplot",  fluidRow(
+                              box(
+                                width = 6,
+                                sliderInput(
+                                  "sliderplotBinRange",
+                                  label = "Plot Bin Range:",
+                                  min = 0,
+                                  max = 80,
+                                  value = c(0, 80)
+                                ),
+                                sliderInput(
+                                  "sliderplotYRange",
+                                  label = "Plot Y hight:",
+                                  min = 0,
+                                  max = 1,
+                                  value = c(0, 1)
+                                )
+                              ),
+                              box(
+                                title = "math",
+                                collapsed = TRUE,
+                                collapsible = T,
+                                width = 3,
+                                radioButtons(
+                                  "myMath",
+                                  "Set math function",
+                                  choices = c("mean", "sum", "median", "var"),
+                                  selected = "mean"
+                                )
+                              ),
+                              box(
+                                width = 3,
+                                selectInput(
+                                  "kbrewer",
+                                  "quick color set",
+                                  choices = kBrewerList,
+                                  selected = kBrewerList[3]
+                                )
                               )
                             )
-                          ))))
+                          )))
                 ))
 )
 

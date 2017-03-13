@@ -4,20 +4,10 @@ load file and build data list ... plot with controls
 
 make orgonize trigers to loading data file, changing disply options, and changing option
 
- update with observeEvent()
- observeEvent(input$do, {
-    session$sendCustomMessage(type = 'testmessage',
-      message = 'Thank you for clicking')
-  })
-  
-  
-wrap objects to be hiden as hiden when created
-have show be a list of items
-
 ###plot flow control###
 
 plot is updated by
-axis, hight, width, smooth, rf, norm bin, log2, labels
+axis, smooth, rf, norm bin, log2, labels
 
 plot options is updated by
 : and triggers plot 
@@ -40,5 +30,11 @@ gene tools ...
 # file size restriction the set correctly?
 # load remote files TODO
 # warning messages TODO
+# try and have nickname not trigger apply math only update plot
 # load bg files TODO
 # restrict gene list to all loaded files or just plotted option? 
+# if y slider gets too cumbersum the switch to numiricInputs
+numericInput("inNumber", "Number input:",
+                   min = 1, max = 20, value = 5, step = 0.5),
+      numericInput("inNumber2", "Number input 2:",
+                   min = 1, max = 20, value = 5, step = 0.5),

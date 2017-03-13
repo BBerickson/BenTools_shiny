@@ -375,9 +375,18 @@ LinesLablesList <- function(use_pos_plot_ticks,
   )
 }
 
+# help get min and max from apply math data set
+MyYSetValues <- function(apply_math, xBinRange) {
+  
+  group_by(apply_math, set) %>%
+    filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
+    ungroup() %>%
+    summarise(min(value, na.rm = T)*.9, max(value, na.rm = T)*1.1) %>% unlist(.,use.names=FALSE) %>% round(.,3)
+}
+
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, xBinRange, plot_options, use_smooth = 0, legend_space = 1) {
+  function(list_long_data_frame, xBinRange, plot_options, yBinRange, use_smooth = 0, legend_space = 1) {
     print("ggplot")
     gp <-
         ggplot(
@@ -436,8 +445,7 @@ GGplotLineDot <-
         legend.key.height = unit(legend_space, "line"),
         legend.text = element_text(size = 9)
       )  +
-      coord_cartesian(xlim = xBinRange)
-      #coord_cartesian(xlim = use_x_limits, ylim = unlist(use_y_limits))
+      coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
     #suppressMessages(print(gp))
     return(gp)
   }
