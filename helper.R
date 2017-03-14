@@ -326,53 +326,70 @@ YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
   use_y_label
 }
 
+
+
 # Sets plot lines and lables fix
-LinesLablesList <- function(use_pos_plot_ticks,
-                        use_label_plot_ticks,
-                        use_virtical_line_type = c(1,1,1,1)
-                                               ){
+LinesLablesList <- function(mytype = "543", 
+                            body1bin = 20, 
+                            body1bp = 500, 
+                            body2bin = 40, 
+                            body2bp = 500,
+                            binbp = 100,
+                            everybp = 500,
+                            tssbin = 15,
+                            tesbin = 45,
+                            totbins = 80){
   
+  everybin <- (everybp/binbp)
+ 
+  if(mytype == "543"){
+    LOC1 <- rev(seq(body1bin + 1, by = -everybin, length.out = (body1bin/everybin) + 1))
+    LOC1[near(LOC1, tssbin, tol = everybin -1)] <- tssbin
+    LOC2 <- seq(body2bin, by = everybin, length.out = (body2bin/everybin) + 1)
+    LOC2[near(LOC2, tesbin, tol = everybin -1)] <- tesbin
+    LOCname1 <- rev(seq(body1bp, by = -everybp, length.out = (body1bin/everybin) + 1))
+    LOCname1[near(LOC1, tssbin, tol = everybin -1)] <- "TSS"
+    LOCname2 <- abs(seq(-body2bp, by = binbp * everybin, length.out = (body2bin/everybin) + 1))
+    LOCname2[near(LOC2, tesbin, tol = everybin -1)] <- "TES"
+    use_plot_breaks <- c(LOC1, LOC2)
+    use_plot_breaks_labels <- c(LOCname1, LOCname2)
+    use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin)
+  } else if (mytype == "5"){
+    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin
+    use_plot_breaks_labels <- rev(seq(tssbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
+    use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
+    use_virtical_line <- c(tssbin, NA, NA, NA)
+  } else if(mytype == "3"){
+    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin
+    use_plot_breaks_labels <- rev(seq(tesbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
+    use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -1)] <- "TES"
+    use_virtical_line <- c(NA, tesbin, NA, NA)
+  } else{
+    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks_labels <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_virtical_line <- c(tssbin, tesbin, NA, NA)
+    }
   
-  if (length(use_label_plot_ticks) != length(use_pos_plot_ticks)) {
-    # fix tkmessageBox(message = "The number of Positions and labels are unequal", icon = "error")
-    return ()
-  }
-  
-  use_plot_breaks <- c(
-    # Destring(tclvalue(tcl_pos_one_line)),
-    # Destring(tclvalue(tcl_pos_two_line)),
-    # Destring(tclvalue(tcl_pos_three_line)),
-    # Destring(tclvalue(tcl_pos_four_line)),
-    use_pos_plot_ticks
-  )
-  use_plot_breaks[use_plot_breaks == 0] <- NA
-  
-  use_plot_breaks_labels <- c(
-    # tclvalue(tcl_one_tss_tts_option),
-    # tclvalue(tcl_two_tss_tts_option),
-    # tclvalue(tcl_three_tss_tts_option),
-    # tclvalue(tcl_four_tss_tts_option),
-    use_label_plot_ticks
-  )
-  
+
   use_virtical_line_color <- c("green", "red", "black", "black")
-  use_plot_breaks_labels <-
-    use_plot_breaks_labels[!is.na(use_plot_breaks)]
-  use_virtical_line_type <-
-    use_virtical_line_type[!is.na(use_plot_breaks[1:4])]
-  use_virtical_line_color <-
-    use_virtical_line_color[!is.na(use_plot_breaks[1:4])]
-  use_virtical_line <-
-    use_plot_breaks[1:4][!is.na(use_plot_breaks[1:4])]
-  use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
   
-  virtical_line_data_frame <- data.frame(
+  use_virtical_line_type <- c(1,1,1,1)
+  
+  use_virtical_line_type <-
+    use_virtical_line_type[!is.na(use_virtical_line)]
+  use_virtical_line_color <-
+    use_virtical_line_color[!is.na(use_virtical_line)]
+  
+  list(myline = virtical_line_data_frame <- data.frame(
     use_virtical_line,
     use_virtical_line_type,
     use_virtical_line_color,
-    use_plot_breaks,
     stringsAsFactors = FALSE
-  )
+  ),
+  mybrakes = use_plot_breaks,
+  mylables = use_plot_breaks_labels)
 }
 
 # help get min and max from apply math data set
