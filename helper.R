@@ -326,53 +326,75 @@ YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
   use_y_label
 }
 
+
+
 # Sets plot lines and lables fix
-LinesLablesList <- function(use_pos_plot_ticks,
-                        use_label_plot_ticks,
-                        use_virtical_line_type = c(1,1,1,1)
-                                               ){
+LinesLablesList <- function(body1bin = 20, 
+                            body1bp = 500, 
+                            body2bin = 40, 
+                            body2bp = 500,
+                            binbp = 100,
+                            everybin = 5,
+                            tssbin = 15,
+                            tesbin = 45){
   
+  LOC1 <- rev(seq(body1bin + 1, by = -everybin, length.out = (body1bin/everybin) + 1))
+  LOC1[near(LOC1, tssbin, tol = 4)] <- tssbin
+  LOC2 <- rev(seq(body2bin, by = everybin, length.out = (body2bin/everybin) + 1))
   
-  if (length(use_label_plot_ticks) != length(use_pos_plot_ticks)) {
-    # fix tkmessageBox(message = "The number of Positions and labels are unequal", icon = "error")
-    return ()
-  }
+  LOCname1 <- rev(seq(body1bp, by = -(binbp * everybin), length.out = (body1bin/everybin) + 1))
+  LOCname1[near(LOC1, tssbin, tol = 4)] <- "TSS"
+  LOCname2 <- rev(seq(body2bp, by = binbp * everybin, length.out = (body2bin/everybin) + 1))
   
-  use_plot_breaks <- c(
-    # Destring(tclvalue(tcl_pos_one_line)),
-    # Destring(tclvalue(tcl_pos_two_line)),
-    # Destring(tclvalue(tcl_pos_three_line)),
-    # Destring(tclvalue(tcl_pos_four_line)),
-    use_pos_plot_ticks
-  )
-  use_plot_breaks[use_plot_breaks == 0] <- NA
+
+
+  # rev(seq(500,by=-500,length.out = (20+1)/5)) #replace 0 with "TSS
+  # rev(seq(20+1,by=-5,length.out = (20+1)/5)) 
+  # rev(seq("bodybp",by=("bp"*"everybin"),length.out = ("bodybin"+1/"everybin")))
+  # rev(seq("bodybin",by="everybin",length.out = ("bodybin"+1/"everybin")))
+  # rev(seq(-500,by=500,length.out = (40+1)/5))
+  # rev(seq(40,by=5,length.out = (40+1)/5))
   
-  use_plot_breaks_labels <- c(
-    # tclvalue(tcl_one_tss_tts_option),
-    # tclvalue(tcl_two_tss_tts_option),
-    # tclvalue(tcl_three_tss_tts_option),
-    # tclvalue(tcl_four_tss_tts_option),
-    use_label_plot_ticks
-  )
-  
-  use_virtical_line_color <- c("green", "red", "black", "black")
-  use_plot_breaks_labels <-
-    use_plot_breaks_labels[!is.na(use_plot_breaks)]
-  use_virtical_line_type <-
-    use_virtical_line_type[!is.na(use_plot_breaks[1:4])]
-  use_virtical_line_color <-
-    use_virtical_line_color[!is.na(use_plot_breaks[1:4])]
-  use_virtical_line <-
-    use_plot_breaks[1:4][!is.na(use_plot_breaks[1:4])]
-  use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
-  
-  virtical_line_data_frame <- data.frame(
-    use_virtical_line,
-    use_virtical_line_type,
-    use_virtical_line_color,
-    use_plot_breaks,
-    stringsAsFactors = FALSE
-  )
+  # if (length(use_label_plot_ticks) != length(use_pos_plot_ticks)) {
+  #   # fix tkmessageBox(message = "The number of Positions and labels are unequal", icon = "error")
+  #   return ()
+  # }
+  # 
+  # use_plot_breaks <- c(
+  #   # Destring(tclvalue(tcl_pos_one_line)),
+  #   # Destring(tclvalue(tcl_pos_two_line)),
+  #   # Destring(tclvalue(tcl_pos_three_line)),
+  #   # Destring(tclvalue(tcl_pos_four_line)),
+  #   use_pos_plot_ticks
+  # )
+  # use_plot_breaks[use_plot_breaks == 0] <- NA
+  # 
+  # use_plot_breaks_labels <- c(
+  #   # tclvalue(tcl_one_tss_tts_option),
+  #   # tclvalue(tcl_two_tss_tts_option),
+  #   # tclvalue(tcl_three_tss_tts_option),
+  #   # tclvalue(tcl_four_tss_tts_option),
+  #   use_label_plot_ticks
+  # )
+  # 
+  # use_virtical_line_color <- c("green", "red", "black", "black")
+  # use_plot_breaks_labels <-
+  #   use_plot_breaks_labels[!is.na(use_plot_breaks)]
+  # use_virtical_line_type <-
+  #   use_virtical_line_type[!is.na(use_plot_breaks[1:4])]
+  # use_virtical_line_color <-
+  #   use_virtical_line_color[!is.na(use_plot_breaks[1:4])]
+  # use_virtical_line <-
+  #   use_plot_breaks[1:4][!is.na(use_plot_breaks[1:4])]
+  # use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
+  # 
+  # virtical_line_data_frame <- data.frame(
+  #   use_virtical_line,
+  #   use_virtical_line_type,
+  #   use_virtical_line_color,
+  #   use_plot_breaks,
+  #   stringsAsFactors = FALSE
+  # )
 }
 
 # help get min and max from apply math data set
