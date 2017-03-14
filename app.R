@@ -49,11 +49,11 @@ server <- function(input, output, session) {
       if (LIST_DATA$STATE[1] == 0) {
         print("1st slider and plot lines Ylable")
         reactive_values$Y_Axis_Lable <- YAxisLable()
-        reactive_values$Lines_Lables_List <-
-          LinesLablesList(
-            use_pos_plot_ticks = c(LIST_DATA$x_plot_range[1:2]),
-            use_label_plot_ticks = c(LIST_DATA$x_plot_range[1:2])
-          )
+        # reactive_values$Lines_Lables_List <-
+        #   LinesLablesList(
+        #     use_pos_plot_ticks = c(LIST_DATA$x_plot_range),
+        #     use_label_plot_ticks = c(LIST_DATA$x_plot_range)
+        #   )
         updateSliderInput(
           session,
           "sliderplotBinRange",
@@ -436,7 +436,7 @@ ui <- dashboardPage(
                                 textInput("textnickname", "Nick Name"),
                                 actionButton("actionoptions", "Update nick name")
                               ),
-                              box(
+                              box(width = 3,
                                 colourInput("colourhex", "Select color HEX"),
                                 textInput("textrgbtohex", "RGB"),
                                 actionButton("actionmyrgb", "Update HEX color")
@@ -451,8 +451,15 @@ ui <- dashboardPage(
                           )),
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
+                              box(width = 4, collapsible = TRUE,
+                                  selectInput("selectlineslables", 
+                                              label = "quick set", 
+                                              choices = c("543","5'","3'","4")
+                                              )
+                                
+                              ),
                               box(
-                                width = 6,
+                                width = 6, collapsible = TRUE,
                                 sliderInput(
                                   "sliderplotBinRange",
                                   label = "Plot Bin Range:",
