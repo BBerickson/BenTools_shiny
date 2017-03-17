@@ -214,7 +214,7 @@ ApplyMath <-
            use_math, 
            r_checkbox_gene_relative_frequency,
            sel_list = NULL) {
-    
+    print("apply math fun")
     table_file = list_data$table_file
     gene_file = list_data$gene_file
     gene_info = list_data$gene_info
@@ -243,7 +243,7 @@ ApplyMath <-
             mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
         }
       }
-      
+      print("data parced")
       if (is.null(names(list_data_frame))) {
         print("nothing to plot")
         return(NULL)
@@ -270,6 +270,7 @@ ApplyMath <-
 
 # gather relavent plot option data
 MakePlotOptionFrame <- function(list_data){
+  print("plot options fun")
   gene_info <- list_data$gene_info
   list_data_frame <- NULL
   for (i in names(gene_info)) {
@@ -340,6 +341,7 @@ LinesLablesList <- function(mytype = "543",
                             tssbin = 15,
                             tesbin = 45,
                             totbins = 80){
+  print("lines and lables fun")
   
   everybin <- (everybp/binbp)
  
@@ -405,7 +407,7 @@ MyYSetValues <- function(apply_math, xBinRange) {
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, xBinRange, plot_options, yBinRange, use_smooth = 0, legend_space = 1) {
+  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth = 0, legend_space = 1) {
     print("ggplot")
     gp <-
         ggplot(
@@ -436,16 +438,16 @@ GGplotLineDot <-
       scale_shape_manual(name = "Sample", values = plot_options$mydot) +
       scale_linetype_manual(name = "Sample", values = plot_options$myline) +
       # xlab(use_x_label) + ylab(use_y_label) +  # Set axis labels
-      # scale_x_continuous(breaks = use_plot_breaks,
-      #                    labels = use_plot_breaks_labels) +
-      # 
-      # geom_vline(
-      #   data = virtical_line_data_frame,
-      #   aes(xintercept = use_virtical_line),
-      #   size = 2,
-      #   linetype = virtical_line_data_frame$use_virtical_line_type,
-      #   color = virtical_line_data_frame$use_virtical_line_color
-      # ) +
+      scale_x_continuous(breaks = line_list$mybrakes,
+                         labels = line_list$mylables) +
+
+      geom_vline(
+        data = line_list$myline,
+        aes(xintercept = use_virtical_line),
+        size = 2,
+        linetype = line_list$myline$use_virtical_line_type,
+        color = line_list$myline$use_virtical_line_color
+      ) +
       theme_bw() +
       theme(panel.grid.minor = element_blank(),
             panel.grid.major = element_blank()) +

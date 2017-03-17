@@ -49,11 +49,17 @@ server <- function(input, output, session) {
       if (LIST_DATA$STATE[1] == 0) {
         print("1st slider and plot lines Ylable")
         reactive_values$Y_Axis_Lable <- YAxisLable()
-        # reactive_values$Lines_Lables_List <-
-        #   LinesLablesList(
-        #     use_pos_plot_ticks = c(LIST_DATA$x_plot_range),
-        #     use_label_plot_ticks = c(LIST_DATA$x_plot_range)
-        #   )
+        reactive_values$Lines_Lables_List <-
+          LinesLablesList(mytype = "543", 
+                                      body1bin = 20, 
+                                      body1bp = 500, 
+                                      body2bin = 40, 
+                                      body2bp = 500,
+                                      binbp = 100,
+                                      everybp = 500,
+                                      tssbin = 15,
+                                      tesbin = 45,
+                                      totbins = 80)
         updateSliderInput(
           session,
           "sliderplotBinRange",
@@ -143,19 +149,12 @@ server <- function(input, output, session) {
                   input$myMath,
                   r_checkbox_gene_relative_frequency = 0)
       if (!is.null(reactive_values$Apply_Math)) {
-      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
-       updateSliderInput(session,
-                          "sliderplotYRange",
-                          min = myYBinRange[1],
-                          max = myYBinRange[2],
-                          value = myYBinRange,
-                         step = ((myYBinRange[2]-myYBinRange[1])/10))
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-             reactive_values$Plot_Options, myYBinRange
+             reactive_values$Plot_Options, myYBinRange, reactive_values$Lines_Lables_List
           )
       }
     }
@@ -175,7 +174,7 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange
+               reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
             )
         }
       }
@@ -196,7 +195,7 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange
+               reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
             )
         }
       }
@@ -227,7 +226,7 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange
+               reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
             )
         }
       }
@@ -280,12 +279,6 @@ server <- function(input, output, session) {
                         value = myYBinRange,
                         step = ((myYBinRange[2]-myYBinRange[1])/10))
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-      reactive_values$Plot_controler <-
-        GGplotLineDot(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-           reactive_values$Plot_Options, myYBinRange
-        )
       enable("hidemainplot")
     } else{
       disable("hidemainplot")
@@ -316,12 +309,6 @@ server <- function(input, output, session) {
                         value = myYBinRange,
                         step = ((myYBinRange[2]-myYBinRange[1])/10))
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-      reactive_values$Plot_controler <-
-        GGplotLineDot(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-           reactive_values$Plot_Options, myYBinRange
-        )
     }
   })
   
@@ -329,13 +316,13 @@ server <- function(input, output, session) {
   #plots when range bin slider is triggered ----
   observeEvent(input$sliderplotBinRange, {
     req(first_file())
-    print("slider")
     if (!is.null(reactive_values$Apply_Math)) {
+      print("bin slider")
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-           reactive_values$Plot_Options, input$sliderplotYRange
+           reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
         )
     }
   })
@@ -343,13 +330,13 @@ server <- function(input, output, session) {
   #plots when Y range slider is triggered ----
   observeEvent(input$sliderplotYRange, {
     req(first_file())
-    print("slider")
     if (!is.null(reactive_values$Apply_Math)) {
+      print("Y slider")
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-           reactive_values$Plot_Options, input$sliderplotYRange
+           reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
         )
     }
   })
@@ -378,7 +365,7 @@ server <- function(input, output, session) {
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-             reactive_values$Plot_Options, input$sliderplotYRange
+             reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
           )
       }
     }
