@@ -451,7 +451,11 @@ ui <- dashboardPage(
                           )),
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
+<<<<<<< HEAD
                               box(width = 4, collapsible = TRUE,
+=======
+                              box(width = 4, collapsible = TRUE
+>>>>>>> cd88d224ac57139f533c6341e313591acd79b4fd
                                   selectInput("selectlineslables", 
                                               label = "quick set", 
                                               choices = c("543","5'","3'","4")
