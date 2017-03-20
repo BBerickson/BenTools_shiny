@@ -1,7 +1,9 @@
 
 load file and build data list ... plot with controls
 
-truncakte displayed name
+add lines and lables control boxes
+
+
 make orgonize trigers to loading data file, changing disply options, and changing option
 
 ###plot flow control###

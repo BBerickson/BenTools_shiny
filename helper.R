@@ -239,8 +239,7 @@ ApplyMath <-
             ) != 0)
           list_data_frame[[i]] <-
             bind_rows(table_file[truefalse]) %>%
-            semi_join(., enesg, by = "gene") %>%
-            mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
+            semi_join(., enesg, by = "gene") 
         }
       }
       print("data parced")
@@ -256,13 +255,15 @@ ApplyMath <-
         ungroup() %>%
         group_by(set, bin) %>%
         summarise(value = get(use_math)(score, na.rm = T)) %>%
-        ungroup()
+        ungroup() %>%
+        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
       
     } else {
       list_long_data_frame <- bind_rows(list_data_frame) %>%
         group_by(set, bin) %>%
         summarise(value = get(use_math)(score, na.rm = T)) %>%
-        ungroup()
+        ungroup() %>%
+        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
     }
     
     return(list_long_data_frame)
@@ -399,10 +400,12 @@ LinesLablesList <- function(mytype = "543",
 # help get min and max from apply math data set
 MyYSetValues <- function(apply_math, xBinRange) {
   
-  group_by(apply_math, set) %>%
+  tt <- group_by(apply_math, set) %>%
     filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
     ungroup() %>%
-    summarise(min(value, na.rm = T)*.9, max(value, na.rm = T)*1.1) %>% unlist(.,use.names=FALSE) %>% round(.,3)
+    summarise(min(value, na.rm = T), max(value, na.rm = T)) %>% 
+    unlist(.,use.names=FALSE) %>% round(.,4)
+  tt <- c(tt, tt[1]-tt[2]*.1, tt[2]+tt[2]*.1) 
 }
 
 # main ggplot function

@@ -8,7 +8,7 @@ source("helper.R")
 
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 20MB.
-options(shiny.maxRequestSize = 20 * 1024 ^ 2)
+options(shiny.maxRequestSize = 30 * 1024 ^ 2)
 
 
 
@@ -87,6 +87,8 @@ server <- function(input, output, session) {
   # update when data file is loaded ----
   observeEvent(first_file(), {
     print("update load file")
+    addClass("radiodataoption",class = "ofhidden")
+    addClass("checkboxonoff",class = "ofhidden")
     updateRadioButtons(
       session,
       "radiodataoption",
@@ -154,7 +156,7 @@ server <- function(input, output, session) {
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-             reactive_values$Plot_Options, myYBinRange, reactive_values$Lines_Lables_List
+             reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
           )
       }
     }
@@ -274,10 +276,10 @@ server <- function(input, output, session) {
       myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
       updateSliderInput(session,
                         "sliderplotYRange",
-                        min = myYBinRange[1],
-                        max = myYBinRange[2],
-                        value = myYBinRange,
-                        step = ((myYBinRange[2]-myYBinRange[1])/10))
+                        min = myYBinRange[3],
+                        max = myYBinRange[4],
+                        value = myYBinRange[1:2],
+                        step = ((myYBinRange[2]-myYBinRange[1])/20))
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       enable("hidemainplot")
     } else{
@@ -304,10 +306,10 @@ server <- function(input, output, session) {
       myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
       updateSliderInput(session,
                         "sliderplotYRange",
-                        min = myYBinRange[1],
-                        max = myYBinRange[2],
-                        value = myYBinRange,
-                        step = ((myYBinRange[2]-myYBinRange[1])/10))
+                        min = myYBinRange[3],
+                        max = myYBinRange[4],
+                        value = myYBinRange[1:2],
+                        step = ((myYBinRange[2]-myYBinRange[1])/20))
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
     }
   })
@@ -389,6 +391,7 @@ ui <- dashboardPage(
     )
   )),
   dashboardBody(useShinyjs(),
+                inlineCSS(list(.ofhidden = "overflow: auto")),
                 tabItems(
                   # load data tab
                   tabItem(tabName = "loaddata",
