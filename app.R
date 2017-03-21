@@ -49,17 +49,7 @@ server <- function(input, output, session) {
       if (LIST_DATA$STATE[1] == 0) {
         print("1st slider and plot lines Ylable")
         reactive_values$Y_Axis_Lable <- YAxisLable()
-        reactive_values$Lines_Lables_List <-
-          LinesLablesList(mytype = "543", 
-                                      body1bin = 20, 
-                                      body1bp = 500, 
-                                      body2bin = 40, 
-                                      body2bp = 500,
-                                      binbp = 100,
-                                      everybp = 500,
-                                      tssbin = 15,
-                                      tesbin = 45,
-                                      totbins = 80)
+        reactive_values$Lines_Lables_List <- LinesLablesList()
         updateSliderInput(
           session,
           "sliderplotBinRange",
@@ -67,6 +57,10 @@ server <- function(input, output, session) {
           max = LIST_DATA$x_plot_range[2],
           value = LIST_DATA$x_plot_range
         )
+        updateNumericInput(session,"numericbody1", min = 1, max = LIST_DATA$x_plot_range[2])
+        updateNumericInput(session,"numericbody2", min = 1, max = LIST_DATA$x_plot_range[2])
+        updateNumericInput(session,"numerictss", min = 1, max = LIST_DATA$x_plot_range[2])
+        updateNumericInput(session,"numerictes", min = 1, max = LIST_DATA$x_plot_range[2])
         LIST_DATA$STATE[1] <<- 1
       }
       show("hidemainplot")
@@ -343,6 +337,33 @@ server <- function(input, output, session) {
     }
   })
 
+  # quick lines and lables preset change #TODO finish update
+  observeEvent(input$selectlineslables, {
+    req(first_file())
+    print("update lines and lables")
+    # if(input$selectlineslables == "543"){
+    #   updateNumericInput(session,"numericbody1", value = 20)
+    #   updateNumericInput(session,"numericbody2", value = 40)
+    #   updateNumericInput(session,"numerictss", value = 15)
+    #   updateNumericInput(session,"numerictes", value = 45)
+    # } #"543","5'","3'","4"
+    reactive_values$Lines_Lables_List <- 
+      LinesLablesList(input$selectlineslables,
+                      input$numericbody1,
+                    input$numericbody2,
+                    input$numerictss,
+                    input$numerictes,
+                    input$numericbinsize,
+                    LIST_DATA$x_plot_range[2])
+    reactive_values$Plot_controler <-
+      GGplotLineDot(
+        reactive_values$Apply_Math,
+        input$sliderplotBinRange,
+        reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+      )
+    
+  })
+  
   # quick color set change ----
   observeEvent(input$kbrewer, {
     req(first_file())
@@ -445,7 +466,12 @@ ui <- dashboardPage(
                                   selectInput("selectlineslables", 
                                               label = "quick set", 
                                               choices = c("543","5'","3'","4")
-                                              )
+                                              ),
+                                  numericInput("numericbody1", "5|4 bin",value = 20),
+                                  numericInput("numericbody2", "4|3 bin",value = 40),
+                                  numericInput("numerictss", "TSS bin",value = 15),
+                                  numericInput("numerictes", "TES bin",value = 45),
+                                  numericInput("numericbinsize", "bp/bin",value = 100, min = 20, max = 1000, step = 5)
                                 
                               ),
                               box(

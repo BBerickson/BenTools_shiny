@@ -1,10 +1,10 @@
 
 load file and build data list ... plot with controls
 
-add lines and lables control boxes
+add lines and lables action button(enable/disable) add header make collaped, make every bp box and move quick set to side bar
+update quick set, and add protection for passing numbers out of bounds
+try and brake function
 
-
-make orgonize trigers to loading data file, changing disply options, and changing option
 
 ###plot flow control###
 
@@ -17,6 +17,8 @@ plot options is updated by
 apply math updated by
 rg, norm factor: and triggers plot
 
+# fix up load files with controls and warning messages
+
 
 
 save plot ... make markdown file?
@@ -28,6 +30,7 @@ load color files (add option for names to match?)
 
 gene tools ...
 
+# add more lines and lables presets
 # test loading multiple files
 # file size restriction the set correctly?
 # load remote files TODO

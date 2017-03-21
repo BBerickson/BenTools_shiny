@@ -38,7 +38,7 @@ LIST_DATA <- list(
   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
   clust = list(), # Cluster holder
   x_plot_range = c(0, 0),
-  STATE = c(0, "common")
+  STATE = c(0, "common") # flow control, gene list flow control
 )      
 
 
@@ -150,6 +150,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       }
     } else {
       list_data$x_plot_range <- c(1, num_bins)
+
     }
     color_safe <-
       (length(list_data$table_file) + 1) %% length(kListColorSet)
@@ -334,16 +335,16 @@ YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
 
 LinesLablesList <- function(mytype = "543", 
                             body1bin = 20, 
-                            body1bp = 500, 
                             body2bin = 40, 
-                            body2bp = 500,
-                            binbp = 100,
-                            everybp = 500,
                             tssbin = 15,
                             tesbin = 45,
-                            totbins = 80){
+                            binbp = 100,
+                            totbins = 80,
+                            everybp = 500){
   print("lines and lables fun")
-  
+  print(mytype)
+  body1bp = (body1bin-tssbin)*binbp
+  body2bp = (tesbin-body2bin)*binbp
   everybin <- (everybp/binbp)
  
   if(mytype == "543"){
@@ -358,13 +359,13 @@ LinesLablesList <- function(mytype = "543",
     use_plot_breaks <- c(LOC1, LOC2)
     use_plot_breaks_labels <- c(LOCname1, LOCname2)
     use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin)
-  } else if (mytype == "5"){
+  } else if (mytype == "5'"){
     use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin
     use_plot_breaks_labels <- rev(seq(tssbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
     use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
     use_virtical_line <- c(tssbin, NA, NA, NA)
-  } else if(mytype == "3"){
+  } else if(mytype == "3'"){
     use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin
     use_plot_breaks_labels <- rev(seq(tesbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
@@ -385,6 +386,7 @@ LinesLablesList <- function(mytype = "543",
     use_virtical_line_type[!is.na(use_virtical_line)]
   use_virtical_line_color <-
     use_virtical_line_color[!is.na(use_virtical_line)]
+  use_virtical_line <- use_virtical_line[!is.na(use_virtical_line)]
   
   list(myline = virtical_line_data_frame <- data.frame(
     use_virtical_line,
