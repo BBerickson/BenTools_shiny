@@ -1,10 +1,10 @@
 
 load file and build data list ... plot with controls
 
-add lines and lables action button(enable/disable) add header make collaped, make every bp box and move quick set to side bar
-update quick set, and add protection for passing numbers out of bounds
-try and brake function
 
+update function to add .5 and 1/2 bin, try and brake function
+
+load file has stuff apear sooner
 
 ###plot flow control###
 

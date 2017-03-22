@@ -340,13 +340,12 @@ LinesLablesList <- function(mytype = "543",
                             tesbin = 45,
                             binbp = 100,
                             totbins = 80,
-                            everybp = 500){
+                            everybin = 5){
   print("lines and lables fun")
-  print(mytype)
-  body1bp = (body1bin-tssbin)*binbp
-  body2bp = (tesbin-body2bin)*binbp
-  everybin <- (everybp/binbp)
- 
+  body1bp  <- (body1bin-tssbin)*binbp
+  body2bp  <- (tesbin-body2bin)*binbp
+  everybp <- everybin * binbp
+ if(everybin > 0 & everybp > 0){
   if(mytype == "543"){
     LOC1 <- rev(seq(body1bin + 1, by = -everybin, length.out = (body1bin/everybin) + 1))
     LOC1[near(LOC1, tssbin, tol = everybin -1)] <- tssbin
@@ -376,11 +375,33 @@ LinesLablesList <- function(mytype = "543",
     use_plot_breaks_labels <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_virtical_line <- c(tssbin, tesbin, NA, NA)
     }
-  
+ } else {
+   if(mytype == "543"){
+     use_plot_breaks <- c(tssbin, tesbin, body1bin, body2bin)
+     use_plot_breaks_labels <- c("TSS", "TES", "5|4", "4|3")
+     use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin)
+   } else if (mytype == "5'"){
+     use_plot_breaks <- tssbin
+     use_plot_breaks_labels <- "TSS"
+     use_virtical_line <- c(tssbin, NA, NA, NA)
+   } else if(mytype == "3'"){
+     use_plot_breaks <- tesbin
+     use_plot_breaks_labels <- "TES"
+     use_virtical_line <- c(NA, tesbin, NA, NA)
+   } else{
+     use_plot_breaks <- c(tssbin, tesbin)
+     use_plot_breaks_labels <- c("TSS", "TES")
+     use_virtical_line <- c(tssbin, tesbin, NA, NA)
+   }
+  }
 
   use_virtical_line_color <- c("green", "red", "black", "black")
   
   use_virtical_line_type <- c(1,1,1,1)
+  use_plot_breaks <- na_if(use_plot_breaks, 0)
+  use_plot_breaks_labels <- use_plot_breaks_labels[!is.na(use_plot_breaks)]
+  use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
+  
   
   use_virtical_line_type <-
     use_virtical_line_type[!is.na(use_virtical_line)]
@@ -397,6 +418,22 @@ LinesLablesList <- function(mytype = "543",
   mybrakes = use_plot_breaks,
   mylables = use_plot_breaks_labels)
 
+}
+
+# lines and labels preset helper
+LinesLablesPreSet <- function(mytype){
+  if(mytype == "543 bins 20,20,40"){
+    tt <- c(20,40,15,45,100,5)
+  } else if (mytype == "543 bins 10,10,10"){ 
+    tt <- c(10,20,5,25,100,5)
+  } else if(mytype == "5' 1k 1k 80bins"){
+    tt <- c(0,0,40,0,25,20)
+  } else if(mytype == "3'"){
+    tt <- c(0,0,0,40,25,20)
+  } else{
+    tt <- c(0,0,15,45,100,5)
+  }
+  tt
 }
 
 # help get min and max from apply math data set

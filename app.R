@@ -32,6 +32,10 @@ server <- function(input, output, session) {
       "selectgenelistonoff",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
     )
+    toggle(
+      "selectlineslables",
+      condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
+    )
     toggle("actionmyplot",
            condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] == 2))
   })
@@ -250,6 +254,7 @@ server <- function(input, output, session) {
                         LIST_DATA$gene_info)
         LIST_DATA$STATE[1] <<- 2
         toggle("actionmyplot", condition = (input$tabs == "mainplot"))
+        disable("selectlineslables")
         disable("hidemainplot")
       } else {
         print("just updating what is seen")
@@ -276,8 +281,10 @@ server <- function(input, output, session) {
                         step = ((myYBinRange[2]-myYBinRange[1])/20))
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       enable("hidemainplot")
+      enable("selectlineslables")
     } else{
       disable("hidemainplot")
+      disable("selectlineslables")
     }
     hide("actionmyplot")
     LIST_DATA$STATE[1] <<- 1
@@ -337,31 +344,79 @@ server <- function(input, output, session) {
     }
   })
 
-  # quick lines and lables preset change #TODO finish update
+  # quick lines and lables preset change #TODO finish update ----
   observeEvent(input$selectlineslables, {
     req(first_file())
     print("update lines and lables")
-    # if(input$selectlineslables == "543"){
-    #   updateNumericInput(session,"numericbody1", value = 20)
-    #   updateNumericInput(session,"numericbody2", value = 40)
-    #   updateNumericInput(session,"numerictss", value = 15)
-    #   updateNumericInput(session,"numerictes", value = 45)
-    # } #"543","5'","3'","4"
+    myset <- LinesLablesPreSet(input$selectlineslables)
+      updateNumericInput(session,"numericbody1", value = myset[1])
+      updateNumericInput(session,"numericbody2", value = myset[2])
+      updateNumericInput(session,"numerictss", value = myset[3])
+      updateNumericInput(session,"numerictes", value = myset[4])
+      updateNumericInput(session,"numericbinsize", value = myset[5])
+      updateNumericInput(session,"numericlabelspaceing", value = myset[6])
+   
+    
     reactive_values$Lines_Lables_List <- 
-      LinesLablesList(input$selectlineslables,
-                      input$numericbody1,
-                    input$numericbody2,
-                    input$numerictss,
-                    input$numerictes,
-                    input$numericbinsize,
-                    LIST_DATA$x_plot_range[2])
+      LinesLablesList(strsplit(input$selectlineslables, " ")[[1]][1],
+                      myset[1],
+                      myset[2],
+                      myset[3],
+                      myset[4],
+                      myset[5],
+                    LIST_DATA$x_plot_range[2],
+                    myset[6])
+   
+  })
+  
+  # action button update lines and lables ----
+  observeEvent(input$actionlineslabels,{
+    req(first_file())
+    print("action lines and lables")
+    myset <- c(input$numericbody1,
+    input$numericbody2,
+    input$numerictss,
+    input$numerictes,
+    input$numericbinsize,
+    input$numericlabelspaceing)
+    print(myset)
+    myset[is.na(myset)] <- 0
+    
+    for(i in seq_along(myset)){
+        if(myset[i] < 0){
+          myset[i] <- 0
+        } else if(i %in% c(1:4,6) & myset[i] > LIST_DATA$x_plot_range[2]){
+          myset[i] <- LIST_DATA$x_plot_range[2]
+        }
+    }
+    updateNumericInput(session,"numericbody1", value = myset[1])
+    updateNumericInput(session,"numericbody2", value = myset[2])
+    updateNumericInput(session,"numerictss", value = myset[3])
+    updateNumericInput(session,"numerictes", value = myset[4])
+    updateNumericInput(session,"numericbinsize", value = myset[5])
+    updateNumericInput(session,"numericlabelspaceing", value = myset[6])
+    
+    reactive_values$Lines_Lables_List <- 
+      LinesLablesList(strsplit(input$selectlineslables, " ")[[1]][1],
+                      myset[1],
+                      myset[2],
+                      myset[3],
+                      myset[4],
+                      myset[5],
+                      LIST_DATA$x_plot_range[2],
+                      myset[6])
+    
+  })
+  
+  # observe lines and labes update and update plot ----
+  observeEvent(reactive_values$Lines_Lables_List,{
+    req(input$actionmyplot)
     reactive_values$Plot_controler <-
       GGplotLineDot(
         reactive_values$Apply_Math,
         input$sliderplotBinRange,
         reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
       )
-    
   })
   
   # quick color set change ----
@@ -408,7 +463,11 @@ ui <- dashboardPage(
     hidden(
       checkboxGroupInput("checkboxonoff", h3("Plot on/off"), choices = "Load data file"),
       selectInput("selectgenelistonoff", "Select Gene list", choices = "common"),
-      actionButton("actionmyplot", "Update Plot")
+      actionButton("actionmyplot", "Update Plot"),
+      selectInput("selectlineslables", 
+                  label = "quick set lines and lables", 
+                  choices = c("543 bins 20,20,40","543 bins 10,10,10", "5' 1k 1k 80bins" ,"3'","4")
+      )
     )
   )),
   dashboardBody(useShinyjs(),
@@ -462,16 +521,14 @@ ui <- dashboardPage(
                           )),
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
-                              box(width = 4, collapsible = TRUE,
-                                  selectInput("selectlineslables", 
-                                              label = "quick set", 
-                                              choices = c("543","5'","3'","4")
-                                              ),
+                              box(title = "Lines and Labels", width = 4, collapsible = TRUE,
                                   numericInput("numericbody1", "5|4 bin",value = 20),
                                   numericInput("numericbody2", "4|3 bin",value = 40),
                                   numericInput("numerictss", "TSS bin",value = 15),
                                   numericInput("numerictes", "TES bin",value = 45),
-                                  numericInput("numericbinsize", "bp/bin",value = 100, min = 20, max = 1000, step = 5)
+                                  numericInput("numericbinsize", "bp/bin",value = 100, min = 20, max = 1000, step = 5),
+                                  numericInput("numericlabelspaceing", "every bin",value = 5),
+                                  actionButton("actionlineslabels", "Update Lines and Lables")
                                 
                               ),
                               box(
