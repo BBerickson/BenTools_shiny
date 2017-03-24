@@ -1,7 +1,7 @@
 
 load file and build data list ... plot with controls
 
-smooth, rf, norm bin, log2 and then YAxisLable()
+smooth, rf, norm bin, log2 and then YAxisLable()  
 
 ###plot flow control###
 
