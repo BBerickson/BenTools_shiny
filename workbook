@@ -2,8 +2,6 @@
 load file and build data list ... plot with controls
 
 
-update function to add .5 and 1/2 bin, try and brake function
-
 load file has stuff apear sooner
 
 ###plot flow control###

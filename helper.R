@@ -333,8 +333,7 @@ YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
 
 # Sets plot lines and lables fix
 
-LinesLablesList <- function(mytype = "543", 
-                            body1bin = 20, 
+LinesLablesList <- function(body1bin = 20, 
                             body2bin = 40, 
                             tssbin = 15,
                             tesbin = 45,
@@ -342,63 +341,87 @@ LinesLablesList <- function(mytype = "543",
                             totbins = 80,
                             everybin = 5){
   print("lines and lables fun")
-  body1bp  <- (body1bin-tssbin)*binbp
-  body2bp  <- (tesbin-body2bin)*binbp
+  if(tssbin > 0 & tesbin > 0 & (body1bin == 0 | body2bin == 0)){
+    mytype <- "4'"
+  } else if(tssbin == 0 & tesbin > 0){
+    mytype <- "3'"
+  } else if(tesbin == 0 & tssbin > 0){
+    mytype <- "5'"
+  } else if(tssbin > 0 & tesbin > 0 & body1bin > 0 & body2bin > 0){
+    mytype <- "543"
+  }else {
+    mytype <- "none"
+  }
   everybp <- everybin * binbp
- if(everybin > 0 & everybp > 0){
+ if(everybp > 0){
   if(mytype == "543"){
     LOC1 <- rev(seq(body1bin + 1, by = -everybin, length.out = (body1bin/everybin) + 1))
-    LOC1[near(LOC1, tssbin, tol = everybin -1)] <- tssbin
+    LOC1[near(LOC1, tssbin, tol = everybin -1)] <- tssbin + .5
+    LOC1[near(LOC1, body1bin, tol = everybin -1)] <- body1bin + .5
     LOC2 <- seq(body2bin, by = everybin, length.out = (body2bin/everybin) + 1)
-    LOC2[near(LOC2, tesbin, tol = everybin -1)] <- tesbin
-    LOCname1 <- rev(seq(body1bp, by = -everybp, length.out = (body1bin/everybin) + 1))
+    LOC2[near(LOC2, tesbin, tol = everybin -1)] <- tesbin + .5
+    LOC2[near(LOC2, body2bin, tol = everybin -1)] <- body2bin + .5
+    LOCname1 <- rev(seq((body1bin-tssbin)*binbp, by = -everybp, length.out = (body1bin/everybin) + 1))
     LOCname1[near(LOC1, tssbin, tol = everybin -1)] <- "TSS"
-    LOCname2 <- abs(seq(-body2bp, by = binbp * everybin, length.out = (body2bin/everybin) + 1))
+    LOCname2 <- abs(seq(-(tesbin-body2bin)*binbp, by = binbp * everybin, length.out = (body2bin/everybin) + 1))
     LOCname2[near(LOC2, tesbin, tol = everybin -1)] <- "TES"
     use_plot_breaks <- c(LOC1, LOC2)
     use_plot_breaks_labels <- c(LOCname1, LOCname2)
-    use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin)
+    use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin) + .5
   } else if (mytype == "5'"){
     use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
-    use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin
+    use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin + .5
     use_plot_breaks_labels <- rev(seq(tssbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
     use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
-    use_virtical_line <- c(tssbin, NA, NA, NA)
+    use_virtical_line <- c(tssbin, NA, NA, NA) + .5
   } else if(mytype == "3'"){
     use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
-    use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin
+    use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin + .5
     use_plot_breaks_labels <- rev(seq(tesbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
     use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -1)] <- "TES"
-    use_virtical_line <- c(NA, tesbin, NA, NA)
-  } else{
+    use_virtical_line <- c(NA, tesbin, NA, NA) + .5
+  } else if(mytype == "none"){
     use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_plot_breaks_labels <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
-    use_virtical_line <- c(tssbin, tesbin, NA, NA)
+    use_virtical_line <- c(NA, NA, NA, NA) + .5
+  } else{
+    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin + .5
+    use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin + .5
+    use_plot_breaks_labels <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
+    use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -1)] <- "TES"
+    use_virtical_line <- c(tssbin, tesbin, NA, NA) + .5
     }
  } else {
    if(mytype == "543"){
-     use_plot_breaks <- c(tssbin, tesbin, body1bin, body2bin)
+     use_plot_breaks <- c(tssbin, tesbin, body1bin, body2bin) + .5
      use_plot_breaks_labels <- c("TSS", "TES", "5|4", "4|3")
-     use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin)
+     use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin) + .5
    } else if (mytype == "5'"){
-     use_plot_breaks <- tssbin
+     use_plot_breaks <- tssbin + .5
      use_plot_breaks_labels <- "TSS"
-     use_virtical_line <- c(tssbin, NA, NA, NA)
+     use_virtical_line <- c(tssbin, NA, NA, NA) + .5
    } else if(mytype == "3'"){
-     use_plot_breaks <- tesbin
+     use_plot_breaks <- tesbin + .5
      use_plot_breaks_labels <- "TES"
-     use_virtical_line <- c(NA, tesbin, NA, NA)
-   } else{
-     use_plot_breaks <- c(tssbin, tesbin)
+     use_virtical_line <- c(NA, tesbin, NA, NA) + .5
+   } else if(mytype == "none"){
+     use_plot_breaks <- .5
+     use_plot_breaks_labels <- "none"
+     use_virtical_line <- c(NA, NA, NA, NA) + .5
+   }else{
+     use_plot_breaks <- c(tssbin, tesbin) + .5
      use_plot_breaks_labels <- c("TSS", "TES")
-     use_virtical_line <- c(tssbin, tesbin, NA, NA)
+     use_virtical_line <- c(tssbin, tesbin, NA, NA) + .5
    }
   }
 
   use_virtical_line_color <- c("green", "red", "black", "black")
   
   use_virtical_line_type <- c(1,1,1,1)
-  use_plot_breaks <- na_if(use_plot_breaks, 0)
+  use_plot_breaks <- na_if(use_plot_breaks, 0.5)
+  use_virtical_line <- na_if(use_virtical_line, 0.5)
   use_plot_breaks_labels <- use_plot_breaks_labels[!is.na(use_plot_breaks)]
   use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
   
