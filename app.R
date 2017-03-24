@@ -45,12 +45,14 @@ server <- function(input, output, session) {
     req(input$filetable$datapath)
     isolate({
       print("load file")
-      # add warnings for total size of LIST_DATA
+      # add warnings for total size of LIST_DATA TODO
       LIST_DATA <<-
         LoadTableFile(input$filetable$datapath,
                       input$filetable$name,
                       LIST_DATA)
       if (LIST_DATA$STATE[1] == 0) {
+        show("hidemainplot")
+        show("startoff")
         print("1st slider and plot lines Ylable")
         reactive_values$Y_Axis_Lable <- YAxisLable()
         reactive_values$Lines_Lables_List <- LinesLablesList()
@@ -67,8 +69,6 @@ server <- function(input, output, session) {
         updateNumericInput(session,"numerictes", min = 1, max = LIST_DATA$x_plot_range[2])
         LIST_DATA$STATE[1] <<- 1
       }
-      show("hidemainplot")
-      show("startoff")
       names(LIST_DATA$table_file)
     })
   })
@@ -85,6 +85,7 @@ server <- function(input, output, session) {
   # update when data file is loaded ----
   observeEvent(first_file(), {
     print("update load file")
+    # prevents over flow of text ... needs some added padding #TODO
     addClass("radiodataoption",class = "ofhidden")
     addClass("checkboxonoff",class = "ofhidden")
     updateRadioButtons(
@@ -358,8 +359,7 @@ server <- function(input, output, session) {
    
     
     reactive_values$Lines_Lables_List <- 
-      LinesLablesList(strsplit(input$selectlineslables, " ")[[1]][1],
-                      myset[1],
+      LinesLablesList(myset[1],
                       myset[2],
                       myset[3],
                       myset[4],
@@ -383,7 +383,7 @@ server <- function(input, output, session) {
     myset[is.na(myset)] <- 0
     
     for(i in seq_along(myset)){
-        if(myset[i] < 0){
+        if(myset[i] < 1){
           myset[i] <- 0
         } else if(i %in% c(1:4,6) & myset[i] > LIST_DATA$x_plot_range[2]){
           myset[i] <- LIST_DATA$x_plot_range[2]
@@ -397,8 +397,7 @@ server <- function(input, output, session) {
     updateNumericInput(session,"numericlabelspaceing", value = myset[6])
     
     reactive_values$Lines_Lables_List <- 
-      LinesLablesList(strsplit(input$selectlineslables, " ")[[1]][1],
-                      myset[1],
+      LinesLablesList(myset[1],
                       myset[2],
                       myset[3],
                       myset[4],
@@ -521,7 +520,7 @@ ui <- dashboardPage(
                           )),
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
-                              box(title = "Lines and Labels", width = 4, collapsible = TRUE,
+                              box(title = "Lines and Labels", width = 4, collapsible = TRUE, collapsed = TRUE,
                                   numericInput("numericbody1", "5|4 bin",value = 20),
                                   numericInput("numericbody2", "4|3 bin",value = 40),
                                   numericInput("numerictss", "TSS bin",value = 15),

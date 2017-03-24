@@ -1,15 +1,12 @@
 
 load file and build data list ... plot with controls
 
-
-update function to add .5 and 1/2 bin, try and brake function
-
-load file has stuff apear sooner
+smooth, rf, norm bin, log2 and then YAxisLable()
 
 ###plot flow control###
 
 plot is updated by
-axis, smooth, rf, norm bin, log2, labels
+smooth, rf, norm bin, log2
 
 plot options is updated by
 : and triggers plot 
@@ -32,6 +29,7 @@ gene tools ...
 
 # add more lines and lables presets
 # test loading multiple files
+# load file has spiner while running
 # file size restriction the set correctly?
 # load remote files TODO
 # warning messages TODO
