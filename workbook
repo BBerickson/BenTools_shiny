@@ -1,12 +1,12 @@
 
 load file and build data list ... plot with controls
 
-smooth, rf, norm bin, log2 and then YAxisLable()  
+rf, norm bin, and then YAxisLable()  
 
 ###plot flow control###
 
 plot is updated by
-smooth, rf, norm bin, log2
+smooth, rf, norm bin
 
 plot options is updated by
 : and triggers plot 

@@ -291,6 +291,7 @@ MakePlotOptionFrame <- function(list_data){
         bind_rows(gene_info[[i]][truefalse]) %>%
         mutate(myline = if_else(my_lines > 6, 0, as.double(my_lines)),
                mydot = if_else(my_dots == 1, 0, my_dots + 13),
+               mysize = if_else(my_dots == 1, 0.01, 4.5),
                set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
     }
   }
@@ -472,7 +473,7 @@ MyYSetValues <- function(apply_math, xBinRange) {
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth = 0, legend_space = 1) {
+  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, legend_space = 1) {
     print("ggplot")
     gp <-
         ggplot(
@@ -482,12 +483,12 @@ GGplotLineDot <-
             y = value,
             color = set,
             shape = set,
-            #size = set
+            size = set,
             linetype = set
             
           )
         )
-    if (use_smooth == 1) { #fix
+    if (use_smooth) { #fix
       gp <- gp +
         geom_smooth(se = FALSE,
                     size = 2.5,
@@ -498,8 +499,8 @@ GGplotLineDot <-
     }
     gp <- gp +
       geom_point(stroke = .001) +
-      # scale_size_manual(name = "Sample", values = use_size) +
-      scale_color_manual(name = "Sample", values = plot_options$mycol) + # do I need to add names to keep things straight? 
+      scale_size_manual(name = "Sample", values = plot_options$mysize) +
+      scale_color_manual(name = "Sample", values = plot_options$mycol) + 
       scale_shape_manual(name = "Sample", values = plot_options$mydot) +
       scale_linetype_manual(name = "Sample", values = plot_options$myline) +
       # xlab(use_x_label) + ylab(use_y_label) +  # Set axis labels

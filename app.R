@@ -63,10 +63,6 @@ server <- function(input, output, session) {
           max = LIST_DATA$x_plot_range[2],
           value = LIST_DATA$x_plot_range
         )
-        updateNumericInput(session,"numericbody1", min = 1, max = LIST_DATA$x_plot_range[2])
-        updateNumericInput(session,"numericbody2", min = 1, max = LIST_DATA$x_plot_range[2])
-        updateNumericInput(session,"numerictss", min = 1, max = LIST_DATA$x_plot_range[2])
-        updateNumericInput(session,"numerictes", min = 1, max = LIST_DATA$x_plot_range[2])
         LIST_DATA$STATE[1] <<- 1
       }
       names(LIST_DATA$table_file)
@@ -155,7 +151,8 @@ server <- function(input, output, session) {
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-             reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+             reactive_values$Plot_Options, input$sliderplotYRange, 
+            reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
           )
       }
     }
@@ -175,7 +172,8 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+               reactive_values$Plot_Options, input$sliderplotYRange,
+              reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
             )
         }
       }
@@ -196,7 +194,8 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+               reactive_values$Plot_Options, input$sliderplotYRange, 
+              reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
             )
         }
       }
@@ -227,7 +226,8 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+               reactive_values$Plot_Options, input$sliderplotYRange, 
+              reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
             )
         }
       }
@@ -326,7 +326,8 @@ server <- function(input, output, session) {
         GGplotLineDot(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-           reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+           reactive_values$Plot_Options, input$sliderplotYRange, 
+          reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
         )
     }
   })
@@ -340,7 +341,8 @@ server <- function(input, output, session) {
         GGplotLineDot(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-           reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+           reactive_values$Plot_Options, input$sliderplotYRange, 
+          reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
         )
     }
   })
@@ -407,6 +409,20 @@ server <- function(input, output, session) {
     
   })
   
+  # replot with smooth update ----
+  observeEvent(input$checkboxsmooth, {
+    req(first_file())
+    print(input$checkboxsmooth)
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Options, 
+          input$sliderplotYRange, 
+          reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+        )
+  })
+  
   # observe lines and labes update and update plot ----
   observeEvent(reactive_values$Lines_Lables_List,{
     req(input$actionmyplot)
@@ -414,7 +430,8 @@ server <- function(input, output, session) {
       GGplotLineDot(
         reactive_values$Apply_Math,
         input$sliderplotBinRange,
-        reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+        reactive_values$Plot_Options, input$sliderplotYRange, 
+        reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
       )
   })
   
@@ -442,7 +459,8 @@ server <- function(input, output, session) {
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-             reactive_values$Plot_Options, input$sliderplotYRange, reactive_values$Lines_Lables_List
+             reactive_values$Plot_Options, input$sliderplotYRange, 
+            reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
           )
       }
     }
@@ -520,7 +538,14 @@ ui <- dashboardPage(
                           )),
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
-                              box(title = "Lines and Labels", width = 4, collapsible = TRUE, collapsed = TRUE,
+                              
+                              box(title = "Normalization", width = 3, collapsible = TRUE,
+                                  checkboxInput("checkboxrf", label = "relative frequency"),
+                                  checkboxInput("checkboxrgf", label = "relative gene frequency"),
+                                  checkboxInput("checkboxsmooth", label = "smooth"),
+                                  numericInput("numericnormbin", "Norm to bin", value = 0)),
+                              
+                              box(title = "Lines and Labels", width = 3, collapsible = TRUE, collapsed = TRUE,
                                   numericInput("numericbody1", "5|4 bin",value = 20),
                                   numericInput("numericbody2", "4|3 bin",value = 40),
                                   numericInput("numerictss", "TSS bin",value = 15),
@@ -530,7 +555,7 @@ ui <- dashboardPage(
                                   actionButton("actionlineslabels", "Update Lines and Lables")
                                 
                               ),
-                              box(
+                              box(title = "Sliders",
                                 width = 6, collapsible = TRUE,
                                 sliderInput(
                                   "sliderplotBinRange",
