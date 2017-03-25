@@ -1,18 +1,18 @@
 
 load file and build data list ... plot with controls
 
-rf, norm bin, and then YAxisLable()  
+norm bin -- switch rf, and then YAxisLable()  
 
 ###plot flow control###
 
 plot is updated by
-smooth, rf, norm bin
+norm bin
 
 plot options is updated by
 : and triggers plot 
 
 apply math updated by
-rg, norm factor: and triggers plot
+norm factor: and triggers plot
 
 # fix up load files with controls and warning messages
 

@@ -213,7 +213,7 @@ CheckBoxOnOff <- function(gene_set, check_box, list_data) {
 ApplyMath <-
   function(list_data, 
            use_math, 
-           r_checkbox_gene_relative_frequency,
+           gene_relative_frequency,
            sel_list = NULL) {
     print("apply math fun")
     table_file = list_data$table_file
@@ -249,7 +249,7 @@ ApplyMath <-
         return(NULL)
       }
     # applys math to pared down data file
-    if (r_checkbox_gene_relative_frequency == 1) {
+    if (gene_relative_frequency) {
       list_long_data_frame <- bind_rows(list_data_frame) %>%
         group_by(set, gene) %>%
         mutate(score = score / sum(score, na.rm = TRUE)) %>%
@@ -306,14 +306,14 @@ MakePlotOptionFrame <- function(list_data){
 # Sets y lable fix
 YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
   use_y_label <- paste(use_math, "of bin counts")
-  if ("r_checkbox_gene_relative_frequency" == 1) {
+  if ("gene_relative_frequency" == 1) {
     use_y_label <- paste("RF per gene :", use_y_label)
   } else if ("r_checkbox_relative_frequency" == 1) {
     use_y_label <- paste(strsplit(use_y_label, split = " ")[[1]][1],
                          "bins : RF")
   }
   if (norm_bin > 0) {
-    if (r_checkbox_gene_relative_frequency == 1) {
+    if (gene_relative_frequency == 1) {
       use_y_label <- paste(use_y_label, " : Norm bin ", norm_bin)
     } else {
       use_y_label <- paste(strsplit(use_y_label, split = " ")[[1]][1],
@@ -473,8 +473,14 @@ MyYSetValues <- function(apply_math, xBinRange) {
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, legend_space = 1) {
+  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, checkboxrf, legend_space = 1) {
     print("ggplot")
+    if(checkboxrf){
+      list_long_data_frame <- group_by(list_long_data_frame, set) %>%
+        mutate(value = value / sum(value)) %>%
+        ungroup()
+      }
+    
     gp <-
         ggplot(
           list_long_data_frame,

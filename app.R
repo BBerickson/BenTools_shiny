@@ -144,15 +144,18 @@ server <- function(input, output, session) {
       reactive_values$Apply_Math <-
         ApplyMath(LIST_DATA,
                   input$myMath,
-                  r_checkbox_gene_relative_frequency = 0)
+                  input$checkboxrgf)
       if (!is.null(reactive_values$Apply_Math)) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-             reactive_values$Plot_Options, input$sliderplotYRange, 
-            reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+            reactive_values$Plot_Options, 
+            input$sliderplotYRange, 
+            reactive_values$Lines_Lables_List, 
+            input$checkboxsmooth, 
+            input$checkboxrf
           )
       }
     }
@@ -172,8 +175,11 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange,
-              reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+              reactive_values$Plot_Options, 
+              input$sliderplotYRange, 
+              reactive_values$Lines_Lables_List, 
+              input$checkboxsmooth, 
+              input$checkboxrf
             )
         }
       }
@@ -194,8 +200,11 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange, 
-              reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+              reactive_values$Plot_Options, 
+              input$sliderplotYRange, 
+              reactive_values$Lines_Lables_List, 
+              input$checkboxsmooth, 
+              input$checkboxrf
             )
         }
       }
@@ -226,8 +235,11 @@ server <- function(input, output, session) {
             GGplotLineDot(
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
-               reactive_values$Plot_Options, input$sliderplotYRange, 
-              reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+              reactive_values$Plot_Options, 
+              input$sliderplotYRange, 
+              reactive_values$Lines_Lables_List, 
+              input$checkboxsmooth, 
+              input$checkboxrf
             )
         }
       }
@@ -271,7 +283,7 @@ server <- function(input, output, session) {
     reactive_values$Apply_Math <-
       ApplyMath(LIST_DATA,
                 input$myMath,
-                r_checkbox_gene_relative_frequency = 0)
+                input$checkboxrgf)
     if (!is.null(reactive_values$Apply_Math)) {
       myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
       updateSliderInput(session,
@@ -303,7 +315,7 @@ server <- function(input, output, session) {
     reactive_values$Apply_Math <-
       ApplyMath(LIST_DATA,
                 input$myMath,
-                r_checkbox_gene_relative_frequency = 0)
+                input$checkboxrgf)
     if (!is.null(reactive_values$Apply_Math)) {
       myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
       updateSliderInput(session,
@@ -326,8 +338,11 @@ server <- function(input, output, session) {
         GGplotLineDot(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-           reactive_values$Plot_Options, input$sliderplotYRange, 
-          reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+          reactive_values$Plot_Options, 
+          input$sliderplotYRange, 
+          reactive_values$Lines_Lables_List, 
+          input$checkboxsmooth, 
+          input$checkboxrf
         )
     }
   })
@@ -341,8 +356,11 @@ server <- function(input, output, session) {
         GGplotLineDot(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-           reactive_values$Plot_Options, input$sliderplotYRange, 
-          reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+          reactive_values$Plot_Options, 
+          input$sliderplotYRange, 
+          reactive_values$Lines_Lables_List, 
+          input$checkboxsmooth, 
+          input$checkboxrf
         )
     }
   })
@@ -413,14 +431,66 @@ server <- function(input, output, session) {
   observeEvent(input$checkboxsmooth, {
     req(first_file())
     print(input$checkboxsmooth)
-      reactive_values$Plot_controler <-
-        GGplotLineDot(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-          reactive_values$Plot_Options, 
-          input$sliderplotYRange, 
-          reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
-        )
+    reactive_values$Plot_controler <-
+      GGplotLineDot(
+        reactive_values$Apply_Math,
+        input$sliderplotBinRange,
+        reactive_values$Plot_Options, 
+        input$sliderplotYRange, 
+        reactive_values$Lines_Lables_List, 
+        input$checkboxsmooth, 
+        input$checkboxrf
+      )
+  })
+  
+  # replot relative frequncy ----
+  observeEvent(input$checkboxrf,{
+    req(first_file())
+    if(input$checkboxrgf){
+      return()
+    }
+    if(input$checkboxrf){
+      print("rf on")
+    updateNumericInput(session, "numericnormbin", value = 0)
+    if (!is.null(reactive_values$Apply_Math)) {
+      myYBinRange <- MyYSetValues(ungroup(mutate(group_by(reactive_values$Apply_Math, set), 
+                                                 value = value / sum(value))), input$sliderplotBinRange)
+    }
+    } else {
+      print("rf off")
+    if (!is.null(reactive_values$Apply_Math)) {
+      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
+    }
+    }
+       updateSliderInput(session,
+                        "sliderplotYRange",
+                        min = myYBinRange[3],
+                        max = myYBinRange[4],
+                        value = myYBinRange[1:2],
+                        step = ((myYBinRange[2]-myYBinRange[1])/20))
+
+      
+  })
+  
+  # replot relative gene frequncy ----
+  observeEvent(input$checkboxrgf,{
+    req(first_file())
+    updateCheckboxInput(session, "checkboxrf",value = FALSE)
+    
+    print("rgf")
+    reactive_values$Apply_Math <-
+      ApplyMath(LIST_DATA,
+                input$myMath,
+                input$checkboxrgf)
+    if (!is.null(reactive_values$Apply_Math)) {
+      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
+      updateSliderInput(session,
+                        "sliderplotYRange",
+                        min = myYBinRange[3],
+                        max = myYBinRange[4],
+                        value = myYBinRange[1:2],
+                        step = ((myYBinRange[2]-myYBinRange[1])/20))
+    }
   })
   
   # observe lines and labes update and update plot ----
@@ -430,8 +500,11 @@ server <- function(input, output, session) {
       GGplotLineDot(
         reactive_values$Apply_Math,
         input$sliderplotBinRange,
-        reactive_values$Plot_Options, input$sliderplotYRange, 
-        reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+        reactive_values$Plot_Options, 
+        input$sliderplotYRange, 
+        reactive_values$Lines_Lables_List, 
+        input$checkboxsmooth, 
+        input$checkboxrf
       )
   })
   
@@ -459,8 +532,11 @@ server <- function(input, output, session) {
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
-             reactive_values$Plot_Options, input$sliderplotYRange, 
-            reactive_values$Lines_Lables_List, use_smooth = input$checkboxsmooth
+            reactive_values$Plot_Options, 
+            input$sliderplotYRange, 
+            reactive_values$Lines_Lables_List, 
+            input$checkboxsmooth, 
+            input$checkboxrf
           )
       }
     }
