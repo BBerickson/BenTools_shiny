@@ -17,6 +17,7 @@ server <- function(input, output, session) {
   # Globals and reacive values ----
   reactive_values <- reactiveValues(
     Y_Axis_Lable = NULL,
+    Y_Axis_numbers = NULL,
     Lines_Lables_List = NULL,
     Apply_Math = NULL,
     Plot_Options = NULL,
@@ -141,22 +142,16 @@ server <- function(input, output, session) {
     LIST_DATA$table_file[[input$radiodataoption]]["set"] <<-
       paste(input$textnickname)
     if (LIST_DATA$STATE[1] == 1) {
-      reactive_values$Apply_Math <-
-        ApplyMath(LIST_DATA,
-                  input$myMath,
-                  input$checkboxrgf)
       if (!is.null(reactive_values$Apply_Math)) {
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-        reactive_values$Plot_controler <-
-          GGplotLineDot(
-            reactive_values$Apply_Math,
-            input$sliderplotBinRange,
-            reactive_values$Plot_Options, 
-            input$sliderplotYRange, 
-            reactive_values$Lines_Lables_List, 
-            input$checkboxsmooth, 
-            input$checkboxrf
-          )
+      oldnickname <- paste(gsub("(.{17})", "\\1\n", input$selectgenelistoptions), 
+                        gsub("(.{17})", "\\1\n", input$radiodataoption), sep = '-\n')
+      newnickname <- paste(gsub("(.{17})", "\\1\n", input$selectgenelistoptions), 
+                           gsub("(.{17})", "\\1\n", input$textnickname), sep = '-\n')
+      reactive_values$Apply_Math <- reactive_values$Apply_Math %>% 
+        mutate(set = replace(set, set == oldnickname, newnickname))
+      
+        reactive_values$Plot_Options <- reactive_values$Plot_Options %>% 
+          mutate(set = replace(set, set == oldnickname, newnickname))
       }
     }
   })
@@ -178,8 +173,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options, 
               input$sliderplotYRange, 
               reactive_values$Lines_Lables_List, 
-              input$checkboxsmooth, 
-              input$checkboxrf
+              input$checkboxsmooth
             )
         }
       }
@@ -203,8 +197,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options, 
               input$sliderplotYRange, 
               reactive_values$Lines_Lables_List, 
-              input$checkboxsmooth, 
-              input$checkboxrf
+              input$checkboxsmooth
             )
         }
       }
@@ -238,8 +231,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options, 
               input$sliderplotYRange, 
               reactive_values$Lines_Lables_List, 
-              input$checkboxsmooth, 
-              input$checkboxrf
+              input$checkboxsmooth
             )
         }
       }
@@ -283,15 +275,10 @@ server <- function(input, output, session) {
     reactive_values$Apply_Math <-
       ApplyMath(LIST_DATA,
                 input$myMath,
-                input$checkboxrgf)
+                input$checkboxrgf,
+                input$checkboxrf,
+                input$numericnormbin)
     if (!is.null(reactive_values$Apply_Math)) {
-      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
-      updateSliderInput(session,
-                        "sliderplotYRange",
-                        min = myYBinRange[3],
-                        max = myYBinRange[4],
-                        value = myYBinRange[1:2],
-                        step = ((myYBinRange[2]-myYBinRange[1])/20))
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       enable("hidemainplot")
       enable("selectlineslables")
@@ -303,28 +290,47 @@ server <- function(input, output, session) {
     LIST_DATA$STATE[1] <<- 1
   })
   
+  # updates y axis limits
+  observeEvent(reactive_values$Apply_Math,{
+    reactive_values$Y_Axis_numbers <- MyYSetValues(reactive_values$Apply_Math, 
+                                                   input$sliderplotBinRange)
+    updateSliderInput(session,
+                      "sliderplotYRange",
+                      min = reactive_values$Y_Axis_numbers[3],
+                      max = reactive_values$Y_Axis_numbers[4],
+                      value = reactive_values$Y_Axis_numbers[1:2],
+                      step = ((reactive_values$Y_Axis_numbers[2]-reactive_values$Y_Axis_numbers[1])/20))
+  })
+  
   # renders plot ----
   output$plot <- renderPlot({
     reactive_values$Plot_controler
   })
   
-  #update plot with math selection ----
-  observeEvent(input$myMath, {
-    req(first_file())
-    print("math")
+  #updates applymath ----
+  observeEvent(c(input$myMath, input$checkboxrgf, input$checkboxrf, input$numericnormbin),{
+    req(first_file())               
+    if(input$checkboxrgf == TRUE & input$checkboxrf == TRUE){               
+      updateCheckboxInput(session, "checkboxrf",value = FALSE)
+    }
+      if(is.na(input$numericnormbin)){
+        updateNumericInput(session, "numericnormbin", value = 0)
+      } else if(input$numericnormbin < 0){
+        updateNumericInput(session, "numericnormbin", value = 0)
+      } else if(input$numericnormbin > LIST_DATA$x_plot_range[2]){
+        updateNumericInput(session, "numericnormbin", value = LIST_DATA$x_plot_range[2])
+      } else {
+        updateNumericInput(session, "numericnormbin", value = round(input$numericnormbin))
+      }
+                   
+    if(LIST_DATA$STATE[1]==1){
+    print("apply math")
     reactive_values$Apply_Math <-
       ApplyMath(LIST_DATA,
                 input$myMath,
-                input$checkboxrgf)
-    if (!is.null(reactive_values$Apply_Math)) {
-      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
-      updateSliderInput(session,
-                        "sliderplotYRange",
-                        min = myYBinRange[3],
-                        max = myYBinRange[4],
-                        value = myYBinRange[1:2],
-                        step = ((myYBinRange[2]-myYBinRange[1])/20))
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+                input$checkboxrgf,
+                input$checkboxrf,
+                input$numericnormbin)
     }
   })
   
@@ -341,8 +347,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options, 
           input$sliderplotYRange, 
           reactive_values$Lines_Lables_List, 
-          input$checkboxsmooth, 
-          input$checkboxrf
+          input$checkboxsmooth
         )
     }
   })
@@ -359,8 +364,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options, 
           input$sliderplotYRange, 
           reactive_values$Lines_Lables_List, 
-          input$checkboxsmooth, 
-          input$checkboxrf
+          input$checkboxsmooth
         )
     }
   })
@@ -430,7 +434,6 @@ server <- function(input, output, session) {
   # replot with smooth update ----
   observeEvent(input$checkboxsmooth, {
     req(first_file())
-    print(input$checkboxsmooth)
     reactive_values$Plot_controler <-
       GGplotLineDot(
         reactive_values$Apply_Math,
@@ -438,59 +441,8 @@ server <- function(input, output, session) {
         reactive_values$Plot_Options, 
         input$sliderplotYRange, 
         reactive_values$Lines_Lables_List, 
-        input$checkboxsmooth, 
-        input$checkboxrf
+        input$checkboxsmooth
       )
-  })
-  
-  # replot relative frequncy ----
-  observeEvent(input$checkboxrf,{
-    req(first_file())
-    if(input$checkboxrgf){
-      return()
-    }
-    if(input$checkboxrf){
-      print("rf on")
-    updateNumericInput(session, "numericnormbin", value = 0)
-    if (!is.null(reactive_values$Apply_Math)) {
-      myYBinRange <- MyYSetValues(ungroup(mutate(group_by(reactive_values$Apply_Math, set), 
-                                                 value = value / sum(value))), input$sliderplotBinRange)
-    }
-    } else {
-      print("rf off")
-    if (!is.null(reactive_values$Apply_Math)) {
-      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
-    }
-    }
-       updateSliderInput(session,
-                        "sliderplotYRange",
-                        min = myYBinRange[3],
-                        max = myYBinRange[4],
-                        value = myYBinRange[1:2],
-                        step = ((myYBinRange[2]-myYBinRange[1])/20))
-
-      
-  })
-  
-  # replot relative gene frequncy ----
-  observeEvent(input$checkboxrgf,{
-    req(first_file())
-    updateCheckboxInput(session, "checkboxrf",value = FALSE)
-    
-    print("rgf")
-    reactive_values$Apply_Math <-
-      ApplyMath(LIST_DATA,
-                input$myMath,
-                input$checkboxrgf)
-    if (!is.null(reactive_values$Apply_Math)) {
-      myYBinRange <- MyYSetValues(reactive_values$Apply_Math, input$sliderplotBinRange)
-      updateSliderInput(session,
-                        "sliderplotYRange",
-                        min = myYBinRange[3],
-                        max = myYBinRange[4],
-                        value = myYBinRange[1:2],
-                        step = ((myYBinRange[2]-myYBinRange[1])/20))
-    }
   })
   
   # observe lines and labes update and update plot ----
@@ -503,8 +455,7 @@ server <- function(input, output, session) {
         reactive_values$Plot_Options, 
         input$sliderplotYRange, 
         reactive_values$Lines_Lables_List, 
-        input$checkboxsmooth, 
-        input$checkboxrf
+        input$checkboxsmooth
       )
   })
   
@@ -535,8 +486,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options, 
             input$sliderplotYRange, 
             reactive_values$Lines_Lables_List, 
-            input$checkboxsmooth, 
-            input$checkboxrf
+            input$checkboxsmooth
           )
       }
     }
@@ -619,7 +569,8 @@ ui <- dashboardPage(
                                   checkboxInput("checkboxrf", label = "relative frequency"),
                                   checkboxInput("checkboxrgf", label = "relative gene frequency"),
                                   checkboxInput("checkboxsmooth", label = "smooth"),
-                                  numericInput("numericnormbin", "Norm to bin", value = 0)),
+                                  numericInput("numericnormbin", "Norm to bin", value = 0)
+                                  ),
                               
                               box(title = "Lines and Labels", width = 3, collapsible = TRUE, collapsed = TRUE,
                                   numericInput("numericbody1", "5|4 bin",value = 20),

@@ -214,6 +214,8 @@ ApplyMath <-
   function(list_data, 
            use_math, 
            gene_relative_frequency,
+           checkboxrf,
+           normbin,
            sel_list = NULL) {
     print("apply math fun")
     table_file = list_data$table_file
@@ -243,7 +245,6 @@ ApplyMath <-
             semi_join(., enesg, by = "gene") 
         }
       }
-      print("data parced")
       if (is.null(names(list_data_frame))) {
         print("nothing to plot")
         return(NULL)
@@ -266,6 +267,17 @@ ApplyMath <-
         ungroup() %>%
         mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
     }
+    if(normbin > 0) {
+      list_long_data_frame <-
+        group_by(list_long_data_frame, set) %>%
+        mutate(value = value / nth(value, normbin)) %>%
+        ungroup()
+    } else if(checkboxrf){
+      list_long_data_frame <- group_by(list_long_data_frame, set) %>%
+        mutate(value = value / sum(value)) %>%
+        ungroup()
+    }
+    
     
     return(list_long_data_frame)
   }
@@ -473,13 +485,8 @@ MyYSetValues <- function(apply_math, xBinRange) {
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, checkboxrf, legend_space = 1) {
+  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, legend_space = 1) {
     print("ggplot")
-    if(checkboxrf){
-      list_long_data_frame <- group_by(list_long_data_frame, set) %>%
-        mutate(value = value / sum(value)) %>%
-        ungroup()
-      }
     
     gp <-
         ggplot(
