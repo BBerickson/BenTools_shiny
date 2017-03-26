@@ -1,7 +1,10 @@
 
 load file and build data list ... plot with controls
 
-YAxisLable()  
+mean toggle sum wont replot?
+every bin is not working ... 5 prime tss should center (probably need to look at 3')
+
+try and put ggplot in its own reactive
 
 ###plot flow control###
 
@@ -10,7 +13,7 @@ norm factor updateded with nickname ... only avalible on common
 # fix up load files with controls and warning messages
 
 
-
+x sub lable, and # genes added to legend and legend spaceing
 save plot ... make markdown file?
 
 load gene lists, info update and plot controls working?

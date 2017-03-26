@@ -174,7 +174,8 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options, 
               input$sliderplotYRange, 
               reactive_values$Lines_Lables_List, 
-              input$checkboxsmooth
+              input$checkboxsmooth,
+              reactive_values$Y_Axis_Lable
             )
         }
       }
@@ -198,7 +199,8 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options, 
               input$sliderplotYRange, 
               reactive_values$Lines_Lables_List, 
-              input$checkboxsmooth
+              input$checkboxsmooth,
+              reactive_values$Y_Axis_Lable
             )
         }
       }
@@ -232,7 +234,8 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options, 
               input$sliderplotYRange, 
               reactive_values$Lines_Lables_List, 
-              input$checkboxsmooth
+              input$checkboxsmooth,
+              reactive_values$Y_Axis_Lable
             )
         }
       }
@@ -293,7 +296,7 @@ server <- function(input, output, session) {
   
   # updates y axis limits
   observeEvent(reactive_values$Apply_Math,{
-    reactive_values$Y_Axis_numbers <- MyYSetValues(reactive_values$Apply_Math, 
+    reactive_values$Y_Axis_numbers <- MyXSetValues(reactive_values$Apply_Math, 
                                                    input$sliderplotBinRange)
     updateSliderInput(session,
                       "sliderplotYRange",
@@ -343,7 +346,7 @@ server <- function(input, output, session) {
     } else {
       reactive_values$mynorm <- "none"
     }
-    
+    reactive_values$Y_Axis_Lable <- YAxisLable(input$myMath, input$checkboxrf, input$checkboxrgf, input$numericnormbin, input$checkboxsmooth)
     if(LIST_DATA$STATE[1]==1){
     print("apply math")
     reactive_values$Apply_Math <-
@@ -368,7 +371,8 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options, 
           input$sliderplotYRange, 
           reactive_values$Lines_Lables_List, 
-          input$checkboxsmooth
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
         )
     }
   })
@@ -385,7 +389,8 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options, 
           input$sliderplotYRange, 
           reactive_values$Lines_Lables_List, 
-          input$checkboxsmooth
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
         )
     }
   })
@@ -455,6 +460,7 @@ server <- function(input, output, session) {
   # replot with smooth update ----
   observeEvent(input$checkboxsmooth, {
     req(first_file())
+    reactive_values$Y_Axis_Lable <- YAxisLable(input$myMath, input$checkboxrf, input$checkboxrgf, input$numericnormbin, input$checkboxsmooth)
     reactive_values$Plot_controler <-
       GGplotLineDot(
         reactive_values$Apply_Math,
@@ -462,7 +468,8 @@ server <- function(input, output, session) {
         reactive_values$Plot_Options, 
         input$sliderplotYRange, 
         reactive_values$Lines_Lables_List, 
-        input$checkboxsmooth
+        input$checkboxsmooth,
+        reactive_values$Y_Axis_Lable
       )
   })
   
@@ -476,7 +483,8 @@ server <- function(input, output, session) {
         reactive_values$Plot_Options, 
         input$sliderplotYRange, 
         reactive_values$Lines_Lables_List, 
-        input$checkboxsmooth
+        input$checkboxsmooth,
+        reactive_values$Y_Axis_Lable
       )
   })
   
@@ -507,7 +515,8 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options, 
             input$sliderplotYRange, 
             reactive_values$Lines_Lables_List, 
-            input$checkboxsmooth
+            input$checkboxsmooth,
+            reactive_values$Y_Axis_Lable
           )
       }
     }

@@ -316,16 +316,16 @@ MakePlotOptionFrame <- function(list_data){
 }
 
 # Sets y lable fix
-YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
+YAxisLable <- function(use_math = "mean",  relative_frequency = F, gene_relative_frequency = F, norm_bin = 0, smoothed = F){
   use_y_label <- paste(use_math, "of bin counts")
-  if ("gene_relative_frequency" == 1) {
+  if (gene_relative_frequency) {
     use_y_label <- paste("RF per gene :", use_y_label)
-  } else if ("r_checkbox_relative_frequency" == 1) {
+  } else if (relative_frequency) {
     use_y_label <- paste(strsplit(use_y_label, split = " ")[[1]][1],
                          "bins : RF")
   }
   if (norm_bin > 0) {
-    if (gene_relative_frequency == 1) {
+    if (gene_relative_frequency) {
       use_y_label <- paste(use_y_label, " : Norm bin ", norm_bin)
     } else {
       use_y_label <- paste(strsplit(use_y_label, split = " ")[[1]][1],
@@ -333,12 +333,10 @@ YAxisLable <- function(use_math = "mean", use_log2 = 0, norm_bin = 0){
                            norm_bin)
     }
   }
-  if (use_log2 == 1) { # fix
-    use_y_label <- paste("log2(", use_y_label, ")", sep = "")
+  
+  if(smoothed){
+    use_y_label <- paste0("smoothed(", use_y_label, ")")
   }
-  # if(tclvalue(tcl_smooth) == 1){
-  #   use_y_label <- paste0("smoothed(", use_y_label, ")")
-  # }
   use_y_label
 }
 
@@ -473,7 +471,7 @@ LinesLablesPreSet <- function(mytype){
 }
 
 # help get min and max from apply math data set
-MyYSetValues <- function(apply_math, xBinRange) {
+MyXSetValues <- function(apply_math, xBinRange) {
   
   tt <- group_by(apply_math, set) %>%
     filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
@@ -485,7 +483,7 @@ MyYSetValues <- function(apply_math, xBinRange) {
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, legend_space = 1) {
+  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, use_y_label, legend_space = 1) {
     print("ggplot")
     
     gp <-
@@ -516,7 +514,8 @@ GGplotLineDot <-
       scale_color_manual(name = "Sample", values = plot_options$mycol) + 
       scale_shape_manual(name = "Sample", values = plot_options$mydot) +
       scale_linetype_manual(name = "Sample", values = plot_options$myline) +
-      # xlab(use_x_label) + ylab(use_y_label) +  # Set axis labels
+      # xlab(use_x_label) + 
+      ylab(use_y_label) +  # Set axis labels
       scale_x_continuous(breaks = line_list$mybrakes,
                          labels = line_list$mylables) +
 
