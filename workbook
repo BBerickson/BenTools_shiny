@@ -1,20 +1,14 @@
 
 load file and build data list ... plot with controls
 
-try and put ggplot in its own reactive
-
-###plot flow control###
-
-norm factor updateded with nickname ... only avalible on common
-
-# fix up load files with controls and warning messages
+fix up load files with controls and warning messages
 
 
 x sub lable, and # genes added to legend and legend spaceing
 save plot ... make markdown file?
 
 load gene lists, info update and plot controls working?
-add editable nickname
+not common hide norm factor
 
 load color files (add option for names to match?)
 

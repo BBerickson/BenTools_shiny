@@ -119,6 +119,9 @@ server <- function(input, output, session) {
     updateTextInput(session,
                     "textnickname",
                     value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["set"]))
+    updateNumericInput(session, 
+                       "normfactor", 
+                       value = as.numeric(LIST_DATA$gene_info[[my_list]][[my_sel]]["rnorm"]))
     updateSelectInput(session,
                       "selectdot",
                       selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mydot"]))
@@ -134,18 +137,48 @@ server <- function(input, output, session) {
     updateRadioButtons(session, "radiodataoption", selected = input$radiodataoption)
   })
   
-  # record new nickname ----
+  # record new nickname and norm factor ----
   observeEvent(input$actionoptions, {
     req(first_file())
-    print("new nickname")
+    if (!is.na(input$normfactor) & !input$normfactor %in% c(0,1) & input$normfactor != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["rnorm"]) {
+      print("norm")
+      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["rnorm"] <<- 
+        input$normfactor
+      LIST_DATA$table_file[[input$radiodataoption]] <<-
+        mutate(LIST_DATA$table_file[[input$radiodataoption]],
+               score = score / as.numeric(input$normfactor))
+      if (LIST_DATA$STATE[1] == 1) {
+        reactive_values$Apply_Math <-
+          ApplyMath(LIST_DATA,
+                    input$myMath,
+                    input$checkboxrgf,
+                    input$checkboxrf,
+                    input$numericnormbin)
+      }
+    } else if(!is.na(input$normfactor)){
+      updateNumericInput(session, 
+                         "normfactor", 
+                         value = as.numeric(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["rnorm"]))
+    }
+
+    if(nchar(input$textnickname)>0){
+      print("new nickname")
+      oldnickname <- paste(gsub("(.{17})", "\\1\n", input$selectgenelistoptions), 
+                           gsub("(.{17})", "\\1\n", 
+                                LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"]), sep = '-\n')
+      
     LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"] <<-
       input$textnickname
     LIST_DATA$table_file[[input$radiodataoption]]["set"] <<-
-      paste(input$textnickname)
+      input$textnickname
+    } else {
+      updateTextInput(session,
+                      "textnickname",
+                      value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"]))
+    }
+    
     if (LIST_DATA$STATE[1] == 1) {
       if (!is.null(reactive_values$Apply_Math)) {
-      oldnickname <- paste(gsub("(.{17})", "\\1\n", input$selectgenelistoptions), 
-                        gsub("(.{17})", "\\1\n", input$radiodataoption), sep = '-\n')
       newnickname <- paste(gsub("(.{17})", "\\1\n", input$selectgenelistoptions), 
                            gsub("(.{17})", "\\1\n", input$textnickname), sep = '-\n')
       reactive_values$Apply_Math <- reactive_values$Apply_Math %>% 
@@ -153,8 +186,21 @@ server <- function(input, output, session) {
       
         reactive_values$Plot_Options <- reactive_values$Plot_Options %>% 
           mutate(set = replace(set, set == oldnickname, newnickname))
+        
+        reactive_values$Plot_controler <-
+          GGplotLineDot(
+            reactive_values$Apply_Math,
+            input$sliderplotBinRange,
+            reactive_values$Plot_Options, 
+            input$sliderplotYRange, 
+            reactive_values$Lines_Lables_List, 
+            input$checkboxsmooth,
+            reactive_values$Y_Axis_Lable
+          )
       }
     }
+    
+    
   })
   
   # records new dot options ----
@@ -398,7 +444,7 @@ server <- function(input, output, session) {
   # quick lines and lables preset change #TODO finish update ----
   observeEvent(input$selectlineslables, {
     req(first_file())
-    print("update lines and lables")
+    print("Lines & Lables")
     myset <- LinesLablesPreSet(input$selectlineslables)
       updateNumericInput(session,"numericbody1", value = myset[1])
       updateNumericInput(session,"numericbody2", value = myset[2])
@@ -577,7 +623,8 @@ ui <- dashboardPage(
                                 selectInput("selectdot", "Select dot type", choices = kDotOptions),
                                 selectInput("selectline", "Select line type", choices = kLineOptions),
                                 textInput("textnickname", "Nick Name"),
-                                actionButton("actionoptions", "Update nick name")
+                                numericInput("normfactor", "Set norm factor, score/rpm", value = 1),
+                                actionButton("actionoptions", "Update nick name and/or norm factor")
                               ),
                               box(width = 3,
                                 colourInput("colourhex", "Select color HEX"),

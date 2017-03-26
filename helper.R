@@ -169,7 +169,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         myline = kLineOptions[1],
         mycol = color_select,
         onoff = legend_nickname,
-        rnorm = "none"
+        rnorm = "1"
       )
     
     # generate info for new file for loaded gene list(s)
@@ -185,7 +185,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
             myline = kLineOptions[1],
             mycol = color_select,
             onoff = 0,
-            rnorm = "none"
+            rnorm = "1"
           )
         
         # if 0 length message and remove file TODO
