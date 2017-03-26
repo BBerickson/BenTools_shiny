@@ -1,14 +1,6 @@
 
 load file and build data list ... plot with controls
 
-fix rename to be smarter 
-
-1 change up apply math to own observe ... plot options?
-
-2 observeevent to update y-axix
-
-3 update ggplot funtion and applymath function for rf rgf normbin
-
 YAxisLable()  
 
 ###plot flow control###

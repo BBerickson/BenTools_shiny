@@ -21,7 +21,8 @@ server <- function(input, output, session) {
     Lines_Lables_List = NULL,
     Apply_Math = NULL,
     Plot_Options = NULL,
-    Plot_controler = NULL
+    Plot_controler = NULL,
+    mynorm = "none"
   )
   
   # show hide checkbox and action button ----
@@ -307,22 +308,42 @@ server <- function(input, output, session) {
     reactive_values$Plot_controler
   })
   
-  #updates applymath ----
-  observeEvent(c(input$myMath, input$checkboxrgf, input$checkboxrf, input$numericnormbin),{
-    req(first_file())               
-    if(input$checkboxrgf == TRUE & input$checkboxrf == TRUE){               
-      updateCheckboxInput(session, "checkboxrf",value = FALSE)
+  # updates applymath ----
+  observeEvent(c(input$myMath, input$checkboxrgf, input$numericnormbin, input$checkboxrf),{
+    req(first_file())
+    if(is.na(input$numericnormbin)){
+      updateNumericInput(session, "numericnormbin", value = 0)
+    } else if(input$numericnormbin < 0){
+      updateNumericInput(session, "numericnormbin", value = 0)
+    } else if(input$numericnormbin > LIST_DATA$x_plot_range[2]){
+      updateNumericInput(session, "numericnormbin", value = LIST_DATA$x_plot_range[2])
+    } else {
+      updateNumericInput(session, "numericnormbin", value = round(input$numericnormbin))
     }
-      if(is.na(input$numericnormbin)){
-        updateNumericInput(session, "numericnormbin", value = 0)
-      } else if(input$numericnormbin < 0){
-        updateNumericInput(session, "numericnormbin", value = 0)
-      } else if(input$numericnormbin > LIST_DATA$x_plot_range[2]){
-        updateNumericInput(session, "numericnormbin", value = LIST_DATA$x_plot_range[2])
-      } else {
-        updateNumericInput(session, "numericnormbin", value = round(input$numericnormbin))
-      }
-                   
+    
+    if(input$checkboxrgf & reactive_values$mynorm == "checkboxrf"){               
+      updateCheckboxInput(session, "checkboxrf", value = FALSE)
+      reactive_values$mynorm <- "checkboxrgf"
+    } else if(input$checkboxrf & reactive_values$mynorm == "checkboxrgf"){
+      updateCheckboxInput(session, "checkboxrgf", value = FALSE)
+      updateNumericInput(session, "numericnormbin", value = 0)
+      reactive_values$mynorm <- "checkboxrf"
+    } else if(input$checkboxrf & reactive_values$mynorm == "numericnormbin"){
+      updateNumericInput(session, "numericnormbin", value = 0)
+      reactive_values$mynorm <- "checkboxrf"
+    } else if(input$numericnormbin > 0 & reactive_values$mynorm == "checkboxrf"){
+      updateCheckboxInput(session, "checkboxrf", value = FALSE)
+      reactive_values$mynorm <- "numericnormbin"
+    } else if(input$checkboxrgf){
+      reactive_values$mynorm <- "checkboxrgf"
+    } else if(input$checkboxrf){
+      reactive_values$mynorm <- "checkboxrf"
+    } else if(input$numericnormbin > 0){
+      reactive_values$mynorm <- "numericnormbin"
+    } else {
+      reactive_values$mynorm <- "none"
+    }
+    
     if(LIST_DATA$STATE[1]==1){
     print("apply math")
     reactive_values$Apply_Math <-
