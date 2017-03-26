@@ -374,7 +374,7 @@ LinesLablesList <- function(body1bin = 20,
     LOC2[near(LOC2, body2bin, tol = everybin -1)] <- body2bin + .5
     LOCname1 <- rev(seq((body1bin-tssbin)*binbp, by = -everybp, length.out = (body1bin/everybin) + 1))
     LOCname1[near(LOC1, tssbin, tol = everybin -1)] <- "TSS"
-    LOCname2 <- abs(seq(-(tesbin-body2bin)*binbp, by = binbp * everybin, length.out = (body2bin/everybin) + 1))
+    LOCname2 <- abs(seq(-(tesbin-body2bin)*binbp, by = everybp, length.out = (body2bin/everybin) + 1))
     LOCname2[near(LOC2, tesbin, tol = everybin -1)] <- "TES"
     use_plot_breaks <- c(LOC1, LOC2)
     use_plot_breaks_labels <- c(LOCname1, LOCname2)
@@ -382,13 +382,13 @@ LinesLablesList <- function(body1bin = 20,
   } else if (mytype == "5'"){
     use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin + .5
-    use_plot_breaks_labels <- rev(seq(tssbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
+    use_plot_breaks_labels <- rev(seq((totbins-tssbin)*binbp, by = -everybp, length.out = (totbins/everybin) + 1))
     use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
     use_virtical_line <- c(tssbin, NA, NA, NA) + .5
   } else if(mytype == "3'"){
     use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin + .5
-    use_plot_breaks_labels <- rev(seq(tesbin * binbp, by = -everybp, length.out = (totbins/everybin) + 1))
+    use_plot_breaks_labels <- abs(seq(-(tesbin-totbins)*binbp, by = binbp * everybin, length.out = (totbins/everybin) + 1))
     use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -1)] <- "TES"
     use_virtical_line <- c(NA, tesbin, NA, NA) + .5
   } else if(mytype == "none"){
@@ -396,12 +396,16 @@ LinesLablesList <- function(body1bin = 20,
     use_plot_breaks_labels <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_virtical_line <- c(NA, NA, NA, NA) + .5
   } else{
-    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
-    use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin + .5
-    use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin + .5
-    use_plot_breaks_labels <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
-    use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
-    use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -1)] <- "TES"
+    LOC1 <- rev(seq(tssbin + 1, by = -everybin, length.out = (tssbin/everybin) + 1))
+    LOC1[near(LOC1, tssbin, tol = everybin -1)] <- tssbin + .5
+    LOC2 <- seq(tesbin, by = everybin, length.out = (tesbin/everybin) + 1)
+    LOC2[near(LOC2, tesbin, tol = everybin -1)] <- tesbin + .5
+    LOCname1 <- rev(seq(binbp, by = -everybp, length.out = (tssbin/everybin) + 1))
+    LOCname1[near(LOC1, tssbin, tol = everybin -1)] <- "TSS"
+    LOCname2 <- abs(seq(-binbp, by = everybp, length.out = (tesbin/everybin) + 1))
+    LOCname2[near(LOC2, tesbin, tol = everybin -1)] <- "TES"
+    use_plot_breaks <- c(LOC1, LOC2)
+    use_plot_breaks_labels <- c(LOCname1, LOCname2)
     use_virtical_line <- c(tssbin, tesbin, NA, NA) + .5
     }
  } else {

@@ -1,9 +1,6 @@
 
 load file and build data list ... plot with controls
 
-mean toggle sum wont replot?
-every bin is not working ... 5 prime tss should center (probably need to look at 3')
-
 try and put ggplot in its own reactive
 
 ###plot flow control###
