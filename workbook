@@ -2,22 +2,25 @@
 load file and build data list ... plot with controls
 
 
-legend spaceing
-save plot ... make markdown file?
 
-load gene lists, info update and plot controls working ... use state[2] ... loads data file needs to change the two select lists back to common
+save plot
+
+load gene lists, info update and plot controls working ... use state[2] ... loads data
+try and brake with incompatible lists, list going to 0 after loading new file
+
 not common hide norm factor
 
 load color files (add option for names to match?)
 
 gene tools ...
 
-# add more lines and lables presets
+# add more lines and lables presets, trigger without button?
 # test loading multiple files
 # load file has spiner while running
 # file size restriction the set correctly?
 # load remote files TODO
 # warning messages TODO
+# legend spaceing?
 # try and have nickname not trigger apply math only update plot
 # load bg files TODO
 # restrict gene list to all loaded files or just plotted option? 

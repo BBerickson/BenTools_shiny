@@ -54,10 +54,10 @@ server <- function(input, output, session) {
                       LIST_DATA)
       updateSelectInput(session,
                         "selectgenelistoptions",
-                        choices = names(LIST_DATA$gene_info))
+                        choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
       updateSelectInput(session,
                         "selectgenelistonoff",
-                        choices = names(LIST_DATA$gene_info))
+                        choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
       if (LIST_DATA$STATE[1] == 0) {
         show("hidemainplot")
         show("startoff")
@@ -71,12 +71,14 @@ server <- function(input, output, session) {
           max = LIST_DATA$x_plot_range[2],
           value = LIST_DATA$x_plot_range
         )
+        # prevents over flow of text ... needs some added padding #TODO
+        addClass("radiodataoption",class = "ofhidden")
+        addClass("checkboxonoff",class = "ofhidden")
         LIST_DATA$STATE[1] <<- 1
       }
       names(LIST_DATA$table_file)
     })
   })
-  
   
   # loads gene list file ----
   gene_file <- reactive({
@@ -89,9 +91,6 @@ server <- function(input, output, session) {
   # update when data file is loaded ----
   observeEvent(first_file(), {
     print("update load file")
-    # prevents over flow of text ... needs some added padding #TODO
-    addClass("radiodataoption",class = "ofhidden")
-    addClass("checkboxonoff",class = "ofhidden")
     updateRadioButtons(
       session,
       "radiodataoption",
@@ -303,11 +302,9 @@ server <- function(input, output, session) {
   # })
   
   #records check box on/off ----
-  observe({
-    input$checkboxonoff
-    isolate({
+  observeEvent(input$checkboxonoff,{
       req(first_file())
-      if (LIST_DATA$STATE[2] == input$selectgenelistonoff) {
+      #if (LIST_DATA$STATE[2] == input$selectgenelistonoff) {
         print("checkbox on/off")
         LIST_DATA$gene_info <<-
           CheckBoxOnOff(input$selectgenelistonoff,
@@ -317,11 +314,10 @@ server <- function(input, output, session) {
         toggle("actionmyplot", condition = (input$tabs == "mainplot"))
         disable("selectlineslables")
         disable("hidemainplot")
-      } else {
-        print("just updating what is seen")
-        LIST_DATA$STATE[2] <<- input$selectgenelistonoff
-      }
-    })
+      # } else {
+      #   print("just updating what is seen")
+      #   LIST_DATA$STATE[2] <<- input$selectgenelistonoff
+      # }
   })
   
   # plots when acction button is pressed ----
@@ -409,31 +405,12 @@ server <- function(input, output, session) {
                 input$numericnormbin)
     }
   })
-  
-  
-  #plots when range bin slider is triggered ----
-  observeEvent(input$sliderplotBinRange, {
+ 
+  #plots when bin slider or y slider is triggered ----
+  observeEvent(c(reactive_values$Lines_Lables_List, input$sliderplotBinRange, input$sliderplotYRange), {
     req(first_file())
     if (!is.null(reactive_values$Apply_Math)) {
-      print("bin slider")
-      reactive_values$Plot_controler <-
-        GGplotLineDot(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-          reactive_values$Plot_Options, 
-          input$sliderplotYRange, 
-          reactive_values$Lines_Lables_List, 
-          input$checkboxsmooth,
-          reactive_values$Y_Axis_Lable
-        )
-    }
-  })
-  
-  #plots when Y range slider is triggered ----
-  observeEvent(input$sliderplotYRange, {
-    req(first_file())
-    if (!is.null(reactive_values$Apply_Math)) {
-      print("Y slider")
+      print("bin slider or L&L")
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
@@ -450,7 +427,7 @@ server <- function(input, output, session) {
   # quick lines and lables preset change #TODO finish update ----
   observeEvent(input$selectlineslables, {
     req(first_file())
-    print("Lines & Lables")
+    print("quick Lines & Lables")
     myset <- LinesLablesPreSet(input$selectlineslables)
       updateNumericInput(session,"numericbody1", value = myset[1])
       updateNumericInput(session,"numericbody2", value = myset[2])
@@ -513,21 +490,6 @@ server <- function(input, output, session) {
   observeEvent(input$checkboxsmooth, {
     req(first_file())
     reactive_values$Y_Axis_Lable <- YAxisLable(input$myMath, input$checkboxrf, input$checkboxrgf, input$numericnormbin, input$checkboxsmooth)
-    reactive_values$Plot_controler <-
-      GGplotLineDot(
-        reactive_values$Apply_Math,
-        input$sliderplotBinRange,
-        reactive_values$Plot_Options, 
-        input$sliderplotYRange, 
-        reactive_values$Lines_Lables_List, 
-        input$checkboxsmooth,
-        reactive_values$Y_Axis_Lable
-      )
-  })
-  
-  # observe lines and labes update and update plot ----
-  observeEvent(reactive_values$Lines_Lables_List,{
-    req(input$actionmyplot)
     reactive_values$Plot_controler <-
       GGplotLineDot(
         reactive_values$Apply_Math,

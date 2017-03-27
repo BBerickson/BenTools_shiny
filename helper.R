@@ -101,6 +101,7 @@ RgbToHex <- function(my_hex = NULL, my_rgb = NULL){
     return(my_hex)
   }
 }
+
 # reads in file, tests, fills out info and returns list_data
 LoadTableFile <- function(file_path, file_name, list_data) {
   # load remote files TODO
@@ -364,8 +365,6 @@ YAxisLable <- function(use_math = "mean",  relative_frequency = F, gene_relative
   use_y_label
 }
 
-
-
 # Sets plot lines and lables fix
 
 LinesLablesList <- function(body1bin = 20, 
@@ -527,7 +526,7 @@ GGplotLineDot <-
             
           )
         )
-    if (use_smooth) { #fix
+    if (use_smooth) { 
       gp <- gp +
         geom_smooth(se = FALSE,
                     size = 2.5,
