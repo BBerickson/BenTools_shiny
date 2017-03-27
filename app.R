@@ -52,6 +52,12 @@ server <- function(input, output, session) {
         LoadTableFile(input$filetable$datapath,
                       input$filetable$name,
                       LIST_DATA)
+      updateSelectInput(session,
+                        "selectgenelistoptions",
+                        choices = names(LIST_DATA$gene_info))
+      updateSelectInput(session,
+                        "selectgenelistonoff",
+                        choices = names(LIST_DATA$gene_info))
       if (LIST_DATA$STATE[1] == 0) {
         show("hidemainplot")
         show("startoff")
@@ -72,7 +78,7 @@ server <- function(input, output, session) {
   })
   
   
-  # loads data file(s) ----
+  # loads gene list file ----
   gene_file <- reactive({
     req(input$filegene$datapath)
     print("load gene file")
@@ -95,7 +101,7 @@ server <- function(input, output, session) {
     updateCheckboxGroupInput(session,
                              "checkboxonoff",
                              choices = first_file(),
-                             selected = c(sapply(LIST_DATA$gene_info[[input$selectgenelistonoff]], "[[", 5)))
+                             selected = c(sapply(LIST_DATA$gene_info[[LIST_DATA$STATE[2]]], "[[", 5)))
   })
   
   # update when gene list is loaded ----
@@ -131,11 +137,11 @@ server <- function(input, output, session) {
   })
   
   # triggers update on changing gene list ----
-  observeEvent(input$selectgenelistoptions, {
-    req(first_file())
-    print("update options on gene list change")
-    updateRadioButtons(session, "radiodataoption", selected = input$radiodataoption)
-  })
+  # observeEvent(input$selectgenelistoptions, {
+  #   req(first_file())
+  #   print("update options on gene list change")
+  #   updateRadioButtons(session, "radiodataoption", selected = input$radiodataoption)
+  # })
   
   # record new nickname and norm factor ----
   observeEvent(input$actionoptions, {
@@ -165,7 +171,7 @@ server <- function(input, output, session) {
       print("new nickname")
       oldnickname <- paste(gsub("(.{17})", "\\1\n", input$selectgenelistoptions), 
                            gsub("(.{17})", "\\1\n", 
-                                LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"]), sep = '-\n')
+                                LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"]), sep = '\n')
       
     LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["set"] <<-
       input$textnickname
@@ -180,7 +186,7 @@ server <- function(input, output, session) {
     if (LIST_DATA$STATE[1] == 1) {
       if (!is.null(reactive_values$Apply_Math)) {
       newnickname <- paste(gsub("(.{17})", "\\1\n", input$selectgenelistoptions), 
-                           gsub("(.{17})", "\\1\n", input$textnickname), sep = '-\n')
+                           gsub("(.{17})", "\\1\n", input$textnickname), sep = '\n')
       reactive_values$Apply_Math <- reactive_values$Apply_Math %>% 
         mutate(set = replace(set, set == oldnickname, newnickname))
       
@@ -287,14 +293,14 @@ server <- function(input, output, session) {
       }
     }
   })
-  
-  # update check box on off with selecting gene list ----
-  observeEvent(input$selectgenelistonoff, {
-    req(first_file())
-    print("update on off check box on gene list change")
-    updateCheckboxGroupInput(session, "checkboxonoff",
-                             selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
-  })
+  # 
+  # # update check box on off with selecting gene list ----
+  # observeEvent(input$selectgenelistonoff, {
+  #   req(first_file())
+  #   print("update on off check box on gene list change")
+  #   updateCheckboxGroupInput(session, "checkboxonoff",
+  #                            selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
+  # })
   
   #records check box on/off ----
   observe({

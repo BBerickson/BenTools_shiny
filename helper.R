@@ -154,7 +154,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     gene_names <- collapse(distinct(tablefile, gene))[[1]]
     if (file_count > 0) {
       gene_names <-
-        c(list_data$gene_file$common$use, gene_names)
+        c(list_data$gene_file[[1]]$use, gene_names)
       gene_names <- gene_names[duplicated(gene_names)]
       if (length(gene_names) == 0) {
         showModal(modalDialog(
@@ -168,6 +168,8 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       list_data$x_plot_range <- c(1, num_bins)
 
     }
+    my_name <- paste("common\nn =", length(gene_names))
+    list_data$STATE[2] <- my_name
     color_safe <-
       (length(list_data$table_file) + 1) %% length(kListColorSet)
     if (color_safe == 0) {
@@ -176,8 +178,8 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     color_select <- kListColorSet[color_safe]
     
     list_data$table_file[[legend_nickname]] <- tablefile
-    list_data$gene_file$common$use <- gene_names
-    list_data$gene_info$common[[legend_nickname]] <-
+    list_data$gene_file[[my_name]]$use <- gene_names
+    list_data$gene_info[[my_name]][[legend_nickname]] <-
       # don't change the order of postions
       tibble(
         set = legend_nickname,
@@ -190,9 +192,10 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     
     # generate info for new file for loaded gene list(s)
     sapply(names(list_data$gene_file), function(g) {
-      if (g != "common" & length(list_data$gene_file[[g]]$full) > 0) {
+      if (g != my_name & length(list_data$gene_file[[g]]$full) > 0) {
         enesg <- c(gene_names, list_data$gene_file[[g]]$full)
         enesg <- enesg[duplicated(enesg)]
+        g <- paste(strsplit(g, "\nn =")[[1]][1], "\nn =", length(enesg))
         list_data$gene_file[[g]]$use <<- enesg
         list_data$gene_info[[g]][[legend_nickname]] <<-
           tibble(
@@ -279,14 +282,14 @@ ApplyMath <-
         group_by(set, bin) %>%
         summarise(value = get(use_math)(score, na.rm = T)) %>%
         ungroup() %>%
-        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
+        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '\n'))
       
     } else {
       list_long_data_frame <- bind_rows(list_data_frame) %>%
         group_by(set, bin) %>%
         summarise(value = get(use_math)(score, na.rm = T)) %>%
         ungroup() %>%
-        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
+        mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '\n'))
     }
     if(normbin > 0) {
       list_long_data_frame <-
@@ -325,7 +328,7 @@ MakePlotOptionFrame <- function(list_data){
         mutate(myline = if_else(my_lines > 6, 0, as.double(my_lines)),
                mydot = if_else(my_dots == 1, 0, my_dots + 13),
                mysize = if_else(my_dots == 1, 0.01, 4.5),
-               set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '-\n'))
+               set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '\n'))
     }
   }
   if (!is.null(names(list_data_frame))) {

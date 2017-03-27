@@ -2,10 +2,10 @@
 load file and build data list ... plot with controls
 
 
-x sub lable, and # genes added to legend and legend spaceing
+legend spaceing
 save plot ... make markdown file?
 
-load gene lists, info update and plot controls working?
+load gene lists, info update and plot controls working ... use state[2] ... loads data file needs to change the two select lists back to common
 not common hide norm factor
 
 load color files (add option for names to match?)
