@@ -556,8 +556,8 @@ GGplotLineDot <-
       theme_bw() +
       theme(panel.grid.minor = element_blank(),
             panel.grid.major = element_blank()) +
-      theme(axis.title.y = element_text(size =  15)) +
-      theme(axis.title.x = element_text(size =  10, vjust = .5)) +
+      theme(axis.title.y = element_text(size =  15, margin = margin(2,10,2,2))) +
+      theme(axis.title.x =  element_blank()) + # element_text(size =  10, vjust = .5)) +
       theme(axis.text.x = element_text(
         size = 12,
         angle = -45,
@@ -569,10 +569,10 @@ GGplotLineDot <-
         legend.title = element_blank(),
         legend.key = element_rect(size = 5, color = 'white'),
         legend.key.height = unit(legend_space, "line"),
-        legend.text = element_text(size = 9)
+        legend.text = element_text(size = 12)
       )  +
       coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
-    #suppressMessages(print(gp))
-    return(gp)
+    suppressMessages(print(gp))
+    return(suppressMessages(gp))
   }
 
