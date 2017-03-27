@@ -1,8 +1,6 @@
 
 load file and build data list ... plot with controls
 
-fix up load files with controls and warning messages
-
 
 x sub lable, and # genes added to legend and legend spaceing
 save plot ... make markdown file?

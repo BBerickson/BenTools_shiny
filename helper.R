@@ -108,21 +108,33 @@ LoadTableFile <- function(file_path, file_name, list_data) {
   #   file_path <- read_lines(file_path)
   # }
   file_count <- length(list_data$table_file)
-  for (x in file_path) {
+  for (x in seq_along(file_path)) {
     legend_nickname <-
-      strsplit(as.character(file_name), '.tab')[[1]][1]
+      strsplit(as.character(file_name[x]), '.tab')[[1]][1]
     if (any(legend_nickname == names(list_data$table_file))) {
-      # tkmessageBox(message = "This file has already been loaded", icon = "info") TODO
+      showModal(modalDialog(
+        title = "Information message",
+        paste(file_name[x], "has already been loaded"), size = "s",
+        easyClose = TRUE
+      ))
       next()
-    } else {
+    }
       # TODO numbins test
       num_bins <-
-        count_fields(x,
+        count_fields(file_path[x],
                      n_max = 1,
                      skip = 1,
                      tokenizer = tokenizer_tsv()) - 1
+      if(file_count > 0 & num_bins != list_data$x_plot_range[2]){
+        showModal(modalDialog(
+          title = "Information message",
+          "Can't load file, different number of bins", size = "s",
+          easyClose = TRUE
+        ))
+        next()
+      }
       
-      tablefile <- suppressMessages(read_tsv(x,
+      tablefile <- suppressMessages(read_tsv(file_path[x],
                                              col_names = c("gene", 1:(num_bins)),
                                              skip = 1) %>%
                                       gather(., bin, score, 2:(num_bins + 1))) %>%
@@ -133,7 +145,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         ) %>%
         na_if(Inf) %>%
         replace_na(list(score = 0))
-    }
+
     zero_genes <-
       group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test !=
                                                                                          0)
@@ -145,7 +157,11 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         c(list_data$gene_file$common$use, gene_names)
       gene_names <- gene_names[duplicated(gene_names)]
       if (length(gene_names) == 0) {
-        # tkmessageBox("no genes in common") TODO
+        showModal(modalDialog(
+          title = "Information message",
+          " No genes in common ", size = "s",
+          easyClose = TRUE
+        ))
         break()
       }
     } else {
@@ -188,7 +204,12 @@ LoadTableFile <- function(file_path, file_name, list_data) {
             rnorm = "1"
           )
         
-        # if 0 length message and remove file TODO
+        showModal(modalDialog(
+          title = "Information message",
+          " No genes in common, need to remove gene file", size = "s",
+          easyClose = TRUE
+        ))
+        next()
       }
     })
     file_count <- 1
