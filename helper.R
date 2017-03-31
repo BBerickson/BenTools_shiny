@@ -41,7 +41,6 @@ LIST_DATA <- list(
   STATE = c(0, "common") # flow control, gene list flow control
 )      
 
-
 # types of dots to be used in plotting
 kDotOptions <-
   c(
@@ -120,7 +119,6 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       ))
       next()
     }
-      # TODO numbins test
       num_bins <-
         count_fields(file_path[x],
                      n_max = 1,
@@ -171,6 +169,10 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     }
     my_name <- paste("common\nn =", length(gene_names))
     list_data$STATE[2] <- my_name
+    if (file_count > 0) {
+    names(list_data$gene_file)[1] <- my_name
+    names(list_data$gene_info)[1] <- my_name
+    }
     color_safe <-
       (length(list_data$table_file) + 1) %% length(kListColorSet)
     if (color_safe == 0) {
@@ -196,9 +198,19 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       if (g != my_name & length(list_data$gene_file[[g]]$full) > 0) {
         enesg <- c(gene_names, list_data$gene_file[[g]]$full)
         enesg <- enesg[duplicated(enesg)]
-        g <- paste(strsplit(g, "\nn =")[[1]][1], "\nn =", length(enesg))
-        list_data$gene_file[[g]]$use <<- enesg
-        list_data$gene_info[[g]][[legend_nickname]] <<-
+        print(length(enesg))
+        if(length(enesg) < 1){
+          showModal(modalDialog(
+            title = "Information message",
+            " No genes in common, need to remove gene file", size = "s",
+            easyClose = TRUE
+          ))
+        }
+        my_name_g <- paste(strsplit(g, "\nn =")[[1]][1], "\nn =", length(enesg))
+        names(list_data$gene_file)[which(names(LIST_DATA$gene_file) == g)] <- my_name_g
+        names(list_data$gene_info)[which(names(LIST_DATA$gene_info) == g)] <- my_name_g
+        list_data$gene_file[[my_name_g]]$use <- enesg
+        list_data$gene_info[[my_name_g]][[legend_nickname]] <-
           tibble(
             set = legend_nickname,
             mydot = kDotOptions[1],
@@ -207,18 +219,61 @@ LoadTableFile <- function(file_path, file_name, list_data) {
             onoff = 0,
             rnorm = "1"
           )
-        
-        showModal(modalDialog(
-          title = "Information message",
-          " No genes in common, need to remove gene file", size = "s",
-          easyClose = TRUE
-        ))
-        next()
       }
     })
     file_count <- 1
   }
   list_data
+}
+
+# reads in gene list files
+LoadGeneFile <- function(file_path, file_name, list_data) {
+  
+    genefile <-
+      suppressMessages(read_tsv(
+        file_path,
+        col_names = "gene",
+        comment = "#",
+        cols(gene = col_character())
+      ))
+    
+    enesg <- c(unique(genefile$gene),
+               list_data$gene_file[[1]]$use)
+    enesg <- enesg[duplicated(enesg)]
+    if (length(enesg) == 0) {
+      
+      showModal(modalDialog(
+        title = "Information message",
+        " No genes in common, might need to reformat gene name style", size = "s",
+        easyClose = TRUE
+      ))
+      return()
+      
+    }
+    
+    legend_nickname <-
+      paste(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn =", length(enesg))
+    
+    list_data$gene_file[[legend_nickname]]$full <-
+      unique(genefile[, 1])
+    list_data$gene_file[[legend_nickname]]$use <- enesg
+    list_data$gene_info[[legend_nickname]] <-
+      lapply(setNames(
+        names(list_data$gene_info[[1]]),
+        names(list_data$gene_info[[1]])
+      ),
+      function(i)
+        tibble(
+          set = i,
+          mydot = kDotOptions[1],
+          myline = kLineOptions[1],
+          mycol = list_data$gene_info[[1]][[i]]$mycol,
+          onoff = 0,
+          rnorm = "1"
+        ))
+    list_data$STATE[2] <- names(list_data$gene_info)[1]
+    list_data
+    
 }
 
 # records check box on/off
@@ -247,6 +302,10 @@ ApplyMath <-
     gene_file = list_data$gene_file
     gene_info = list_data$gene_info
     list_data_frame <- NULL
+    list_long_data_frame <- NULL
+    if(sum(sapply(names(gene_info), function(i) sapply(gene_info[[i]], "[[",5))) == 0){
+      return(NULL)
+    }
       for (i in names(gene_file)) {
         # checks to see if at least one file in list is acitve
         if (sum(sapply(gene_info[[i]], "[[", 5) != 0) == 0) {
@@ -269,14 +328,14 @@ ApplyMath <-
             bind_rows(table_file[truefalse]) %>%
             semi_join(., enesg, by = "gene") 
         }
-      }
+      
       if (is.null(names(list_data_frame))) {
         print("nothing to plot")
         return(NULL)
       }
     # applys math to pared down data file
     if (gene_relative_frequency) {
-      list_long_data_frame <- bind_rows(list_data_frame) %>%
+      list_long_data_frame[[i]] <- bind_rows(list_data_frame) %>%
         group_by(set, gene) %>%
         mutate(score = score / sum(score, na.rm = TRUE)) %>%
         ungroup() %>%
@@ -286,25 +345,26 @@ ApplyMath <-
         mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '\n'))
       
     } else {
-      list_long_data_frame <- bind_rows(list_data_frame) %>%
+      list_long_data_frame[[i]] <- bind_rows(list_data_frame) %>%
         group_by(set, bin) %>%
         summarise(value = get(use_math)(score, na.rm = T)) %>%
         ungroup() %>%
         mutate(., set = paste(gsub("(.{17})", "\\1\n", i), gsub("(.{17})", "\\1\n", set), sep = '\n'))
     }
     if(normbin > 0) {
-      list_long_data_frame <-
-        group_by(list_long_data_frame, set) %>%
+      list_long_data_frame[[i]] <-
+        group_by(list_long_data_frame[[i]], set) %>%
         mutate(value = value / nth(value, normbin)) %>%
         ungroup()
     } else if(checkboxrf){
-      list_long_data_frame <- group_by(list_long_data_frame, set) %>%
+      list_long_data_frame[[i]] <- group_by(list_long_data_frame[[i]], set) %>%
         mutate(value = value / sum(value)) %>%
         ungroup()
     }
     
-    
-    return(list_long_data_frame)
+        list_data_frame <- NULL
+      }
+    return(bind_rows(list_long_data_frame))
   }
 
 # gather relavent plot option data
@@ -505,7 +565,7 @@ MyXSetValues <- function(apply_math, xBinRange) {
     ungroup() %>%
     summarise(min(value, na.rm = T), max(value, na.rm = T)) %>% 
     unlist(.,use.names=FALSE) %>% round(.,4)
-  tt <- c(tt, tt[1]-tt[2]*.1, tt[2]+tt[2]*.1) 
+  tt <- round(c(tt, tt[1]-tt[1]*.1, tt[2]+tt[2]*.1),4) 
 }
 
 # main ggplot function

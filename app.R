@@ -14,7 +14,23 @@ options(shiny.maxRequestSize = 30 * 1024 ^ 2)
 
 # server ----
 server <- function(input, output, session) {
+  # remove on non-local deployment
+  session$onSessionEnded(stopApp)
+  
   # Globals and reacive values ----
+  
+  # LIST_DATA <- list(
+  #   table_file = list(),
+  #   # [[]] gene X1 X2 ...
+  #   gene_file = list(),
+  #   # holds $common genes from files and $gene file(s)
+  #   gene_info = list(),
+  #   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
+  #   clust = list(), # Cluster holder
+  #   x_plot_range = c(0, 0),
+  #   STATE = c(0, "common") # flow control, gene list flow control
+  # )      
+  
   reactive_values <- reactiveValues(
     Y_Axis_Lable = NULL,
     Y_Axis_numbers = NULL,
@@ -59,6 +75,7 @@ server <- function(input, output, session) {
                         "selectgenelistonoff",
                         choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
       if (LIST_DATA$STATE[1] == 0) {
+        show("filegene")
         show("hidemainplot")
         show("startoff")
         print("1st slider and plot lines Ylable")
@@ -81,11 +98,19 @@ server <- function(input, output, session) {
   })
   
   # loads gene list file ----
-  gene_file <- reactive({
-    req(input$filegene$datapath)
+  gene_file <- observeEvent(input$filegene,{
     print("load gene file")
+    # load info, update select boxes, switching works and chaning info and ploting
+    LIST_DATA <<- LoadGeneFile(input$filegene$datapath,
+                               input$filegene$name,
+                               LIST_DATA)
+    updateSelectInput(session,
+                      "selectgenelistoptions",
+                      choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+    updateSelectInput(session,
+                      "selectgenelistonoff",
+                      choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
     # add warnings for total size of LIST_DATA
-    names(LIST_DATA$gene_info)
   })
   
   # update when data file is loaded ----
@@ -103,19 +128,9 @@ server <- function(input, output, session) {
                              selected = c(sapply(LIST_DATA$gene_info[[LIST_DATA$STATE[2]]], "[[", 5)))
   })
   
-  # update when gene list is loaded ----
-  observeEvent(gene_file(), {
-    print("select gene list options")
-    updateSelectInput(session,
-                      "selectgenelistoptions",
-                      choices = names(LIST_DATA$gene_info))
-    updateSelectInput(session,
-                      "selectgenelistonoff",
-                      choices = names(LIST_DATA$gene_info))
-  })
   
   # update desplay selected item info ----
-  observeEvent(input$radiodataoption, {
+  observeEvent(c(input$radiodataoption, input$selectgenelistoptions), {
     req(first_file())
     my_sel <- input$radiodataoption
     my_list <- input$selectgenelistoptions
@@ -292,19 +307,19 @@ server <- function(input, output, session) {
       }
     }
   })
-  # 
-  # # update check box on off with selecting gene list ----
-  # observeEvent(input$selectgenelistonoff, {
-  #   req(first_file())
-  #   print("update on off check box on gene list change")
-  #   updateCheckboxGroupInput(session, "checkboxonoff",
-  #                            selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
-  # })
+
+  # update check box on off with selecting gene list ----
+  observeEvent(input$selectgenelistonoff, {
+    req(first_file())
+    print("update on off check box on gene list change")
+    updateCheckboxGroupInput(session, "checkboxonoff",
+                             selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
+  })
   
   #records check box on/off ----
-  observeEvent(input$checkboxonoff,{
+  observeEvent(input$checkboxonoff,ignoreNULL = FALSE,{
       req(first_file())
-      #if (LIST_DATA$STATE[2] == input$selectgenelistonoff) {
+      if (LIST_DATA$STATE[2] == input$selectgenelistonoff) {
         print("checkbox on/off")
         LIST_DATA$gene_info <<-
           CheckBoxOnOff(input$selectgenelistonoff,
@@ -314,10 +329,10 @@ server <- function(input, output, session) {
         toggle("actionmyplot", condition = (input$tabs == "mainplot"))
         disable("selectlineslables")
         disable("hidemainplot")
-      # } else {
-      #   print("just updating what is seen")
-      #   LIST_DATA$STATE[2] <<- input$selectgenelistonoff
-      # }
+      } else {
+        print("just updating what is seen")
+        LIST_DATA$STATE[2] <<- input$selectgenelistonoff
+      }
   })
   
   # plots when acction button is pressed ----
@@ -344,6 +359,7 @@ server <- function(input, output, session) {
   
   # updates y axis limits
   observeEvent(reactive_values$Apply_Math,{
+    print("upate y axix on new math")
     reactive_values$Y_Axis_numbers <- MyXSetValues(reactive_values$Apply_Math, 
                                                    input$sliderplotBinRange)
     updateSliderInput(session,
@@ -351,7 +367,8 @@ server <- function(input, output, session) {
                       min = reactive_values$Y_Axis_numbers[3],
                       max = reactive_values$Y_Axis_numbers[4],
                       value = reactive_values$Y_Axis_numbers[1:2],
-                      step = ((reactive_values$Y_Axis_numbers[2]-reactive_values$Y_Axis_numbers[1])/20))
+                      step = ((reactive_values$Y_Axis_numbers[4] - 
+                                 reactive_values$Y_Axis_numbers[3])/20))
   })
   
   # renders plot ----
@@ -557,7 +574,8 @@ ui <- dashboardPage(
       )
     )
   )),
-  dashboardBody(useShinyjs(),
+  dashboardBody(
+    useShinyjs(),
                 inlineCSS(list(.ofhidden = "overflow: auto")),
                 tabItems(
                   # load data tab
