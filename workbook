@@ -1,8 +1,11 @@
 
 https://github.com/daattali/advanced-shiny#readme
 
-data after list length of enesg? ... deal with == 0
-checkboxonoff NULL reactive
+loading gene list switch to new list on checkbox ... properly updated
+check radio options are properly recordeing 
+ggplot useing proper options
+add spinning wheel on loading data
+
 # load info, update select boxes, switching works and chaning info and ploting
 
 update plot not updating if y axis is the same? 
@@ -25,9 +28,10 @@ gene tools ...
 # 
 # load bg files TODO
 # loading gene list add conveter hint, add gene list converter function 
-# restrict gene list to all loaded files or just plotted option 
-# if y slider gets too cumbersum the switch to numiricInputs
+# restrict gene list to all loaded files or just plotted option innerjoin
+# data after list length of enesg ... deal with == 0
 # yes/no message box loading genes and converting style and saving
+# if y slider gets too cumbersum the switch to numiricInputs
 numericInput("inNumber", "Number input:",
                    min = 1, max = 20, value = 5, step = 0.5),
       numericInput("inNumber2", "Number input 2:",

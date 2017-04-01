@@ -195,10 +195,9 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     
     # generate info for new file for loaded gene list(s)
     sapply(names(list_data$gene_file), function(g) {
-      if (g != my_name & length(list_data$gene_file[[g]]$full) > 0) {
-        enesg <- c(gene_names, list_data$gene_file[[g]]$full)
+      if (length(list_data$gene_file[[g]]$full) > 0) {
+        enesg <- c(list_data$gene_file[[g]]$full, gene_names)
         enesg <- enesg[duplicated(enesg)]
-        print(length(enesg))
         if(length(enesg) < 1){
           showModal(modalDialog(
             title = "Information message",
@@ -207,10 +206,10 @@ LoadTableFile <- function(file_path, file_name, list_data) {
           ))
         }
         my_name_g <- paste(strsplit(g, "\nn =")[[1]][1], "\nn =", length(enesg))
-        names(list_data$gene_file)[which(names(LIST_DATA$gene_file) == g)] <- my_name_g
-        names(list_data$gene_info)[which(names(LIST_DATA$gene_info) == g)] <- my_name_g
-        list_data$gene_file[[my_name_g]]$use <- enesg
-        list_data$gene_info[[my_name_g]][[legend_nickname]] <-
+        names(list_data$gene_file)[which(names(list_data$gene_file) == g)] <<- my_name_g
+        names(list_data$gene_info)[which(names(list_data$gene_info) == g)] <<- my_name_g
+        list_data$gene_file[[my_name_g]]$use <<- enesg
+        list_data$gene_info[[my_name_g]][[legend_nickname]] <<-
           tibble(
             set = legend_nickname,
             mydot = kDotOptions[1],
@@ -237,7 +236,7 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
         cols(gene = col_character())
       ))
     
-    enesg <- c(unique(genefile$gene),
+    enesg <- c(collapse(distinct(genefile, gene))[[1]],
                list_data$gene_file[[1]]$use)
     enesg <- enesg[duplicated(enesg)]
     if (length(enesg) == 0) {
@@ -255,7 +254,7 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
       paste(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn =", length(enesg))
     
     list_data$gene_file[[legend_nickname]]$full <-
-      unique(genefile[, 1])
+      collapse(distinct(genefile, gene))[[1]]
     list_data$gene_file[[legend_nickname]]$use <- enesg
     list_data$gene_info[[legend_nickname]] <-
       lapply(setNames(
@@ -303,7 +302,7 @@ ApplyMath <-
     gene_info = list_data$gene_info
     list_data_frame <- NULL
     list_long_data_frame <- NULL
-    if(sum(sapply(names(gene_info), function(i) sapply(gene_info[[i]], "[[",5))) == 0){
+    if(sum(unlist(sapply(names(gene_info), function(i) sapply(gene_info[[i]], "[[",5) != 0))) == 0){
       return(NULL)
     }
       for (i in names(gene_file)) {
