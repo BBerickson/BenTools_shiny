@@ -124,7 +124,19 @@ LoadTableFile <- function(file_path, file_name, list_data) {
                      n_max = 1,
                      skip = 1,
                      tokenizer = tokenizer_tsv()) - 1
-      if(file_count > 0 & num_bins != list_data$x_plot_range[2]){
+      # checks if last row is an empty and fixes
+      tablefile <- suppressMessages(read_tsv(file_path[x],
+                                             col_names = c("gene", 1:(num_bins)),
+                                             skip = 1, n_max = 5))
+      if(sum(is.na(tablefile[,num_bins+1])) == 5){
+        test <- TRUE
+        num_bins2 <- num_bins - 1
+      } else {
+        test <- FALSE
+        num_bins2 <- num_bins
+      }
+      
+      if(file_count > 0 & num_bins2 != list_data$x_plot_range[2]){
         showModal(modalDialog(
           title = "Information message",
           "Can't load file, different number of bins", size = "s",
@@ -132,6 +144,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         ))
         next()
       }
+      
       
       tablefile <- suppressMessages(read_tsv(file_path[x],
                                              col_names = c("gene", 1:(num_bins)),
@@ -144,6 +157,12 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         ) %>%
         na_if(Inf) %>%
         replace_na(list(score = 0))
+      
+      if(test){
+        tablefile <- tablefile %>% filter(., bin != num_bins)
+      }
+      
+      num_bins <- num_bins2
 
     zero_genes <-
       group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test !=
