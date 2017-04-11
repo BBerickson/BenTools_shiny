@@ -1,17 +1,21 @@
 
 https://github.com/daattali/advanced-shiny#readme
 
-loading gene list switch to new list on checkbox ... properly updated
-check radio options are properly recordeing 
-ggplot useing proper options
-add spinning wheel on loading data
 
+load file last bin NA protection 5' problem
+
+update plot not updating if y axis is the same after removing a checkbox? 
+
+gene lists colors are a shade diffrent ...
+
+add spinning wheel on loading data
+ loading the wrong file type in gene lists adds to dropdowns?
 # load info, update select boxes, switching works and chaning info and ploting
 
-update plot not updating if y axis is the same? 
+
 
 load gene lists, info update and plot controls working ... use state[2] ... loads data
-try and brake with incompatible lists, list going to 0 after loading new file
+try and brake with incompatible lists and files, list going to 0 after loading new file
 
 not common hide norm factor
 

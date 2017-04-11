@@ -128,7 +128,6 @@ server <- function(input, output, session) {
                              selected = c(sapply(LIST_DATA$gene_info[[LIST_DATA$STATE[2]]], "[[", 5)))
   })
   
-  
   # update desplay selected item info ----
   observeEvent(c(input$radiodataoption, input$selectgenelistoptions), {
     req(first_file())
@@ -149,13 +148,6 @@ server <- function(input, output, session) {
                       "selectline",
                       selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
   })
-  
-  # triggers update on changing gene list ----
-  # observeEvent(input$selectgenelistoptions, {
-  #   req(first_file())
-  #   print("update options on gene list change")
-  #   updateRadioButtons(session, "radiodataoption", selected = input$radiodataoption)
-  # })
   
   # record new nickname and norm factor ----
   observeEvent(input$actionoptions, {
@@ -311,9 +303,11 @@ server <- function(input, output, session) {
   # update check box on off with selecting gene list ----
   observeEvent(input$selectgenelistonoff, {
     req(first_file())
+    print(input$selectgenelistonoff)
     print("update on off check box on gene list change")
+    onoff <- unlist(sapply(LIST_DATA$gene_info[[input$selectgenelistonoff]], "[[",5))
     updateCheckboxGroupInput(session, "checkboxonoff",
-                             selected = LIST_DATA$gene_info[[input$selectgenelistonoff]][[first_file()]]["onoff"])
+                             selected = onoff)
   })
   
   #records check box on/off ----

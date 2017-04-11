@@ -270,7 +270,7 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
           onoff = 0,
           rnorm = "1"
         ))
-    list_data$STATE[2] <- names(list_data$gene_info)[1]
+    list_data$STATE[2] <- legend_nickname
     list_data
     
 }
@@ -572,6 +572,12 @@ GGplotLineDot <-
   function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, use_y_label, legend_space = 1) {
     print("ggplot")
     
+    use_col <- plot_options$mycol
+    use_dot <- plot_options$mydot
+    use_line <- plot_options$myline
+    names(use_col) <- plot_options$set
+    names(use_dot) <- plot_options$set
+    names(use_line) <- plot_options$set
     gp <-
         ggplot(
           list_long_data_frame,
@@ -596,10 +602,10 @@ GGplotLineDot <-
     }
     gp <- gp +
       geom_point(stroke = .001) +
-      scale_size_manual(name = "Sample", values = plot_options$mysize) +
-      scale_color_manual(name = "Sample", values = plot_options$mycol) + 
-      scale_shape_manual(name = "Sample", values = plot_options$mydot) +
-      scale_linetype_manual(name = "Sample", values = plot_options$myline) +
+      scale_size_manual(values = plot_options$mysize) +
+      scale_color_manual(values = use_col) + 
+      scale_shape_manual(values = use_dot) +
+      scale_linetype_manual(values = use_line) +
       # xlab(use_x_label) + 
       ylab(use_y_label) +  # Set axis labels
       scale_x_continuous(breaks = line_list$mybrakes,
