@@ -2,7 +2,6 @@
 https://github.com/daattali/advanced-shiny#readme
 
 
-make gene lists colors a shade diffrent ...
 
 add spinning wheel on loading data
  loading the wrong file type in gene lists adds to dropdowns?

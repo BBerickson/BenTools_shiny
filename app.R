@@ -528,6 +528,7 @@ observeEvent(reactive_values$Apply_Math,{
     req(first_file())
     print("kbrewer")
     kListColorSet <<- brewer.pal(8, input$kbrewer)
+    common_name <- names(LIST_DATA$gene_info)[1]
     if (!is.null(LIST_DATA$gene_info[[1]])) {
       print("kbrewer update")
       lapply(names(LIST_DATA$gene_info), function(i) {
@@ -536,8 +537,13 @@ observeEvent(reactive_values$Apply_Math,{
           if (color_safe == 0) {
             color_safe <- 1
           }
-          LIST_DATA$gene_info[[i]][[j]][4] <<-
-            kListColorSet[color_safe]
+          if(i == common_name){
+            LIST_DATA$gene_info[[i]][[j]][4] <<-
+              kListColorSet[color_safe]
+          } else {
+            LIST_DATA$gene_info[[i]][[j]][4] <<-
+              RgbToHex(my_hex = kListColorSet[color_safe], tint = T)
+          }
         })
       })
       updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"]))
@@ -684,7 +690,7 @@ ui <- dashboardPage(
                                   "kbrewer",
                                   "quick color set",
                                   choices = kBrewerList,
-                                  selected = kBrewerList[3]
+                                  selected = kBrewerList[6]
                                 )
                               )
                             )

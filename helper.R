@@ -77,15 +77,20 @@ kBrewerList <-
     "Set3")
 
 # color Brewer set that is active to use in plot
-kListColorSet <- brewer.pal(8, kBrewerList[3])
+kListColorSet <- brewer.pal(8, kBrewerList[6])
 
 # math options avalible
 kMathOptions <- c("mean", "sum", "median", "var")
 
 # functions ----
-RgbToHex <- function(my_hex = NULL, my_rgb = NULL){
+RgbToHex <- function(my_hex = NULL, my_rgb = NULL, tint = FALSE){
   if(!is.null(my_hex)){
+    if (tint) {
+      my_rgb <- as.numeric(col2rgb(c(my_hex)))
+      my_rgb <- paste(round(my_rgb + (255 - my_rgb) * .5),collapse = ",")
+    } else {
     return(paste(col2rgb(c(my_hex)),collapse = ","))
+    }
   }
   if(!is.null(my_rgb)){
     red_green_blue <- strsplit(my_rgb, ",")[[1]]
@@ -233,7 +238,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
             set = legend_nickname,
             mydot = kDotOptions[1],
             myline = kLineOptions[1],
-            mycol = color_select,
+            mycol = RgbToHex(my_hex = color_select, tint = T),
             onoff = 0,
             rnorm = "1"
           )
@@ -285,7 +290,7 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
           set = i,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = list_data$gene_info[[1]][[i]]$mycol,
+          mycol = RgbToHex(my_hex = list_data$gene_info[[1]][[i]]$mycol, tint = T),
           onoff = 0,
           rnorm = "1"
         ))
@@ -582,7 +587,7 @@ MyXSetValues <- function(apply_math, xBinRange) {
     filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
     ungroup() %>%
     summarise(min(value, na.rm = T), max(value, na.rm = T)) %>% 
-    unlist(.,use.names=FALSE) #%>% round(.,4)
+    unlist(.,use.names=FALSE) 
   tt <- round(c(tt, tt[1]-tt[1]*.1, tt[2]+tt[2]*.1),4) 
 }
 
