@@ -2,11 +2,7 @@
 https://github.com/daattali/advanced-shiny#readme
 
 
-load file last bin NA protection 5' problem
-
-update plot not updating if y axis is the same after removing a checkbox? 
-
-gene lists colors are a shade diffrent ...
+make gene lists colors a shade diffrent ...
 
 add spinning wheel on loading data
  loading the wrong file type in gene lists adds to dropdowns?

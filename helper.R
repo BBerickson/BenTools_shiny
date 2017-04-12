@@ -582,7 +582,7 @@ MyXSetValues <- function(apply_math, xBinRange) {
     filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
     ungroup() %>%
     summarise(min(value, na.rm = T), max(value, na.rm = T)) %>% 
-    unlist(.,use.names=FALSE) %>% round(.,4)
+    unlist(.,use.names=FALSE) #%>% round(.,4)
   tt <- round(c(tt, tt[1]-tt[1]*.1, tt[2]+tt[2]*.1),4) 
 }
 

@@ -38,6 +38,7 @@ server <- function(input, output, session) {
     Apply_Math = NULL,
     Plot_Options = NULL,
     Plot_controler = NULL,
+    Y_Axis_plot = NULL,
     mynorm = "none"
   )
   
@@ -352,10 +353,12 @@ server <- function(input, output, session) {
   })
   
   # updates y axis limits
-  observeEvent(reactive_values$Apply_Math,{
+observeEvent(reactive_values$Apply_Math,{
     print("upate y axix on new math")
+  test <- reactive_values$Y_Axis_numbers
     reactive_values$Y_Axis_numbers <- MyXSetValues(reactive_values$Apply_Math, 
                                                    input$sliderplotBinRange)
+    
     updateSliderInput(session,
                       "sliderplotYRange",
                       min = reactive_values$Y_Axis_numbers[3],
@@ -363,7 +366,14 @@ server <- function(input, output, session) {
                       value = reactive_values$Y_Axis_numbers[1:2],
                       step = ((reactive_values$Y_Axis_numbers[4] - 
                                  reactive_values$Y_Axis_numbers[3])/20))
+    # Forces update if y Asis values stay the same
+    if(sum(test) == sum(reactive_values$Y_Axis_numbers)){
+      reactive_values$Y_Axis_plot <- input$actionmyplot[1]
+    }
+    
   })
+  
+  
   
   # renders plot ----
   output$plot <- renderPlot({
@@ -418,10 +428,10 @@ server <- function(input, output, session) {
   })
  
   #plots when bin slider or y slider is triggered ----
-  observeEvent(c(reactive_values$Lines_Lables_List, input$sliderplotBinRange, input$sliderplotYRange), {
+  observeEvent(c(reactive_values$Lines_Lables_List, input$sliderplotBinRange, reactive_values$Y_Axis_plot, input$sliderplotYRange), {
     req(first_file())
     if (!is.null(reactive_values$Apply_Math)) {
-      print("bin slider or L&L")
+      print("bin slider or L&L making ggplot")
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
