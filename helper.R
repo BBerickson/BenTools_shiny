@@ -29,6 +29,8 @@ suppressPackageStartupMessages(my_packages(
   )
 ))
 
+
+
 LIST_DATA <- list(
   table_file = list(),
   # [[]] gene X1 X2 ...
@@ -124,6 +126,8 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       ))
       next()
     }
+    setProgress(1, detail = "numbins")
+    
       num_bins <-
         count_fields(file_path[x],
                      n_max = 1,
@@ -149,8 +153,9 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         ))
         next()
       }
+      setProgress(1, detail = "load file")
       
-      
+
       tablefile <- suppressMessages(read_tsv(file_path[x],
                                              col_names = c("gene", 1:(num_bins)),
                                              skip = 1) %>%
@@ -168,7 +173,8 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       }
       
       num_bins <- num_bins2
-
+      setProgress(2, detail = "process gene list")
+      
     zero_genes <-
       group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test !=
                                                                                          0)
@@ -203,7 +209,9 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       color_safe <- 1
     }
     color_select <- kListColorSet[color_safe]
-    
+    num_bins <- num_bins2
+    setProgress(3, detail = "build")
+  
     list_data$table_file[[legend_nickname]] <- tablefile
     list_data$gene_file[[my_name]]$use <- gene_names
     list_data$gene_info[[my_name]][[legend_nickname]] <-
@@ -216,6 +224,8 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         onoff = legend_nickname,
         rnorm = "1"
       )
+    num_bins <- num_bins2
+    setProgress(4, detail = "adding to gene list")
     
     # generate info for new file for loaded gene list(s)
     sapply(names(list_data$gene_file), function(g) {
@@ -246,6 +256,9 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     })
     file_count <- 1
   }
+  num_bins <- num_bins2
+  setProgress(5, detail = "done")
+  
   list_data
 }
 

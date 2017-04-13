@@ -65,10 +65,15 @@ server <- function(input, output, session) {
     isolate({
       print("load file")
       # add warnings for total size of LIST_DATA TODO
+      disable("startoff")
+      disable("hidemainplot")
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...', value = 0, {
       LIST_DATA <<-
         LoadTableFile(input$filetable$datapath,
                       input$filetable$name,
                       LIST_DATA)
+                   })
       updateSelectInput(session,
                         "selectgenelistoptions",
                         choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
@@ -94,12 +99,14 @@ server <- function(input, output, session) {
         addClass("checkboxonoff",class = "ofhidden")
         LIST_DATA$STATE[1] <<- 1
       }
+      enable("startoff")
+      enable("hidemainplot")
       names(LIST_DATA$table_file)
     })
   })
   
   # loads gene list file ----
-  gene_file <- observeEvent(input$filegene,{
+  observeEvent(input$filegene,{
     print("load gene file")
     # load info, update select boxes, switching works and chaning info and ploting
     LIST_DATA <<- LoadGeneFile(input$filegene$datapath,
@@ -609,8 +616,8 @@ ui <- dashboardPage(
                                 label = "Load color list",
                                 accept = c('.color.txt')
                               ))
-                            )
-                            ,
+                            ),
+                    
                             hidden(div(
                               id = "startoff",
                               box(

@@ -2,9 +2,7 @@
 https://github.com/daattali/advanced-shiny#readme
 
 
-
-add spinning wheel on loading data
- loading the wrong file type in gene lists adds to dropdowns?
+ loading the wrong file type in gene lists adds to dropdowns? ... only keep first column
 # load info, update select boxes, switching works and chaning info and ploting
 
 
