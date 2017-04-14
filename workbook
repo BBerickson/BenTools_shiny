@@ -2,12 +2,6 @@
 https://github.com/daattali/advanced-shiny#readme
 
 
- loading the wrong file type in gene lists adds to dropdowns? ... only keep first column
-# load info, update select boxes, switching works and chaning info and ploting
-
-
-
-load gene lists, info update and plot controls working ... use state[2] ... loads data
 try and brake with incompatible lists and files, list going to 0 after loading new file
 
 not common hide norm factor
@@ -23,7 +17,8 @@ gene tools ...
 # load remote files TODO
 # 
 # 
-# load bg files TODO
+# load bg files TODO 
+# work on progress bar
 # loading gene list add conveter hint, add gene list converter function 
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0

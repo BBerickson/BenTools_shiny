@@ -337,7 +337,7 @@ server <- function(input, output, session) {
       }
   })
   
-  # plots when acction button is pressed ----
+  # plots when action button is pressed ----
   observeEvent(input$actionmyplot, {
     req(first_file())
     print("plot button")

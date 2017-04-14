@@ -265,6 +265,12 @@ LoadTableFile <- function(file_path, file_name, list_data) {
 # reads in gene list files
 LoadGeneFile <- function(file_path, file_name, list_data) {
   
+  num_bins <-
+    count_fields(file_path,
+                 n_max = 1,
+                 skip = 1,
+                 tokenizer = tokenizer_tsv())
+  if(num_bins == 1){
     genefile <-
       suppressMessages(read_tsv(
         file_path,
@@ -272,7 +278,15 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
         comment = "#",
         cols(gene = col_character())
       ))
-    
+  } else if(num_bins > 1){
+    genefile <-
+      suppressMessages(read_tsv(
+        file_path,
+        comment = "#",
+        col_types = cols_only(gene = col_character())
+      ))
+  }
+  
     enesg <- c(collapse(distinct(genefile, gene))[[1]],
                list_data$gene_file[[1]]$use)
     enesg <- enesg[duplicated(enesg)]
@@ -283,7 +297,7 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
         " No genes in common, might need to reformat gene name style", size = "s",
         easyClose = TRUE
       ))
-      return()
+      return(list_data)
       
     }
     
