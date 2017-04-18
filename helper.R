@@ -117,9 +117,13 @@ isColor <- function(x) {
 # reads in file, tests, fills out info and returns list_data
 LoadTableFile <- function(file_path, file_name, list_data) {
   # load remote files TODO
-  # if(length(file_path) == 1 && length(grep(".url",file_path))==1){
-  #   file_path <- read_lines(file_path)
-  # }
+  if(length(file_name) == 1 && length(grep(".url",file_name))==1){
+    file_path <- read_lines(file_path)
+    file_name <- NULL
+    for(i in file_path){
+      file_name <- c(file_name, last(strsplit(i, "/")[[1]]))
+    }
+  }
   file_count <- length(list_data$table_file)
   for (x in seq_along(file_path)) {
     legend_nickname <-
@@ -139,6 +143,39 @@ LoadTableFile <- function(file_path, file_name, list_data) {
                      n_max = 1,
                      skip = 1,
                      tokenizer = tokenizer_tsv()) - 1
+      
+      if (num_bins == 2) {
+        setProgress(1, detail = "load file")
+        tablefile <- suppressMessages(read_tsv(file_path[x],
+                                               col_names = c("gene", "bin", "score"))) %>%
+          mutate(set = legend_nickname) %>% na_if(Inf)
+        num_bins <- collapse(summarise(tablefile, max(bin)))[[1]]
+        if (file_count > 0 & num_bins != list_data$x_plot_range[2]) {
+            showModal(modalDialog(
+              title = "Information message",
+              "Can't load file, different number of bins", size = "s",
+              easyClose = TRUE
+            ))
+            break ()
+          }
+      } else if (num_bins == 5) {
+        setProgress(1, detail = "load file")
+        tablefile <- suppressMessages(read_tsv(
+          file_path[x],
+          col_names = c("chr", "start", "end", "gene", "bin", "score")
+        )) %>%
+          select(gene, bin, score) %>%
+          mutate(set = legend_nickname) %>% na_if(Inf)
+        num_bins <- collapse(summarise(tablefile, max(bin)))[[1]]
+        if (file_count > 0 & num_bins != list_data$x_plot_range[2]) {
+            showModal(modalDialog(
+              title = "Information message",
+              "Can't load file, different number of bins", size = "s",
+              easyClose = TRUE
+            ))
+            break ()
+          }
+      } else{
       # checks if last row is an empty and fixes
       tablefile <- suppressMessages(read_tsv(file_path[x],
                                              col_names = c("gene", 1:(num_bins)),
@@ -157,11 +194,10 @@ LoadTableFile <- function(file_path, file_name, list_data) {
           "Can't load file, different number of bins", size = "s",
           easyClose = TRUE
         ))
-        next()
+        break ()
       }
       setProgress(1, detail = "load file")
       
-
       tablefile <- suppressMessages(read_tsv(file_path[x],
                                              col_names = c("gene", 1:(num_bins)),
                                              skip = 1) %>%
@@ -171,8 +207,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
           bin = as.numeric(bin),
           score = as.numeric(score)
         ) %>%
-        na_if(Inf) %>%
-        replace_na(list(score = 0))
+        na_if(Inf)
       
       if(test){
         tablefile <- tablefile %>% filter(., bin != num_bins)
@@ -180,7 +215,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       
       num_bins <- num_bins2
       setProgress(2, detail = "process gene list")
-      
+      }
     zero_genes <-
       group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test !=
                                                                                          0)
@@ -215,7 +250,6 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       color_safe <- 1
     }
     color_select <- kListColorSet[color_safe]
-    num_bins <- num_bins2
     setProgress(3, detail = "build")
   
     list_data$table_file[[legend_nickname]] <- tablefile
@@ -230,7 +264,6 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         onoff = legend_nickname,
         rnorm = "1"
       )
-    num_bins <- num_bins2
     setProgress(4, detail = "adding to gene list")
     
     # generate info for new file for loaded gene list(s)
@@ -262,7 +295,6 @@ LoadTableFile <- function(file_path, file_name, list_data) {
     })
     file_count <- 1
   }
-  num_bins <- num_bins2
   setProgress(5, detail = "done")
   
   list_data

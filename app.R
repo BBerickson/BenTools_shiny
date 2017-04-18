@@ -58,7 +58,6 @@ server <- function(input, output, session) {
     toggle("actionmyplot",
            condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] == 2))
   })
-  
   # loads data file(s) ----
   first_file <- reactive({
     req(input$filetable$datapath)
@@ -314,6 +313,7 @@ server <- function(input, output, session) {
   
   # update and save color selected ----
   observeEvent(input$colourhex, {
+    req(first_file())
     print("update text color")
     updateTextInput(session,
                     "textrgbtohex",

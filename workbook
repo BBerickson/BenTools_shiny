@@ -1,24 +1,24 @@
 
 https://github.com/daattali/advanced-shiny#readme
 
+# loading gene list add conveter hint(have popup show example from first row in load gene list), add gene list converter function 
 
-
-
-# load bg files
-# load remote files TODO
 # work on progress bar
 # add more lines and lables presets, trigger without button?
-# plot lines lables text legend sizes, legend spaceing?
-# converting genes list and saving (have popup show example from first row in load gene list)
+# plot lines lables, text, and legend sizes, legend spaceing?
+
 
 gene tools ...
-
+sort
+region
+cluster
+cdp
+intersect
 # file size restriction the set correctly?
 
-# loading gene list add conveter hint, add gene list converter function 
+
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0
-# yes/no message box loading genes and converting style and saving
 
 # if y slider gets too cumbersum the switch to numiricInputs
 numericInput("inNumber", "Number input:",
