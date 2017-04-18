@@ -301,8 +301,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
 }
 
 # reads in gene list files
-LoadGeneFile <- function(file_path, file_name, list_data) {
-  
+LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
   num_bins <-
     count_fields(file_path,
                  n_max = 1,
@@ -328,17 +327,29 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
     enesg <- c(collapse(distinct(genefile, gene))[[1]],
                list_data$gene_file[[1]]$use)
     enesg <- enesg[duplicated(enesg)]
-    if (length(enesg) == 0) {
+    if (length(enesg) == 0 & convert == FALSE) {
       
       showModal(modalDialog(
         title = "Information message",
-        " No genes in common, might need to reformat gene name style", size = "s",
+        " No genes in common, might need to reformat gene name style, try pattern matching", size = "s",
         easyClose = TRUE
       ))
       return(list_data)
       
+    } else if (length(enesg) == 0 & convert){
+      enesg <-
+        unique(grep(paste(genefile$gene, collapse = "|"), list_data$gene_file[[1]]$use, value = T))
+      genefile <- data.frame(gene = enesg)
+      if (length(enesg) == 0) {
+        showModal(modalDialog(
+          title = "Information message",
+          " No genes found after pattern matching search", size = "s",
+          easyClose = TRUE
+        ))
+        return(list_data)
+      }
+      print("save gene list")
     }
-    
     legend_nickname <-
       paste(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn =", length(enesg))
     
@@ -364,6 +375,7 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
     
 }
 
+# read in and match up names and change colors
 LoadColorFile <- function(file_path, list_data) {
    
   num_bins <-

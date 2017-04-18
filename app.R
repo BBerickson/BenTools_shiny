@@ -58,6 +58,7 @@ server <- function(input, output, session) {
     toggle("actionmyplot",
            condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] == 2))
   })
+  
   # loads data file(s) ----
   first_file <- reactive({
     req(input$filetable$datapath)
@@ -81,6 +82,7 @@ server <- function(input, output, session) {
                         choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
       if (LIST_DATA$STATE[1] == 0) {
         show("filegene")
+        show("checkboxconvert")
         show("filecolor")
         show("hidemainplot")
         show("startoff")
@@ -101,6 +103,7 @@ server <- function(input, output, session) {
       }
       enable("startoff")
       enable("hidemainplot")
+      reset("filetable")
       names(LIST_DATA$table_file)
     })
   })
@@ -111,13 +114,14 @@ server <- function(input, output, session) {
     # load info, update select boxes, switching works and chaning info and ploting
     LIST_DATA <<- LoadGeneFile(input$filegene$datapath,
                                input$filegene$name,
-                               LIST_DATA)
+                               LIST_DATA, input$checkboxconvert)
     updateSelectInput(session,
                       "selectgenelistoptions",
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
     updateSelectInput(session,
                       "selectgenelistonoff",
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+    reset("filegene")
     # add warnings for total size of LIST_DATA
   })
   
@@ -145,7 +149,7 @@ server <- function(input, output, session) {
           reactive_values$Y_Axis_Lable
         )
     }
-    
+    reset("filecolor")
     })
   
   # update when data file is loaded ----
@@ -641,7 +645,10 @@ ui <- dashboardPage(
                                 "filegene",
                                 label = "Load gene list",
                                 accept = c('.txt')
-                              )),
+                              ),
+                              checkboxInput("checkboxconvert",
+                                            "gene list partal matching,      !!!can be slow!!!", value = FALSE)),
+                              
                               hidden(fileInput(
                                 "filecolor",
                                 label = "Load color list",

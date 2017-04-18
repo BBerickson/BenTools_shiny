@@ -1,9 +1,8 @@
 
 https://github.com/daattali/advanced-shiny#readme
 
-# loading gene list add conveter hint(have popup show example from first row in load gene list), add gene list converter function 
-
-# work on progress bar
+# add save gene list function and add to pattern match
+# work on progress bar in loading files and add to loading gene lists and pattern matching
 # add more lines and lables presets, trigger without button?
 # plot lines lables, text, and legend sizes, legend spaceing?
 
