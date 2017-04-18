@@ -1,0 +1,3 @@
+a.table 255,0,0
+c.table #E41A1C
+b.table 0,0,255
