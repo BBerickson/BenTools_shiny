@@ -82,6 +82,7 @@ server <- function(input, output, session) {
                         choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
       if (LIST_DATA$STATE[1] == 0) {
         show("filegene")
+        show("filecolor")
         show("hidemainplot")
         show("startoff")
         print("1st slider and plot lines Ylable")
@@ -121,6 +122,33 @@ server <- function(input, output, session) {
     # add warnings for total size of LIST_DATA
   })
   
+  # loads gene list file ----
+  observeEvent(input$filecolor,{
+    req(first_file())
+    my_sel <- input$radiodataoption
+    my_list <- input$selectgenelistoptions
+    print("load color file")
+    # load info, update select boxes, switching works and chaning info and ploting
+    LIST_DATA <<- LoadColorFile(input$filecolor$datapath,
+                               LIST_DATA)
+    updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mycol"]))
+    if (LIST_DATA$STATE[1] == 1 &
+        !is.null(reactive_values$Apply_Math)) {
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Options, 
+          input$sliderplotYRange, 
+          reactive_values$Lines_Lables_List, 
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
+        )
+    }
+    
+    })
+  
   # update when data file is loaded ----
   observeEvent(first_file(), {
     print("update load file")
@@ -155,6 +183,11 @@ server <- function(input, output, session) {
     updateSelectInput(session,
                       "selectline",
                       selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
+    if(my_list == names(LIST_DATA$gene_info)[1]){
+      enable("normfactor")
+    } else {
+      disable("normfactor")
+    }
   })
   
   # record new nickname and norm factor ----
@@ -360,7 +393,7 @@ server <- function(input, output, session) {
   })
   
   # updates y axis limits
-observeEvent(reactive_values$Apply_Math,{
+  observeEvent(reactive_values$Apply_Math,{
     print("upate y axix on new math")
   test <- reactive_values$Y_Axis_numbers
     reactive_values$Y_Axis_numbers <- MyXSetValues(reactive_values$Apply_Math, 
@@ -379,8 +412,6 @@ observeEvent(reactive_values$Apply_Math,{
     }
     
   })
-  
-  
   
   # renders plot ----
   output$plot <- renderPlot({

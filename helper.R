@@ -108,6 +108,12 @@ RgbToHex <- function(my_hex = NULL, my_rgb = NULL, tint = FALSE){
   }
 }
 
+# basic test for valid colors
+isColor <- function(x) {
+  res <- try(col2rgb(x), silent = TRUE)
+  return(!"try-error" %in% class(res))
+}
+
 # reads in file, tests, fills out info and returns list_data
 LoadTableFile <- function(file_path, file_name, list_data) {
   # load remote files TODO
@@ -324,6 +330,75 @@ LoadGeneFile <- function(file_path, file_name, list_data) {
     list_data$STATE[2] <- legend_nickname
     list_data
     
+}
+
+LoadColorFile <- function(file_path, list_data) {
+   
+  num_bins <-
+    count_fields(file_path,
+                 n_max = 1,
+                 skip = 1,
+                 tokenizer = tokenizer_tsv())
+  if(num_bins == 2){
+    color_file <-
+      suppressMessages(read_tsv(
+        file_path,
+        col_names = F,
+        col_types = "cc")
+      )
+  } else if(num_bins == 1){
+    num_bins <-
+      count_fields(file_path,
+                   n_max = 1,
+                   skip = 1,
+                   tokenizer = tokenizer_delim(" "))
+    if(num_bins == 2){
+      color_file <-
+        suppressMessages(read_delim(
+          delim = " ",
+          file_path,
+          col_names = F,
+          col_types = "cc")
+        )
+    } else {
+      print("can't load file")
+      return(list_data)
+    }
+    # match name test color and update color
+    for(i in seq_along(color_file$X1)){
+      nickname <-
+        strsplit(as.character(color_file$X1[i]), '.tab')[[1]][1]
+      num <- grep(nickname, names(list_data$table_file), ignore.case = TRUE)
+
+      if(length(num) > 0){
+        if (suppressWarnings(!is.na(as.numeric(substr(
+          color_file$X2[i], 1, 1
+        )))) == TRUE) {
+          red_green_blue <- strsplit(color_file$X2[i], ",")
+          if (length(red_green_blue[[1]]) == 3) {
+            color_file$X2[i] <- rgb(
+              as.numeric(red_green_blue[[1]])[1],
+              as.numeric(red_green_blue[[1]])[2],
+              as.numeric(red_green_blue[[1]])[3],
+              maxColorValue = 255
+            )
+          } else {
+            color_file$X2[i] <- "black"
+          }
+        }
+        
+        if (!isColor(color_file$X2[i])) {
+          color_file$X2[i] <- "black"
+        }
+        
+       lapply(seq_along(list_data$gene_info), function(j) {
+            list_data$gene_info[[j]][[nickname]]['mycol'] <<- color_file$X2[i]
+          })
+    }
+ 
+  } 
+  }
+  list_data
 }
 
 # records check box on/off

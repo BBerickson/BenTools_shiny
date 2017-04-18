@@ -2,27 +2,24 @@
 https://github.com/daattali/advanced-shiny#readme
 
 
-try and brake with incompatible lists and files, list going to 0 after loading new file
 
-not common hide norm factor
 
-load color files (add option for names to match?)
+# load bg files
+# load remote files TODO
+# work on progress bar
+# add more lines and lables presets, trigger without button?
+# plot lines lables text legend sizes, legend spaceing?
+# converting genes list and saving (have popup show example from first row in load gene list)
 
 gene tools ...
 
-# add more lines and lables presets, trigger without button?
-# plot lines lables text legend sizes, legend spaceing?
-# load file has spiner while running
 # file size restriction the set correctly?
-# load remote files TODO
-# 
-# 
-# load bg files TODO 
-# work on progress bar
+
 # loading gene list add conveter hint, add gene list converter function 
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0
 # yes/no message box loading genes and converting style and saving
+
 # if y slider gets too cumbersum the switch to numiricInputs
 numericInput("inNumber", "Number input:",
                    min = 1, max = 20, value = 5, step = 0.5),
