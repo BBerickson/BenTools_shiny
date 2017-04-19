@@ -302,6 +302,7 @@ LoadTableFile <- function(file_path, file_name, list_data) {
 
 # reads in gene list files
 LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
+  setProgress(1, detail = "reading in file")
   num_bins <-
     count_fields(file_path,
                  n_max = 1,
@@ -337,6 +338,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
       return(list_data)
       
     } else if (length(enesg) == 0 & convert){
+      setProgress(2, detail = "looking for gene name matches")
       enesg <-
         unique(grep(paste(genefile$gene, collapse = "|"), list_data$gene_file[[1]]$use, value = T))
       genefile <- data.frame(gene = enesg)
@@ -356,7 +358,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
     }
     legend_nickname <-
       paste(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn =", length(enesg))
-    
+    setProgress(3, detail = "adding file to lists")
     list_data$gene_file[[legend_nickname]]$full <-
       collapse(distinct(genefile, gene))[[1]]
     list_data$gene_file[[legend_nickname]]$use <- enesg
@@ -375,6 +377,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
           rnorm = "1"
         ))
     list_data$STATE[2] <- legend_nickname
+    setProgress(5, detail = "done")
     list_data
     
 }
@@ -743,7 +746,7 @@ MyXSetValues <- function(apply_math, xBinRange) {
 
 # main ggplot function
 GGplotLineDot <-
-  function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, use_y_label, legend_space = 1) {
+function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, use_smooth, use_y_label) {
     print("ggplot")
     
     use_col <- plot_options$mycol
@@ -752,6 +755,10 @@ GGplotLineDot <-
     names(use_col) <- plot_options$set
     names(use_dot) <- plot_options$set
     names(use_line) <- plot_options$set
+    legend_space <- max(1, (lengths(
+      strsplit(plot_options$set, "\n")
+    )))
+    print(legend_space)
     gp <-
         ggplot(
           list_long_data_frame,

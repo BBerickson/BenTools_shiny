@@ -112,10 +112,13 @@ server <- function(input, output, session) {
   # loads gene list file ----
   observeEvent(input$filegene,{
     print("load gene file")
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...', value = 0, {
     # load info, update select boxes, switching works and chaning info and ploting
     LIST_DATA <<- LoadGeneFile(input$filegene$datapath,
                                input$filegene$name,
                                LIST_DATA, input$checkboxconvert)
+                 })
     updateSelectInput(session,
                       "selectgenelistoptions",
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
@@ -124,6 +127,7 @@ server <- function(input, output, session) {
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
     reset("filegene")
     # add warnings for total size of LIST_DATA
+
   })
   
   # loads gene list file ----
@@ -646,17 +650,19 @@ ui <- dashboardPage(
                 inlineCSS(list(.ofhidden = "overflow: auto")),
                 tabItems(
                   # load data tab
-                  tabItem(tabName = "loaddata",
+                  tabItem(tabName = "loaddata", 
                           fluidRow(
-                            box(
+                            tabBox(title = "Load files", id = "loadfiles", 
                               width = 4,
+                              tabPanel("Table",
                               fileInput(
                                 "filetable",
                                 label = "Load table file",
                                 accept = c('.table'),
-                                multiple = TRUE
+                                multiple = TRUE)
                               ),
-                              hidden(fileInput(
+                              tabPanel(title = "Gene",  
+                                       hidden(fileInput(
                                 "filegene",
                                 label = "Load gene list",
                                 accept = c('.txt')
@@ -664,31 +670,42 @@ ui <- dashboardPage(
                               checkboxInput("checkboxconvert",
                                             "gene list partial matching,      !!!can be slow!!!", value = FALSE),
                               downloadButton("downloadGeneList", "Save Gene List")
+                                       )
                               
                               ),
                               
-                              hidden(fileInput(
+                              tabPanel(title = "Color",
+                                       hidden(fileInput(
                                 "filecolor",
                                 label = "Load color list",
                                 accept = c('.color.txt')
                               ))
+                              )
                             ),
                     
                             hidden(div(
                               id = "startoff",
-                              box(
+                              box(width = 8,status = "primary",
                                 selectInput("selectgenelistoptions", "Select Gene list", choices = "common"),
-                                radioButtons("radiodataoption", "select data", choices = "Load data file"),
+                                radioButtons("radiodataoption", "select data", choices = "Load data file")),
+                              box(width = 4,
                                 selectInput("selectdot", "Select dot type", choices = kDotOptions),
                                 selectInput("selectline", "Select line type", choices = kLineOptions),
-                                textInput("textnickname", "Nick Name"),
-                                numericInput("normfactor", "Set norm factor, score/rpm", value = 1),
-                                actionButton("actionoptions", "Update nick name and/or norm factor")
+                                
+                                fluidRow(
+                                  # column(1,tags$br()),
+                                box(width = 12, status = "info", background = "light-blue",
+                                    colourInput("colourhex", "Select color HEX"),
+                                    tags$hr(),
+                                    textInput("textrgbtohex", "RGB"),
+                                    actionButton("actionmyrgb", "Update HEX color")
+                                    ))
                               ),
-                              box(width = 3,
-                                colourInput("colourhex", "Select color HEX"),
-                                textInput("textrgbtohex", "RGB"),
-                                actionButton("actionmyrgb", "Update HEX color")
+                              box(width = 4,
+                                textInput("textnickname", "Update Nickname"),
+                                numericInput("normfactor", "Set norm factor, score/rpm", value = 1),
+                                actionButton("actionoptions", "Update"),
+                                helpText("Need to update Nickname and/or nrom factor")
                               )
                             ))
                           )),
@@ -707,19 +724,20 @@ ui <- dashboardPage(
                                   checkboxInput("checkboxsmooth", label = "smooth"),
                                   numericInput("numericnormbin", "Norm to bin", value = 0)
                                   ),
-                              
-                              box(title = "Lines and Labels", width = 3, collapsible = TRUE, collapsed = TRUE,
-                                  numericInput("numericbody1", "5|4 bin",value = 20),
-                                  numericInput("numericbody2", "4|3 bin",value = 40),
-                                  numericInput("numerictss", "TSS bin",value = 15),
-                                  numericInput("numerictes", "TES bin",value = 45),
-                                  numericInput("numericbinsize", "bp/bin",value = 100, min = 20, max = 1000, step = 5),
-                                  numericInput("numericlabelspaceing", "every bin",value = 5),
-                                  actionButton("actionlineslabels", "Update Lines and Lables")
-                                
+                              box(
+                                title = "math",
+                                collapsed = F,
+                                collapsible = T,
+                                width = 2,
+                                radioButtons(
+                                  "myMath",label = 
+                                    " ",
+                                  choices = c("mean", "sum", "median", "var"),
+                                  selected = "mean"
+                                )
                               ),
-                              box(title = "Sliders",
-                                width = 6, collapsible = TRUE,
+                              box(title = "Sliders", status = "primary", solidHeader = T,
+                                width = 7, collapsible = TRUE,
                                 sliderInput(
                                   "sliderplotBinRange",
                                   label = "Plot Bin Range:",
@@ -735,17 +753,15 @@ ui <- dashboardPage(
                                   value = c(0, 1)
                                 )
                               ),
-                              box(
-                                title = "math",
-                                collapsed = TRUE,
-                                collapsible = T,
-                                width = 3,
-                                radioButtons(
-                                  "myMath",
-                                  "Set math function",
-                                  choices = c("mean", "sum", "median", "var"),
-                                  selected = "mean"
-                                )
+                              box(title = "Lines and Labels", width = 4, collapsible = TRUE, collapsed = TRUE,
+                                  numericInput("numericbody1", "5|4 bin",value = 20),
+                                  numericInput("numericbody2", "4|3 bin",value = 40),
+                                  numericInput("numerictss", "TSS bin",value = 15),
+                                  numericInput("numerictes", "TES bin",value = 45),
+                                  numericInput("numericbinsize", "bp/bin",value = 100, min = 20, max = 1000, step = 5),
+                                  numericInput("numericlabelspaceing", "every bin",value = 5),
+                                  actionButton("actionlineslabels", "Update Lines and Lables")
+                                  
                               ),
                               box(
                                 width = 3,

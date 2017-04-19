@@ -1,11 +1,6 @@
 
 https://github.com/daattali/advanced-shiny#readme
 
-# add save gene list function and add to pattern match
-# work on progress bar in loading files and add to loading gene lists and pattern matching
-# add more lines and lables presets, trigger without button?
-# plot lines lables, text, and legend sizes, legend spaceing?
-
 
 gene tools ... and add save info comments
 sort
