@@ -83,6 +83,7 @@ server <- function(input, output, session) {
       if (LIST_DATA$STATE[1] == 0) {
         show("filegene")
         show("checkboxconvert")
+        show("downloadGeneList")
         show("filecolor")
         show("hidemainplot")
         show("startoff")
@@ -188,10 +189,24 @@ server <- function(input, output, session) {
                       selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
     if(my_list == names(LIST_DATA$gene_info)[1]){
       enable("normfactor")
+      disable("downloadGeneList")
     } else {
       disable("normfactor")
+      enable("downloadGeneList")
     }
   })
+  
+  # saves gene list ----
+  output$downloadGeneList <- downloadHandler(
+    filename = function() {
+      paste(strsplit(input$selectgenelistoptions, " ")[[1]][1], ".txt", sep = "")
+    },
+    content = function(file) {
+      new_comments <- paste("#", Sys.Date())
+      tt <- c(new_comments, LIST_DATA$gene_file[[input$selectgenelistoptions]]$full)
+      write_lines(tt, file)
+    }
+  )
   
   # record new nickname and norm factor ----
   observeEvent(input$actionoptions, {
@@ -647,7 +662,10 @@ ui <- dashboardPage(
                                 accept = c('.txt')
                               ),
                               checkboxInput("checkboxconvert",
-                                            "gene list partal matching,      !!!can be slow!!!", value = FALSE)),
+                                            "gene list partial matching,      !!!can be slow!!!", value = FALSE),
+                              downloadButton("downloadGeneList", "Save Gene List")
+                              
+                              ),
                               
                               hidden(fileInput(
                                 "filecolor",

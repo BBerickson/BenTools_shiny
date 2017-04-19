@@ -7,7 +7,7 @@ https://github.com/daattali/advanced-shiny#readme
 # plot lines lables, text, and legend sizes, legend spaceing?
 
 
-gene tools ...
+gene tools ... and add save info comments
 sort
 region
 cluster

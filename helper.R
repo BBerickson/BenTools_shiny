@@ -348,7 +348,11 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
         ))
         return(list_data)
       }
-      print("save gene list")
+      showModal(modalDialog(
+        title = "Information message",
+        " Don't forget to save the gene list for future use", size = "s",
+        easyClose = TRUE
+      ))
     }
     legend_nickname <-
       paste(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn =", length(enesg))
