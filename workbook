@@ -1,6 +1,12 @@
 
 https://github.com/daattali/advanced-shiny#readme
 
+shinyWidgetsGallery()
+
+
+fix onoff input$pickeronoff and CheckBoxOnOff
+
+use widgets progess bar
 
 gene tools ... and add save info comments
 sort
@@ -13,6 +19,7 @@ intersect
 
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0
+# add icons to buttons
 
 # if y slider gets too cumbersum the switch to numiricInputs
 numericInput("inNumber", "Number input:",

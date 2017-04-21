@@ -18,6 +18,7 @@ suppressPackageStartupMessages(my_packages(
   c(
     "shiny",
     "shinydashboard",
+    "shinyWidgets",
     "ggplot2",
     "dplyr",
     "tidyr",
@@ -357,7 +358,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
       ))
     }
     legend_nickname <-
-      paste(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn =", length(enesg))
+      paste0(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn = ", length(enesg))
     setProgress(3, detail = "adding file to lists")
     list_data$gene_file[[legend_nickname]]$full <-
       collapse(distinct(genefile, gene))[[1]]
@@ -454,15 +455,159 @@ LoadColorFile <- function(file_path, list_data) {
 
 # records check box on/off
 CheckBoxOnOff <- function(gene_set, check_box, list_data) {
-  for (i in names(list_data[[gene_set]])) {
+  for(j in gene_set){
+  for (i in names(list_data[[j]])) {
     # make function
     if (!i %in% check_box) {
-      list_data[[gene_set]][[i]]["onoff"] <- 0
+      list_data[[j]][[i]]["onoff"] <- 0
     } else {
-      list_data[[gene_set]][[i]]["onoff"] <- i
+      list_data[[j]][[i]]["onoff"] <- i
     }
   }
+  }
   list_data
+}
+
+# sorts active gene list contain top % signal based on selected bins and file
+SortTop <- function() {
+  if (as.integer(tksize(listbox_active_sort)) < 1) {
+    return ()
+  }
+  R_start_bin <- as.integer(tclvalue(tcl_bin_start_sort))
+  R_end_bin <- as.integer(tclvalue(tcl_bin_end_sort))
+  R_num <- as.integer(tclvalue(tcl_top_bottom_num))
+  R_option <- tclvalue(tcl_top_bottom_option)
+  R_order <- tclvalue(tcl_acc_dec)
+  pb <<-
+    tkProgressBar(title = "Sorting gene lists",
+                  width = 300)
+  setTkProgressBar(pb, 300, label = "Sorting gene lists")
+  # for item in active list make sorted list, then merge sort=T, then pull out request
+  lc <- 0
+  outlist <- NULL
+  split_test = FALSE
+  nick_name <- as.character(tkget(listbox_active_sort, 0, 'end'))
+  lapply(nick_name, function(j) {
+    nick_name2 <- strsplit(sub('-', '\n!', j), '\n!')[[1]]
+    my_ref  <-
+      LIST_DATA$gene_info[[nick_name2[1]]][[nick_name2[2]]][5]
+    enesg <-
+      data_frame(gene = LIST_DATA$gene_file[[nick_name2[1]]]$use)
+    df <-
+      semi_join(LIST_DATA$table_file[[my_ref]], enesg, by = 'gene')
+    
+    if(length(sub("(-)", "~\\1~", df$gene[1])) > 1){
+      split_test <<- TRUE
+      apply_bins <- group_by(df, gene) %>%
+        filter(bin %in% R_start_bin:R_end_bin) %>%
+        summarise(mysums = sum(score, na.rm = TRUE)) %>%
+        mutate(myper = percent_rank(mysums),
+               gene = gsub("(:|\\-;|\\+;)", "~\\1~", sub("(-)", "~\\1~", gene))) %>%
+        ungroup()
+    } else {
+      apply_bins <- group_by(df, gene) %>%
+        filter(bin %in% R_start_bin:R_end_bin) %>%
+        summarise(mysums = sum(score, na.rm = TRUE)) %>%
+        mutate(myper = percent_rank(mysums)) %>%
+        ungroup()
+    }
+    gene_count <- nrow(apply_bins)
+    
+    if (R_option == "Top%") {
+      num <- c(1, ceiling(gene_count * (R_num / 100)))
+    } else if (R_option == "Quick%") {
+      num <-
+        c(1, count(apply_bins, myper >= mean(myper, na.rm = TRUE))[[2]][2])
+    } else {
+      num <-
+        c(ceiling((gene_count + 1) - (gene_count * (R_num / 100))), gene_count)
+    }
+    outlist2 <- arrange(apply_bins, desc(mysums)) %>%
+      slice(num[1]:num[2])
+    if (lc > 0) {
+      outlist <<- inner_join(outlist, outlist2, by = 'gene')
+      names(outlist)[2] <<- "mysums"
+    } else {
+      outlist <<- outlist2
+    }
+    lc <<- lc + 1
+  })
+  
+  if(split_test){
+    outlist <-
+      separate(outlist,
+               gene,
+               c("chr", "co", "s", "dash", "e", "sign", "gene"),
+               "~",
+               convert = T) %>%
+      arrange(chr, s)
+  }
+  
+  if (!suppressWarnings(is.na(as.numeric(tclvalue(
+    tkget(entry_dist_span)
+  ))))) {
+    if(split_test){
+      tkmessageBox(message = "no chr start and stop to messure the distance between genes", icon = "info")
+      return()
+    }
+    dist_span <- as.numeric(tclvalue(tkget(entry_dist_span)))
+    setTkProgressBar(pb,
+                     nrow(outlist),
+                     label = paste("removing overlapped genes plus", dist_span, "bp"))
+    too_close <- NULL
+    outlist2 <- outlist[1, ]
+    for (i in 2:(nrow(outlist) - 1)) {
+      if (outlist[i, 1] == outlist2[1]) {
+        if (any(
+          between(
+            as.numeric(outlist[i, 3]),
+            outlist2$s - dist_span,
+            outlist2$e + dist_span
+          ),
+          between(
+            as.numeric(outlist[i, 5]),
+            outlist2$s - dist_span,
+            outlist2$e + dist_span
+          )
+        )) {
+          outlist2 <- outlist[i, ]
+          too_close <- unique(c(too_close, i, i - 1))
+        } else {
+          outlist2 <- outlist[i, ]
+        }
+      } else {
+        outlist2 <- outlist[i, ]
+      }
+    }
+    if (!is.null(too_close)) {
+      outlist <- slice(outlist,-too_close)
+    }
+  }
+  
+  if(split_test){
+    outlist <-
+      unite(outlist,
+            col = gene,
+            chr,
+            co,
+            s,
+            dash,
+            e,
+            sign,
+            gene,
+            sep = "") %>% arrange(desc(mysums))
+  }
+  if (R_order == 'Accend') {
+    outlist$gene <- rev(outlist$gene)
+  }
+  tkdelete(listbox_active_gene_sort, 0, 'end')
+  if (length(outlist$gene) > 0) {
+    tkconfigure(listbox_active_gene_sort, listvariable = tclVar(as.character(outlist$gene)))
+  }
+  tkconfigure(label_active_sort_length, text = paste('n = ', (as.integer(
+    tksize(listbox_active_gene_sort)
+  ))))
+  close(pb)
 }
 
 # Applys math to on data in each gene list

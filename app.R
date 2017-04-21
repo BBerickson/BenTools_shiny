@@ -45,12 +45,6 @@ server <- function(input, output, session) {
   # show hide checkbox and action button ----
   observeEvent(input$tabs, {
     req(first_file())
-    toggle("checkboxonoff",
-           condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
-    toggle(
-      "selectgenelistonoff",
-      condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
-    )
     toggle(
       "selectlineslables",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
@@ -77,9 +71,6 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "selectgenelistoptions",
                         choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
-      updateSelectInput(session,
-                        "selectgenelistonoff",
-                        choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
       if (LIST_DATA$STATE[1] == 0) {
         show("filegene")
         show("checkboxconvert")
@@ -99,7 +90,6 @@ server <- function(input, output, session) {
         )
         # prevents over flow of text ... needs some added padding #TODO
         addClass("radiodataoption",class = "ofhidden")
-        addClass("checkboxonoff",class = "ofhidden")
         LIST_DATA$STATE[1] <<- 1
       }
       enable("startoff")
@@ -122,15 +112,25 @@ server <- function(input, output, session) {
     updateSelectInput(session,
                       "selectgenelistoptions",
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
-    updateSelectInput(session,
-                      "selectgenelistonoff",
-                      choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+    onoff <- NULL
+    for(i in sapply(strsplit(names(LIST_DATA$gene_file), "\nn ="), "[[",1)){
+      onoff <- c(onoff,paste(i, names(LIST_DATA$table_file),sep = "-"))
+    }
+    
+    TF <- c(sapply(names(LIST_DATA$gene_info), 
+                   function(i) sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0))
+    mycolors <- c(sapply(names(LIST_DATA$gene_info), function(i) sapply(LIST_DATA$gene_info[[i]], "[[",4)))[TF]
+    updatePickerInput(session, "pickeronoff",
+                      choices = onoff, 
+                      selected = onoff[TF],
+                      choicesOpt = list(style = mycolors)
+    )
     reset("filegene")
     # add warnings for total size of LIST_DATA
 
   })
   
-  # loads gene list file ----
+  # loads color file ----
   observeEvent(input$filecolor,{
     req(first_file())
     my_sel <- input$radiodataoption
@@ -160,17 +160,27 @@ server <- function(input, output, session) {
   # update when data file is loaded ----
   observeEvent(first_file(), {
     print("update load file")
-    updateRadioButtons(
+    updateAwesomeRadio(
       session,
       "radiodataoption",
       choices = first_file(),
       selected = last(first_file())
     )
-    updateCheckboxGroupInput(session,
-                             "checkboxonoff",
-                             choices = first_file(),
-                             selected = c(sapply(LIST_DATA$gene_info[[LIST_DATA$STATE[2]]], "[[", 5)))
+    onoff <- NULL
+    for(i in sapply(strsplit(names(LIST_DATA$gene_file), "\nn ="), "[[",1)){
+      onoff <- c(onoff,paste(i, names(LIST_DATA$table_file),sep = "-"))
+    }
+    
+    TF <- c(sapply(names(LIST_DATA$gene_info), 
+                   function(i) sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0))
+    mycolors <- c(sapply(names(LIST_DATA$gene_info), function(i) sapply(LIST_DATA$gene_info[[i]], "[[",4)))[TF]
+    updatePickerInput(session, "pickeronoff",
+                      choices = onoff, 
+                      selected = onoff[TF],
+                      choicesOpt = list(style = mycolors)
+                      )
   })
+  
   
   # update desplay selected item info ----
   observeEvent(c(input$radiodataoption, input$selectgenelistoptions), {
@@ -363,34 +373,26 @@ server <- function(input, output, session) {
       }
     }
   })
-
-  # update check box on off with selecting gene list ----
-  observeEvent(input$selectgenelistonoff, {
-    req(first_file())
-    print(input$selectgenelistonoff)
-    print("update on off check box on gene list change")
-    onoff <- unlist(sapply(LIST_DATA$gene_info[[input$selectgenelistonoff]], "[[",5))
-    updateCheckboxGroupInput(session, "checkboxonoff",
-                             selected = onoff)
-  })
-  
+    
   #records check box on/off ----
-  observeEvent(input$checkboxonoff,ignoreNULL = FALSE,{
+  observeEvent(input$pickeronoff, ignoreNULL = FALSE,{
       req(first_file())
-      if (LIST_DATA$STATE[2] == input$selectgenelistonoff) {
         print("checkbox on/off")
+        checkboxonoff <- 0
+        selectgenelistonoff <- names(LIST_DATA$gene_info)[[1]]
+        for(i in input$pickeronoff){
+          tt <- strsplit(sub("-"," ", i)," ")[[1]]
+          selectgenelistonoff <- unique(c(selectgenelistonoff, grep(tt[1], names(LIST_DATA$gene_file),value = T)))
+          checkboxonoff <- c(checkboxonoff, tt[2])
+        }
         LIST_DATA$gene_info <<-
-          CheckBoxOnOff(input$selectgenelistonoff,
-                        input$checkboxonoff,
+          CheckBoxOnOff(selectgenelistonoff,
+                        checkboxonoff,
                         LIST_DATA$gene_info)
         LIST_DATA$STATE[1] <<- 2
         toggle("actionmyplot", condition = (input$tabs == "mainplot"))
         disable("selectlineslables")
         disable("hidemainplot")
-      } else {
-        print("just updating what is seen")
-        LIST_DATA$STATE[2] <<- input$selectgenelistonoff
-      }
   })
   
   # plots when action button is pressed ----
@@ -635,9 +637,13 @@ ui <- dashboardPage(
     menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
     
     menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
+      pickerInput(inputId = "pickeronoff", 
+                  label = h3("Plot on/off"), 
+                  choices = "Load data file",
+                  multiple = T,
+                  options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
+      ),
     hidden(
-      checkboxGroupInput("checkboxonoff", h3("Plot on/off"), choices = "Load data file"),
-      selectInput("selectgenelistonoff", "Select Gene list", choices = "common"),
       actionButton("actionmyplot", "Update Plot"),
       selectInput("selectlineslables", 
                   label = "quick set lines and lables", 
@@ -687,7 +693,7 @@ ui <- dashboardPage(
                               id = "startoff",
                               box(width = 8,status = "primary",
                                 selectInput("selectgenelistoptions", "Select Gene list", choices = "common"),
-                                radioButtons("radiodataoption", "select data", choices = "Load data file")),
+                                awesomeRadio("radiodataoption", "select data", choices = "Load data file")),
                               box(width = 4,
                                 selectInput("selectdot", "Select dot type", choices = kDotOptions),
                                 selectInput("selectline", "Select line type", choices = kLineOptions),
@@ -729,7 +735,7 @@ ui <- dashboardPage(
                                 collapsed = F,
                                 collapsible = T,
                                 width = 2,
-                                radioButtons(
+                                awesomeRadio(
                                   "myMath",label = 
                                     " ",
                                   choices = c("mean", "sum", "median", "var"),
