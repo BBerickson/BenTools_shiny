@@ -4,8 +4,6 @@ https://github.com/daattali/advanced-shiny#readme
 shinyWidgetsGallery()
 
 
-fix onoff input$pickeronoff and CheckBoxOnOff
-
 use widgets progess bar
 
 gene tools ... and add save info comments

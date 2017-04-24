@@ -358,7 +358,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
       ))
     }
     legend_nickname <-
-      paste0(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn = ", length(enesg))
+      paste(strsplit(as.character(file_name), '.txt')[[1]][1], "\nn = ", length(enesg), sep = "")
     setProgress(3, detail = "adding file to lists")
     list_data$gene_file[[legend_nickname]]$full <-
       collapse(distinct(genefile, gene))[[1]]
@@ -454,16 +454,16 @@ LoadColorFile <- function(file_path, list_data) {
 }
 
 # records check box on/off
-CheckBoxOnOff <- function(gene_set, check_box, list_data) {
-  for(j in gene_set){
-  for (i in names(list_data[[j]])) {
-    # make function
-    if (!i %in% check_box) {
-      list_data[[j]][[i]]["onoff"] <- 0
-    } else {
-      list_data[[j]][[i]]["onoff"] <- i
+CheckBoxOnOff <- function(check_box, list_data) {
+  for(j in names(list_data)){
+    for (i in names(list_data[[j]])) {
+      # make function
+      if (!i %in% check_box[[j]]) {
+        list_data[[j]][[i]]["onoff"] <- 0
+      } else {
+        list_data[[j]][[i]]["onoff"] <- i
+      }
     }
-  }
   }
   list_data
 }
@@ -903,7 +903,6 @@ function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, us
     legend_space <- max(1, (lengths(
       strsplit(plot_options$set, "\n")
     )))
-    print(legend_space)
     gp <-
         ggplot(
           list_long_data_frame,
