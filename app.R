@@ -46,9 +46,7 @@ server <- function(input, output, session) {
   observeEvent(input$tabs, {
     req(first_file())
     
-    toggle("showpicker",
-                            condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
-    )
+    toggle("showpicker", condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
     toggle(
       "selectlineslables",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
@@ -93,7 +91,6 @@ server <- function(input, output, session) {
           value = LIST_DATA$x_plot_range
         )
         # prevents over flow of text ... needs some added padding #TODO
-        addClass("radiodataoption",class = "ofhidden")
         LIST_DATA$STATE[1] <<- 1
       }
       enable("startoff")
@@ -635,12 +632,20 @@ ui <- dashboardPage(
   dashboardSidebar(sidebarMenu(
     id = "tabs",
     menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
-    
     menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
+    menuItem("Sort Tool", tabName = "sorttool", icon = icon("gears")),
     hidden(div(
       id = "showpicker",
       pickerInput(inputId = "pickeronoff", 
                   label = h4("Select what to plot"), 
+                  choices = "Load data file",
+                  multiple = T,
+                  options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
+      ))),
+    hidden(div(
+      id = "showpickersort",
+      pickerInput(inputId = "pickersorttop", 
+                  label = h4("Select what to sort"), 
                   choices = "Load data file",
                   multiple = T,
                   options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
@@ -655,7 +660,6 @@ ui <- dashboardPage(
   )),
   dashboardBody(
     useShinyjs(),
-                inlineCSS(list(.ofhidden = "overflow: auto")),
                 tabItems(
                   # load data tab
                   tabItem(tabName = "loaddata", 
@@ -695,7 +699,10 @@ ui <- dashboardPage(
                               id = "startoff",
                               box(width = 8,status = "primary",
                                 selectInput("selectgenelistoptions", "Select Gene list", choices = "common"),
-                                awesomeRadio("radiodataoption", "select data", choices = "Load data file")),
+                                div(style = "overflow: auto",fluidRow(div(style = "padding-left: 30px",
+                                awesomeRadio("radiodataoption", "select data", choices = "Load data file")
+                                )))
+                                ),
                               box(width = 4,
                                 selectInput("selectdot", "Select dot type", choices = kDotOptions),
                                 selectInput("selectline", "Select line type", choices = kLineOptions),
@@ -781,7 +788,41 @@ ui <- dashboardPage(
                                 )
                               )
                             )
-                          )))
+                          ))),
+                  # main plot tab
+                  tabItem(tabName = "sorttool",
+                          
+                          box(title = "Sort tool", status = "primary", solidHeader = T,
+                            width = 8,
+                            selectInput(
+                              "selectsorttop",
+                              "Sort Options",
+                              choices = c("Top%", "Bottom%", "Quick%"),
+                              selected = "Top%"
+                            ),
+                            sliderInput(
+                              "slidersortpercent",
+                              label = "% select:",
+                              min = 1,
+                              max = 100,
+                              value = 80
+                            ),
+                            sliderInput(
+                              "slidersortbinrange",
+                              label = "Select Bin Range:",
+                              min = 0,
+                              max = 80,
+                              value = c(0, 80)
+                            ),
+                            selectInput(
+                              "selectaccdecc",
+                              "list output directions",
+                              choices = c("Accend", "Deccend"),
+                              selected = "Deccend"
+                            ),
+                            numericInput("numericsortgenespace", "Genes Separated by #bp",value = 0)
+                            #renderDataTable()
+                          ))
                 ))
 )
 

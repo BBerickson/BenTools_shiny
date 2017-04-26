@@ -3,9 +3,6 @@ https://github.com/daattali/advanced-shiny#readme
 
 shinyWidgetsGallery()
 
-
-use widgets progess bar
-
 gene tools ... and add save info comments
 sort
 region
