@@ -45,13 +45,11 @@ server <- function(input, output, session) {
   # show hide checkbox and action button ----
   observeEvent(input$tabs, {
     req(first_file())
-    
-    toggle("showpicker", condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0))
     toggle(
-      "selectlineslables",
+      "selectlineslablesshow",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
     )
-    toggle("actionmyplot",
+    toggle("actionmyplotshow",
            condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] == 2))
   })
   
@@ -80,6 +78,7 @@ server <- function(input, output, session) {
         show("filecolor")
         show("hidemainplot")
         show("startoff")
+        show("showpicker")
         print("1st slider and plot lines Ylable")
         reactive_values$Y_Axis_Lable <- YAxisLable()
         reactive_values$Lines_Lables_List <- LinesLablesList()
@@ -388,8 +387,8 @@ server <- function(input, output, session) {
           CheckBoxOnOff(checkboxonoff,
                         LIST_DATA$gene_info)
         LIST_DATA$STATE[1] <<- 2
-        toggle("actionmyplot", condition = (input$tabs == "mainplot"))
-        disable("selectlineslables")
+        toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
+        disable("selectlineslablesshow")
         disable("hidemainplot")
   })
   
@@ -406,12 +405,12 @@ server <- function(input, output, session) {
     if (!is.null(reactive_values$Apply_Math)) {
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       enable("hidemainplot")
-      enable("selectlineslables")
+      enable("selectlineslablesshow")
     } else{
       disable("hidemainplot")
-      disable("selectlineslables")
+      disable("selectlineslablesshow")
     }
-    hide("actionmyplot")
+    hide("actionmyplotshow")
     LIST_DATA$STATE[1] <<- 1
   })
   
@@ -633,30 +632,34 @@ ui <- dashboardPage(
     id = "tabs",
     menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
     menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
+    hidden(div(style = "padding-left: 15%",
+               id = "showpicker",
+               pickerInput(inputId = "pickeronoff", width = "75%",
+                           label = h4("Select what to plot"), 
+                           choices = "Load data file",
+                           multiple = T,
+                           options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0")
+               ))),
     menuItem("Sort Tool", tabName = "sorttool", icon = icon("gears")),
-    hidden(div(
-      id = "showpicker",
-      pickerInput(inputId = "pickeronoff", 
-                  label = h4("Select what to plot"), 
-                  choices = "Load data file",
-                  multiple = T,
-                  options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
-      ))),
-    hidden(div(
+    
+    hidden(div(style = "padding-left: 15%",
       id = "showpickersort",
-      pickerInput(inputId = "pickersorttop", 
+      pickerInput(inputId = "pickersorttop", width = "75%",
                   label = h4("Select what to sort"), 
                   choices = "Load data file",
                   multiple = T,
                   options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
       ))),
-    hidden(
-      actionButton("actionmyplot", "Update Plot"),
-      selectInput("selectlineslables", 
+    hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4"),
+    hidden(div(id = "actionmyplotshow", style = "padding-left: 20%",
+      actionButton("actionmyplot", "Update Plot", icon = icon("area-chart"),
+                   style = "color: #fff; background-color: #337ab7; border-color: #2e6da4"))),
+    hidden(div(id = "selectlineslablesshow", style = "padding-left: 10%",  
+      selectInput("selectlineslables", width = "85%",
                   label = "quick set lines and lables", 
                   choices = c("543 bins 20,20,40","543 bins 10,10,10", "5' 1k 1k 80bins" ,"3'","4")
       )
-    )
+    ))
   )),
   dashboardBody(
     useShinyjs(),
@@ -733,17 +736,29 @@ ui <- dashboardPage(
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
                               
-                              box(title = "Normalization", width = 3, collapsible = TRUE,
-                                  checkboxInput("checkboxrf", label = "relative frequency"),
-                                  checkboxInput("checkboxrgf", label = "relative gene frequency"),
-                                  checkboxInput("checkboxsmooth", label = "smooth"),
-                                  numericInput("numericnormbin", "Norm to bin", value = 0)
+                              box(title = "Sliders", status = "primary", solidHeader = T,
+                                  width = 7, collapsible = TRUE,
+                                  sliderInput(
+                                    "sliderplotBinRange",
+                                    label = "Plot Bin Range:",
+                                    min = 0,
+                                    max = 80,
+                                    value = c(0, 80)
                                   ),
-                              box(
+                                  sliderInput(
+                                    "sliderplotYRange",
+                                    label = "Plot Y hight:",
+                                    min = 0,
+                                    max = 1,
+                                    value = c(0, 1)
+                                  )
+                              ),
+                              
+                              box(style='padding:2px;', 
                                 title = "math",
                                 collapsed = F,
                                 collapsible = T,
-                                width = 2,
+                                width = 2, status = "primary", solidHeader = T,
                                 awesomeRadio(
                                   "myMath",label = 
                                     " ",
@@ -751,38 +766,30 @@ ui <- dashboardPage(
                                   selected = "mean"
                                 )
                               ),
-                              box(title = "Sliders", status = "primary", solidHeader = T,
-                                width = 7, collapsible = TRUE,
-                                sliderInput(
-                                  "sliderplotBinRange",
-                                  label = "Plot Bin Range:",
-                                  min = 0,
-                                  max = 80,
-                                  value = c(0, 80)
-                                ),
-                                sliderInput(
-                                  "sliderplotYRange",
-                                  label = "Plot Y hight:",
-                                  min = 0,
-                                  max = 1,
-                                  value = c(0, 1)
-                                )
+                              box(title = "Normalization", status = "primary", solidHeader = T, 
+                                  width = 3, collapsible = TRUE,
+                                  checkboxInput("checkboxrf", label = "relative frequency"),
+                                  checkboxInput("checkboxrgf", label = "relative gene frequency"),
+                                  checkboxInput("checkboxsmooth", label = "smooth"),
+                                  numericInput("numericnormbin", "Norm to bin", value = 0)
                               ),
-                              box(title = "Lines and Labels", width = 4, collapsible = TRUE, collapsed = TRUE,
-                                  numericInput("numericbody1", "5|4 bin",value = 20),
-                                  numericInput("numericbody2", "4|3 bin",value = 40),
-                                  numericInput("numerictss", "TSS bin",value = 15),
-                                  numericInput("numerictes", "TES bin",value = 45),
-                                  numericInput("numericbinsize", "bp/bin",value = 100, min = 20, max = 1000, step = 5),
-                                  numericInput("numericlabelspaceing", "every bin",value = 5),
-                                  actionButton("actionlineslabels", "Update Lines and Lables")
+                              box(title = "Lines and Labels", width = 9, status = "primary", solidHeader = T,
+                                  collapsible = TRUE, collapsed = TRUE,
+                                  div(style="padding:2px; display:inline-block", numericInput("numerictss", "TSS bin",value = 15, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block", numericInput("numerictes", "TES bin",value = 45, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block", numericInput("numericbinsize", 
+                                                                                 "bp/bin",value = 100, min = 20, max = 1000, step = 5)),
                                   
+                                  div(style="padding:2px; display:inline-block", numericInput("numericbody1", "5|4 bin",value = 20, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block",numericInput("numericbody2", "4|3 bin",value = 40, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block",numericInput("numericlabelspaceing", "every bin",value = 5, min = 0, max = 100)),
+                                  div(style= "padding-left:33%", actionButton("actionlineslabels", "Update Lines and Lables"))
                               ),
-                              box(
-                                width = 3,
+                              box(title = "Quick Color Change",
+                                width = 3, status = "primary", solidHeader = T,
                                 selectInput(
                                   "kbrewer",
-                                  "quick color set",
+                                  "color brewer",
                                   choices = kBrewerList,
                                   selected = kBrewerList[6]
                                 )

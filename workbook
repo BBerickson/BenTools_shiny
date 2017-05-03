@@ -11,6 +11,8 @@ cdp
 intersect
 # file size restriction the set correctly?
 
+work on slider math ... rescale?
+collaps sidebar untill file loaded
 
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0
