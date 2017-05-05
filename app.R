@@ -28,7 +28,7 @@ server <- function(input, output, session) {
   #   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
   #   clust = list(), # Cluster holder
   #   x_plot_range = c(0, 0),
-  #   STATE = c(0, "common") # flow control, gene list flow control
+  #   STATE = c(0, "common", 0) # flow control, gene list flow control
   # )      
   
   reactive_values <- reactiveValues(
@@ -46,6 +46,14 @@ server <- function(input, output, session) {
   observeEvent(input$tabs, {
     req(first_file())
     toggle(
+      "showpicker",
+      condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
+      )
+    toggle(
+      "showpickersort",
+      condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0 & LIST_DATA$STATE[3] != 0)
+    )
+    toggle(
       "selectlineslablesshow",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
     )
@@ -62,7 +70,7 @@ server <- function(input, output, session) {
       disable("startoff")
       disable("hidemainplot")
       withProgress(message = 'Calculation in progress',
-                   detail = 'This may take a while...', value = 0, {
+                   detail = 'This may take a while...', value = 0, style = "old", {
       LIST_DATA <<-
         LoadTableFile(input$filetable$datapath,
                       input$filetable$name,
@@ -78,7 +86,6 @@ server <- function(input, output, session) {
         show("filecolor")
         show("hidemainplot")
         show("startoff")
-        show("showpicker")
         print("1st slider and plot lines Ylable")
         reactive_values$Y_Axis_Lable <- YAxisLable()
         reactive_values$Lines_Lables_List <- LinesLablesList()
@@ -89,7 +96,7 @@ server <- function(input, output, session) {
           max = LIST_DATA$x_plot_range[2],
           value = LIST_DATA$x_plot_range
         )
-        # prevents over flow of text ... needs some added padding #TODO
+        shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
         LIST_DATA$STATE[1] <<- 1
       }
       enable("startoff")
@@ -622,7 +629,34 @@ server <- function(input, output, session) {
     }
   })
   
+  # sort tool action ----
+  observeEvent(input$actionsorttool,{
+    req(first_file())
+    print("sort tool")
+    dtsort <- SortTop(LIST_DATA, input$pickeronoff, 
+                      input$slidersortbinrange[1], 
+                      input$slidersortbinrange[2], input$slidersortpercent, input$selectsorttop)
+    print(dtsort)
+    output$sorttable <- renderDataTable(dtsort,
+                                        options = list(
+                                          pageLength = 5,
+                                          searching = FALSE
+                                          #initComplete = I("function(settings, json) {alert('Done.');}")
+                                          )
+    )
+    
+    show("showpickersort")
+  })
   
+  # sort tool action ----
+  observeEvent(input$actionsortquick,{
+    req(first_file())
+    print("quick sort")
+  })
+  
+  
+  
+  shinyjs::addClass(selector = "body", class = "sidebar-collapse")
 }
 
 # UI -----
@@ -640,16 +674,17 @@ ui <- dashboardPage(
                            multiple = T,
                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0")
                ))),
+    hidden(div(style = "padding-left: 15%",
+               id = "showpickersort",
+               pickerInput(inputId = "pickersorttop", width = "75%",
+                           label = h4("Sort gene list"), 
+                           choices = "Load data file",
+                           multiple = T,
+                           options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
+               ))),
     menuItem("Sort Tool", tabName = "sorttool", icon = icon("gears")),
     
-    hidden(div(style = "padding-left: 15%",
-      id = "showpickersort",
-      pickerInput(inputId = "pickersorttop", width = "75%",
-                  label = h4("Select what to sort"), 
-                  choices = "Load data file",
-                  multiple = T,
-                  options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
-      ))),
+    
     hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4"),
     hidden(div(id = "actionmyplotshow", style = "padding-left: 20%",
       actionButton("actionmyplot", "Update Plot", icon = icon("area-chart"),
@@ -666,18 +701,24 @@ ui <- dashboardPage(
                 tabItems(
                   # load data tab
                   tabItem(tabName = "loaddata", 
-                          fluidRow(
-                            tabBox(title = "Load files", id = "loadfiles", 
-                              width = 4,
-                              tabPanel("Table",
-                              fileInput(
-                                "filetable",
+                          fluidRow(tags$style(".nav-tabs-custom .nav-tabs li.active a { background-color: transparent; border-color: #2e6da4; } "),
+                            tabBox(title = "Load files", id = "loadfiles",
+                              width = 4, 
+                              tabPanel("Table", 
+                                       div(style = "height: 200px",
+                                           fluidRow(div(style = "padding: 5px 15px",
+                                                        fileInput(
+                                "filetable", 
                                 label = "Load table file",
                                 accept = c('.table'),
                                 multiple = TRUE)
-                              ),
+                              )),
+                              helpText("load table file(s) or bedGraph file(s)")
+                              )),
                               tabPanel(title = "Gene",  
-                                       hidden(fileInput(
+                                       div(style = "height: 200px",
+                                           fluidRow(div(style = "padding: 5px 15px",
+                                                        hidden(fileInput(
                                 "filegene",
                                 label = "Load gene list",
                                 accept = c('.txt')
@@ -686,27 +727,29 @@ ui <- dashboardPage(
                                             "gene list partial matching,      !!!can be slow!!!", value = FALSE),
                               downloadButton("downloadGeneList", "Save Gene List")
                                        )
-                              
+                                           )))
                               ),
                               
                               tabPanel(title = "Color",
+                                       div(style = "height: 200px",
+                                           fluidRow(div(style = "padding: 5px 15px",
                                        hidden(fileInput(
                                 "filecolor",
                                 label = "Load color list",
                                 accept = c('.color.txt')
-                              ))
+                              )))))
                               )
                             ),
                     
                             hidden(div(
                               id = "startoff",
-                              box(width = 8,status = "primary",
-                                selectInput("selectgenelistoptions", "Select Gene list", choices = "common"),
-                                div(style = "overflow: auto",fluidRow(div(style = "padding-left: 30px",
+                              box(title =  "Select Gene list", width = 8,status = "primary", solidHeader = T,
+                                selectInput("selectgenelistoptions", "", choices = "common"),
+                                div(style = "height: 170px; overflow: auto",fluidRow(div(style = "padding: 0px 30px",
                                 awesomeRadio("radiodataoption", "select data", choices = "Load data file")
                                 )))
                                 ),
-                              box(width = 4,
+                              box(title =  "Set Plot Options", width = 4, status = "primary", solidHeader = T,
                                 selectInput("selectdot", "Select dot type", choices = kDotOptions),
                                 selectInput("selectline", "Select line type", choices = kLineOptions),
                                 
@@ -719,7 +762,7 @@ ui <- dashboardPage(
                                     actionButton("actionmyrgb", "Update HEX color")
                                     ))
                               ),
-                              box(width = 4,
+                              box(title =  "Set Plot Options", width = 4, status = "primary", solidHeader = T,
                                 textInput("textnickname", "Update Nickname"),
                                 numericInput("normfactor", "Set norm factor, score/rpm", value = 1),
                                 actionButton("actionoptions", "Update"),
@@ -804,7 +847,7 @@ ui <- dashboardPage(
                             selectInput(
                               "selectsorttop",
                               "Sort Options",
-                              choices = c("Top%", "Bottom%", "Quick%"),
+                              choices = c("Top%", "Bottom%"),
                               selected = "Top%"
                             ),
                             sliderInput(
@@ -821,14 +864,9 @@ ui <- dashboardPage(
                               max = 80,
                               value = c(0, 80)
                             ),
-                            selectInput(
-                              "selectaccdecc",
-                              "list output directions",
-                              choices = c("Accend", "Deccend"),
-                              selected = "Deccend"
-                            ),
-                            numericInput("numericsortgenespace", "Genes Separated by #bp",value = 0)
-                            #renderDataTable()
+                            actionButton("actionsorttool", "Sort selected"),
+                            actionButton("actionsortquick", "Quick% Sort selected"),
+                            dataTableOutput('sorttable')
                           ))
                 ))
 )
