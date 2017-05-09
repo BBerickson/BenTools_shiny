@@ -4,7 +4,13 @@ https://github.com/daattali/advanced-shiny#readme
 shinyWidgetsGallery()
 
 gene tools ... and add save info comments
-sort
+sort ...
+  add picker(change input), 
+  table: move, adjust length, set max width and overflow, other options
+  adjust posstion and size of selection tools
+  hook up Quick sort
+  update function to fix names of columns
+    
 region
 cluster
 cdp

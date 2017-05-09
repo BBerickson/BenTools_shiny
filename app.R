@@ -639,13 +639,11 @@ server <- function(input, output, session) {
     print(dtsort)
     output$sorttable <- renderDataTable(dtsort,
                                         options = list(
-                                          pageLength = 5,
-                                          searching = FALSE
-                                          #initComplete = I("function(settings, json) {alert('Done.');}")
+                                          pageLength = 5
                                           )
     )
     
-    show("showpickersort")
+    LIST_DATA$STATE[3] <- 1
   })
   
   # sort tool action ----
