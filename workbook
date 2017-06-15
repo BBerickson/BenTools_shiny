@@ -3,9 +3,17 @@ https://github.com/daattali/advanced-shiny#readme
 
 shinyWidgetsGallery()
 
-gene tools ... and add save info comments
+make gene files own picker(s) (start with 2)
+  
+on loading first file set lines and lables to apropriat one if posible 
+work on totorial ... keep uptodate 
+  files that will work
+  gene lists that will work
+  changing plot options
+
+gene tools ... 
 sort ...
-  add picker(change input), 
+  add picker(change input), and save info (display custom?)
   table: move, adjust length, set max width and overflow, other options
   adjust posstion and size of selection tools
   hook up Quick sort

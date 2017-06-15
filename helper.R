@@ -41,7 +41,7 @@ LIST_DATA <- list(
   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
   clust = list(), # Cluster holder
   x_plot_range = c(0, 0),
-  STATE = c(0, "common", 0) # flow control, gene list flow control
+  STATE = c(0, "common", 0, 0) # flow control, gene list flow control, tool tab trigger, first time plot tab
 )      
 
 # types of dots to be used in plotting
@@ -302,7 +302,12 @@ LoadTableFile <- function(file_path, file_name, list_data) {
 }
 
 # reads in gene list files
-LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
+LoadGeneFile <- function(file_path, file_name, list_data, convert = F, list_num = 1) {
+  if(length(list_data$genefile)>list_num+1){
+    old_file <- names(list_data$genefile)[(list_num + 1)]
+    list_data$gene_file[[old_file]] <- NULL
+    list_data$gene_info[[old_file]] <- NULL
+  }
   setProgress(1, detail = "reading in file")
   num_bins <-
     count_fields(file_path,
@@ -336,7 +341,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
         " No genes in common, might need to reformat gene name style, try pattern matching", size = "s",
         easyClose = TRUE
       ))
-      return(list_data)
+      return()
       
     } else if (length(enesg) == 0 & convert){
       setProgress(2, detail = "looking for gene name matches")
@@ -349,7 +354,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F) {
           " No genes found after pattern matching search", size = "s",
           easyClose = TRUE
         ))
-        return(list_data)
+        return()
       }
       showModal(modalDialog(
         title = "Information message",
