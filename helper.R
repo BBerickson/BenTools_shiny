@@ -303,8 +303,8 @@ LoadTableFile <- function(file_path, file_name, list_data) {
 
 # reads in gene list files
 LoadGeneFile <- function(file_path, file_name, list_data, convert = F, list_num = 1) {
-  if(length(list_data$genefile)>list_num+1){
-    old_file <- names(list_data$genefile)[(list_num + 1)]
+  if(length(names(list_data$gene_file)) == 3){
+    old_file <- names(list_data$gene_file)[2]
     list_data$gene_file[[old_file]] <- NULL
     list_data$gene_info[[old_file]] <- NULL
   }
@@ -378,7 +378,7 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F, list_num 
           set = i,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = RgbToHex(my_hex = list_data$gene_info[[1]][[i]]$mycol, tint = T),
+          mycol = RgbToHex(my_hex = list_data$gene_info[[list_num]][[i]]$mycol, tint = T),
           onoff = 0,
           rnorm = "1"
         ))

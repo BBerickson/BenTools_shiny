@@ -1,0 +1,52 @@
+BenTools_shiny
+
+Load Data tab
+
+  load file(s)
+  
+    can read HM.table files
+      gene	A.x0	A.x1	A.x2	B.x0	B.x1	
+      chrI:100060-101169-;YAL025C	0.0273242100195962	0.0143811631682207	0.0129430468513899	0.0182152755007295	0.0377316421086745
+      
+    can read windowed bed files (checks for smaller 3 column version)
+      col_names = c("chr", "start", "end", "gene", "bin", "score")
+      col_names = c("gene", "bin", "score")
+      
+    can load a test file containg file names ... requres file end in .url.txt
+      files can be local or remote
+    
+    trys to set some defalt plot options based on the first file loaded 
+      
+  load gene lists ... limited number at a time, 
+    gene lists are unchecked for plotting by default,
+    colors are a tint of thouse being used by default
+    
+    can be data file
+    can be one colunm
+      if no gene names match can re-try with partial matching
+      
+  load color file
+    can be just a one column list of colors 
+    can be a two column list file name (partial matching) and colors 
+    color format name = "blue" rgb = 255,0,0 and hex = #E41A1C
+    
+  select gene list and file
+    select plot line and dot type
+    select color by rgb or hex
+    plot legend label
+    apply normilization factor 
+    
+Plot tab
+
+  first time runs plotting functions are run and a plot is produced
+  quick set default plot x axis bin lables
+  drop down selection(s) of data restricted to gene list to be plotted
+  sliders for x and y plot axis
+  set math and normalization to data for plotting
+  quick color setting
+  cusome set x axis bin lables
+  
+  
+  
+  
+  

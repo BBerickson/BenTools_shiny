@@ -3,13 +3,12 @@ https://github.com/daattali/advanced-shiny#readme
 
 shinyWidgetsGallery()
 
-make gene files own picker(s) (start with 2)
-  
-on loading first file set lines and lables to apropriat one if posible 
 work on totorial ... keep uptodate 
   files that will work
   gene lists that will work
   changing plot options
+
+use bed files as gene lists?
 
 gene tools ... 
 sort ...
@@ -31,7 +30,7 @@ collaps sidebar untill file loaded
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0
 # add icons to buttons
-
+on loading first file set lines and lables to apropriat one if posible 
 # if y slider gets too cumbersum the switch to numiricInputs
 numericInput("inNumber", "Number input:",
                    min = 1, max = 20, value = 5, step = 0.5),

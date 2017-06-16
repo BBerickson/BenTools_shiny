@@ -124,6 +124,15 @@ server <- function(input, output, session) {
           value = LIST_DATA$x_plot_range
         )
         shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
+        num_bins <- collapse(summarise(LIST_DATA$table_file[[1]], max(bin)))[[1]]
+        if(num_bins == 80){
+          # add second critirea for 5' TODO
+          # updateSelectInput(session, "selectlineslables", selected = "5' 1k 1k 80bins")
+        } else if( num_bins == 30){
+          updateSelectInput(session, "selectlineslables", selected = "543 bins 10,10,10")
+        }
+        
+        
         LIST_DATA$STATE[1] <<- 1
       }
       enable("startoff")
@@ -145,55 +154,33 @@ server <- function(input, output, session) {
                  })
     if(!is.null(LD)){
       LIST_DATA <<- LD
-      updateSelectInput(session,
-                        "selectgenelistoptions",
-                        choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
-      onoff <- paste(strsplit(as.character(input$filegene1$name), '.txt')[[1]][1], names(LIST_DATA$table_file),sep = "-")
-     ref <- grep(strsplit(as.character(input$filegene1$name), '.txt')[[1]][1],names(LIST_DATA$gene_file),value = T)
-      TF <- c(sapply(LIST_DATA$gene_info[[ref]], "[[",5) != 0)
-      mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[ref]], "[[",4)), sep = ":")
-      updatePickerInput(session, "pickergene1onoff", label = strsplit(as.character(input$filegene1$name), '.txt')[[1]][1],
+      lb <- strsplit(names(LIST_DATA$gene_file)[2], "\nn =")[[1]][1]
+      onoff <- paste(lb, names(LIST_DATA$table_file), sep = "-")
+      TF <- c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[2]]], "[[",5) != 0)
+      mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[2]]], "[[",4)), sep = ":")
+      updatePickerInput(session, "pickergene1onoff", label = lb,
                         choices = onoff, 
                         selected = onoff[TF],
                         choicesOpt = list(style = mycolors)
       )
-      hide("filegene1")
-      show("filegene2")
+      if(length(names(LIST_DATA$gene_file)) == 3){
+        lb <- strsplit(names(LIST_DATA$gene_file)[3], "\nn =")[[1]][1]
+        onoff <- paste(lb, names(LIST_DATA$table_file), sep = "-")
+        TF <- c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[3]]], "[[",5) != 0)
+        mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[3]]], "[[",4)), sep = ":")
+        updatePickerInput(session, "pickergene2onoff", label = lb,
+                          choices = onoff, 
+                          selected = onoff[TF],
+                          choicesOpt = list(style = mycolors)
+        )
+      }
     }
     reset("filegene1")
     updateCheckboxInput(session, "checkboxconvert", value = FALSE)
+    updateSelectInput(session,
+                      "selectgenelistoptions",
+                      choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
   })
-  
-  observeEvent(input$filegene2,{
-    print("load gene file")
-    withProgress(message = 'Calculation in progress',
-                 detail = 'This may take a while...', value = 0, {
-                   # load info, update select boxes, switching works and chaning info and ploting
-                   LD <- LoadGeneFile(input$filegene2$datapath,
-                                              input$filegene2$name,
-                                              LIST_DATA, input$checkboxconvert, 2)
-                 })
-    if(!is.null(LD)){
-      LIST_DATA <<- LD
-      updateSelectInput(session,
-                        "selectgenelistoptions",
-                        choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
-      onoff <- paste(strsplit(as.character(input$filegene2$name), '.txt')[[1]][1], names(LIST_DATA$table_file),sep = "-")
-      ref <- grep(strsplit(as.character(input$filegene2$name), '.txt')[[1]][1],names(LIST_DATA$gene_file),value = T)
-      TF <- c(sapply(LIST_DATA$gene_info[[ref]], "[[",5) != 0)
-      mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[ref]], "[[",4)), sep = ":")
-      updatePickerInput(session, "pickergene2onoff", label = strsplit(as.character(input$filegene1$name), '.txt')[[1]][1],
-                        choices = onoff, 
-                        selected = onoff[TF],
-                        choicesOpt = list(style = mycolors)
-      )
-      hide("filegene2")
-      show("filegene1")
-    }
-    reset("filegene2")
-    updateCheckboxInput(session, "checkboxconvert", value = FALSE)
-  })
-  
   
   # loads color file ----
   observeEvent(input$filecolor,{
@@ -806,11 +793,6 @@ ui <- dashboardPage(
                                                         hidden(fileInput(
                                 "filegene1",
                                 label = "Load 1st gene list",
-                                accept = c('.txt')
-                              ),
-                              fileInput(
-                                "filegene2",
-                                label = "Load 2ed gene list",
                                 accept = c('.txt')
                               ),
                               checkboxInput("checkboxconvert",
