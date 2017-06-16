@@ -3,13 +3,6 @@ https://github.com/daattali/advanced-shiny#readme
 
 shinyWidgetsGallery()
 
-work on totorial ... keep uptodate 
-  files that will work
-  gene lists that will work
-  changing plot options
-
-use bed files as gene lists?
-
 gene tools ... 
 sort ...
   add picker(change input), and save info (display custom?)
@@ -17,6 +10,11 @@ sort ...
   adjust posstion and size of selection tools
   hook up Quick sort
   update function to fix names of columns
+
+work on save function
+  commented header add
+  save common list
+  save color list added
     
 region
 cluster

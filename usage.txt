@@ -17,18 +17,21 @@ Load Data tab
     
     trys to set some defalt plot options based on the first file loaded 
       
-  load gene lists ... limited number at a time, 
+  load gene lists ... limited number at a time
     gene lists are unchecked for plotting by default,
     colors are a tint of thouse being used by default
     
     can be data file
     can be one colunm
       if no gene names match can re-try with partial matching
+    can save gene list based on drop down selected gene list
+    can have # comment lines
       
   load color file
     can be just a one column list of colors 
     can be a two column list file name (partial matching) and colors 
     color format name = "blue" rgb = 255,0,0 and hex = #E41A1C
+    can save color list based on drop down selected gene list
     
   select gene list and file
     select plot line and dot type

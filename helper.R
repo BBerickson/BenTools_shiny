@@ -323,11 +323,16 @@ LoadGeneFile <- function(file_path, file_name, list_data, convert = F, list_num 
         cols(gene = col_character())
       ))
   } else if(num_bins > 1){
+    if(num_bins == 6){
+      col_names <- c("chr", "start", "end", "gene", "bin", "score")
+    } else {
+      col_names <- c("gene", "bin", "score")
+    }
     genefile <-
       suppressMessages(read_tsv(
         file_path,
         comment = "#",
-        col_types = cols_only(gene = col_character())
+        col_names = col_names
       ))
   }
   
