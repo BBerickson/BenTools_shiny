@@ -702,7 +702,7 @@ server <- function(input, output, session) {
                                           )
     )
     
-    LIST_DATA$STATE[3] <- 1
+    LIST_DATA$STATE[3] <<- 1
   })
   
   # sort tool action ----
@@ -748,8 +748,8 @@ ui <- dashboardPage(
                )),
     hidden(div(style = "padding-left: 15%",
                id = "showpickersort",
-               pickerInput(inputId = "pickersorttop", width = "75%",
-                           label = h4("Sort gene list"), 
+               pickerInput(inputId = "pickersorttop", width = "99%",
+                           label = "<> Sort gene list", 
                            choices = "Load data file",
                            multiple = T,
                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
