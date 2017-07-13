@@ -753,7 +753,7 @@ ui <- dashboardPage(
     hidden(div(id = "selectlineslablesshow", style = "padding-left: 10%",  
       selectInput("selectlineslables", width = "85%",
                   label = "quick set lines and lables", 
-                  choices = c("543 bins 20,20,40","543 bins 10,10,10", "5' 1k 1k 80bins" ,"3'","4")
+                  choices = c("543 bins 20,20,40","543 bins 10,10,10", "5' 1k 1k 80bins", "5' .25k 10k 205bins", "3'","4")
       )
     ))
   )),
