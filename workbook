@@ -9,12 +9,22 @@ shinyWidgetsGallery()
 
 gene tools ... 
 sort ...
-  add picker(change input), and save info (display custom?)
-  table: move, adjust length, set max width and overflow, other options
-  adjust posstion and size of selection tools
-  hook up Quick sort
-  update function to fix names of columns
 
+  "showpickersort" ... plot on/off update
+  on sort tab show selector for gene lists and a picker for data,(fix what is passed to function)
+  fix function to output gene name and rank with data name as column name
+  save output$gene to LIST_DATA$gene_file$sort$use
+  
+  table: move, adjust length, set max width and overflow, other options 
+    https://rstudio.github.io/DT/options.html
+    https://datatables.net/reference/option/
+    
+  adjust posstion and size of selection tools
+  hook up Quick sort and fix function
+
+
+
+R markdown code generation and save option
 gene list pickers overflow fix ... or at least the legend
 
 work on save function

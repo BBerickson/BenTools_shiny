@@ -692,19 +692,20 @@ LinesLablesList <- function(body1bin = 20,
     use_plot_breaks_labels <- c(LOCname1, LOCname2)
     use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin) + .5
   } else if (mytype == "5'"){
-    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks <- seq(1, by = everybin, length.out = (totbins/everybin))
     use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin + .5
-    use_plot_breaks_labels <- rev(seq((totbins-tssbin)*binbp, by = -everybp, length.out = (totbins/everybin) + 1))
+    use_plot_breaks_labels <- seq(-everybp, by = everybp, length.out = length(use_plot_breaks))
     use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
     use_virtical_line <- c(tssbin, NA, NA, NA) + .5
   } else if(mytype == "3'"){
-    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks <- seq(1, by = everybin, length.out = (totbins/everybin))
     use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin + .5
-    use_plot_breaks_labels <- abs(seq(-(tesbin-totbins)*binbp, by = binbp * everybin, length.out = (totbins/everybin) + 1))
+    use_plot_breaks_labels <- abs(seq(-everybp, by = everybp, length.out = length(use_plot_breaks)))
+    #use_plot_breaks_labels <- abs(seq(-(tesbin-totbins)*binbp, by = everybp, length.out = length(use_plot_breaks)))
     use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -1)] <- "TES"
     use_virtical_line <- c(NA, tesbin, NA, NA) + .5
   } else if(mytype == "none"){
-    use_plot_breaks <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
+    use_plot_breaks <- seq(1, by = everybin, length.out = (totbins/everybin))
     use_plot_breaks_labels <- c(1,rev(seq(totbins, by = -everybin, length.out = (totbins/everybin))))
     use_virtical_line <- c(NA, NA, NA, NA) + .5
   } else{
@@ -772,12 +773,15 @@ LinesLablesList <- function(body1bin = 20,
 
 # lines and labels preset helper
 LinesLablesPreSet <- function(mytype){
+  # 5|4, 4|3, tss, tes, bp/bin, every bin
   if(mytype == "543 bins 20,20,40"){
     tt <- c(20,40,15,45,100,5)
   } else if (mytype == "543 bins 10,10,10"){ 
     tt <- c(10,20,5,25,100,5)
   } else if(mytype == "5' 1k 1k 80bins"){
     tt <- c(0,0,40,0,25,20)
+  } else if(mytype == "5' .25k 10k 205bins"){
+    tt <- c(0,0,5,0,50,6)
   } else if(mytype == "3'"){
     tt <- c(0,0,0,40,25,20)
   } else{

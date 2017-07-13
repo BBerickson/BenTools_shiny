@@ -50,6 +50,8 @@ Plot tab
   cusome set x axis bin lables
   
   
+Sort tool
+
   
   
   

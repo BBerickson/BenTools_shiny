@@ -3,6 +3,7 @@
 # setwd("~/Desktop/BenToolsTab/dockerTest")
 # setwd("~/BenTools gh/BenTools_shiny")
 # runApp("BenTools_shiny")
+# runApp("app.R")
 
 source("helper.R")
 
@@ -18,18 +19,6 @@ server <- function(input, output, session) {
   session$onSessionEnded(stopApp)
   
   # Globals and reacive values ----
-  
-  # LIST_DATA <- list(
-  #   table_file = list(),
-  #   # [[]] gene X1 X2 ...
-  #   gene_file = list(),
-  #   # holds $common genes from files and $gene file(s)
-  #   gene_info = list(),
-  #   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
-  #   clust = list(), # Cluster holder
-  #   x_plot_range = c(0, 0),
-  #   STATE = c(0, "common", 0) # flow control, gene list flow control
-  # )      
   
   reactive_values <- reactiveValues(
     Y_Axis_Lable = NULL,
@@ -128,7 +117,7 @@ server <- function(input, output, session) {
         if(num_bins == 80){
           # add second critirea for 5' TODO
           # updateSelectInput(session, "selectlineslables", selected = "5' 1k 1k 80bins")
-        } else if( num_bins == 30){
+        } else if( num_bins <= 30) {
           updateSelectInput(session, "selectlineslables", selected = "543 bins 10,10,10")
         }
         
@@ -629,7 +618,7 @@ server <- function(input, output, session) {
                       myset[5],
                       LIST_DATA$x_plot_range[2],
                       myset[6])
-    
+
   })
   
   # replot with smooth update ----
