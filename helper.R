@@ -515,7 +515,25 @@ SortTop <- function(list_data, nick_name, start_bin, end_bin, num, topbottom) {
     }
     lc <<- lc + 1
   })
-  outlist  
+  
+  list_data$gene_file[["sort"]]$full <- outlist
+  list_data$gene_file[["sort"]]$use <- outlist$gene
+  list_data$gene_info[["sort"]] <-
+    lapply(setNames(
+      names(list_data$gene_info[[1]]),
+      names(list_data$gene_info[[1]])
+    ),
+    function(i)
+      tibble(
+        set = i,
+        mydot = kDotOptions[1],
+        myline = kLineOptions[1],
+        mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != "sort")]][[i]]$mycol, tint = T),
+        onoff = 0,
+        rnorm = "1"
+      ))
+  
+  list_data  
 }
 
 # Applys math to on data in each gene list

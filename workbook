@@ -7,11 +7,17 @@ https://rstudio.github.io/shinydashboard/index.html
 https://rdrr.io/cran/shinyWidgets/
 shinyWidgetsGallery()
 
+1 make loop that is triggered by loaing gene list or using tool to create on/off pikers
+2 #records check box on/off ---- observeEvent() recorded on plot button generic loop
+3 fix show/hide if it exists show
+4 update selectors on page switch
+  
 gene tools ... 
 sort ...
 
-  "showpickersort" ... plot on/off update
-  on sort tab show selector for gene lists and a picker for data,(fix what is passed to function)
+  
+  on sort tab show selector for gene lists and a picker for data,(fix what is passed to function) 
+    and name it is saved under LIST_DATA$gene_info$sort-genelist n = #
   fix function to output gene name and rank with data name as column name
   save output$gene to LIST_DATA$gene_file$sort$use
   
@@ -23,6 +29,11 @@ sort ...
   hook up Quick sort and fix function
 
 
+new tools checklist for pluging in list to main functions
+  place picker (generator?)
+  show/hide picker ... need to stream line with constent and values
+  record on/off ... need to stream line with constent
+  update gene list selector
 
 R markdown code generation and save option
 gene list pickers overflow fix ... or at least the legend
