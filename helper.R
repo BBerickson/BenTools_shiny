@@ -485,7 +485,7 @@ SortTop <- function(list_data, nick_name, start_bin, end_bin, num, topbottom) {
   lapply(nick_name, function(j) {
     nick_name2 <- strsplit(sub('-', '\n!', j), '\n!')[[1]]
     enesg <-
-      data_frame(gene = list_data$gene_file[[grep(nick_name2[1], names(LIST_DATA$gene_file),value = T)]]$use)
+      data_frame(gene = list_data$gene_file[[grep(nick_name2[1], names(list_data$gene_file),value = T)]]$use)
     df <-
       semi_join(list_data$table_file[[nick_name2[2]]], enesg, by = 'gene')
       apply_bins <- group_by(df, gene) %>%
