@@ -32,8 +32,7 @@ server <- function(input, output, session) {
   )
   
   # show hide checkbox and action button ----
-  observeEvent(input$tabs, {
-    req(first_file())
+  observeEvent(input$tabs, ignoreInit = TRUE,{
     toggle(
       "showpicker",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
@@ -78,9 +77,7 @@ server <- function(input, output, session) {
   })
   
   # loads data file(s) ----
-  first_file <- reactive({
-    req(input$filetable$datapath)
-    isolate({
+  observeEvent(input$filetable,{
       print("load file")
       # add warnings for total size of LIST_DATA TODO
       disable("startoff")
@@ -127,8 +124,27 @@ server <- function(input, output, session) {
       enable("startoff")
       enable("hidemainplot")
       reset("filetable")
-      names(LIST_DATA$table_file)
-    })
+      ff <- names(LIST_DATA$table_file)
+      updateAwesomeRadio(
+        session,
+        "radiodataoption",
+        choices = ff,
+        selected = last(ff)
+      )
+      num <- 0
+      for(i in ff){
+        onoff <- c(paste(strsplit(i, "\nn =")[[1]][1], ff),sep = "-")
+        
+        TF <- c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)
+        mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":")
+        pp <- paste0("pickergene", num,"onoff")
+        updatePickerInput(session, pp,
+                          choices = onoff, 
+                          selected = onoff[TF],
+                          choicesOpt = list(style = mycolors)
+        )
+        num <- num + 1
+      }
   })
   
   # loads gene list file ----
@@ -173,7 +189,6 @@ server <- function(input, output, session) {
   
   # loads color file ----
   observeEvent(input$filecolor,{
-    req(first_file())
     my_sel <- input$radiodataoption
     my_list <- input$selectgenelistoptions
     print("load color file")
@@ -198,35 +213,8 @@ server <- function(input, output, session) {
     reset("filecolor")
     })
   
-  # update when data file is loaded ----
-  observeEvent(first_file(), {
-    print("update load file")
-    updateAwesomeRadio(
-      session,
-      "radiodataoption",
-      choices = first_file(),
-      selected = last(first_file())
-    )
-
-    num <- 0
-    for(i in names(LIST_DATA$gene_file)){
-      onoff <- c(paste(strsplit(i, "\nn =")[[1]][1], names(LIST_DATA$table_file),sep = "-"))
-    
-    TF <- c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)
-    mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":")
-    pp <- paste0("pickergene", num,"onoff")
-    updatePickerInput(session, pp,
-                      choices = onoff, 
-                      selected = onoff[TF],
-                      choicesOpt = list(style = mycolors)
-                      )
-    num <- num + 1
-    }
-  })
-  
   # update desplay selected item info ----
-  observeEvent(c(input$radiodataoption, input$selectgenelistoptions), {
-    req(first_file())
+  observeEvent(c(input$radiodataoption, input$selectgenelistoptions), ignoreInit = TRUE,{
     my_sel <- input$radiodataoption
     my_list <- input$selectgenelistoptions
     print("options update")
@@ -264,9 +252,9 @@ server <- function(input, output, session) {
     }
   )
   
+  
   # record new nickname and norm factor ----
-  observeEvent(input$actionoptions, {
-    req(first_file())
+  observeEvent(input$actionoptions, ignoreInit = TRUE,{
     if (!is.na(input$normfactor) & !input$normfactor %in% c(0,1) & input$normfactor != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["rnorm"]) {
       print("norm")
       LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["rnorm"] <<- 
@@ -387,8 +375,7 @@ server <- function(input, output, session) {
   })
   
   # update and save color selected ----
-  observeEvent(input$colourhex, {
-    req(first_file())
+  observeEvent(input$colourhex, ignoreInit = TRUE,{
     print("update text color")
     updateTextInput(session,
                     "textrgbtohex",
@@ -417,8 +404,7 @@ server <- function(input, output, session) {
   })
     
   #records check box on/off ----
-  observeEvent(c(input$pickergene0onoff, input$pickergene1onoff, input$pickergene2onoff, input$pickersortgeneonoff), ignoreNULL = FALSE,{
-      req(first_file())
+  observeEvent(c(input$pickergene0onoff, input$pickergene1onoff, input$pickergene2onoff, input$pickersortgeneonoff), ignoreInit = TRUE, ignoreNULL = FALSE,{
         print("checkbox on/off")
         checkboxonoff <- list()
         for(tt in strsplit(sub("-"," ", input$pickergene0onoff)," ")){
@@ -454,8 +440,7 @@ server <- function(input, output, session) {
   })
   
   # plots when action button is pressed ----
-  observeEvent(input$actionmyplot, {
-    req(first_file())
+  observeEvent(input$actionmyplot, ignoreInit = TRUE,{
     print("plot button")
     reactive_values$Apply_Math <-
       ApplyMath(LIST_DATA,
@@ -502,8 +487,7 @@ server <- function(input, output, session) {
   })
   
   # updates applymath ----
-  observeEvent(c(input$myMath, input$checkboxrgf, input$numericnormbin, input$checkboxrf),{
-    req(first_file())
+  observeEvent(c(input$myMath, input$checkboxrgf, input$numericnormbin, input$checkboxrf),ignoreInit = TRUE,{
     if(is.na(input$numericnormbin)){
       updateNumericInput(session, "numericnormbin", value = 0)
     } else if(input$numericnormbin < 0){
@@ -549,8 +533,7 @@ server <- function(input, output, session) {
   })
  
   #plots when bin slider or y slider is triggered ----
-  observeEvent(c(reactive_values$Lines_Lables_List, input$sliderplotBinRange, reactive_values$Y_Axis_plot, input$sliderplotYRange), {
-    req(first_file())
+  observeEvent(c(reactive_values$Lines_Lables_List, input$sliderplotBinRange, reactive_values$Y_Axis_plot, input$sliderplotYRange),ignoreInit = TRUE, {
     if (!is.null(reactive_values$Apply_Math)) {
       print("bin slider or L&L making ggplot")
       reactive_values$Plot_controler <-
@@ -567,8 +550,7 @@ server <- function(input, output, session) {
   })
 
   # quick lines and lables preset change #TODO finish update ----
-  observeEvent(input$selectlineslables, {
-    req(first_file())
+  observeEvent(input$selectlineslables,ignoreInit = TRUE, {
     print("quick Lines & Lables")
     myset <- LinesLablesPreSet(input$selectlineslables)
       updateNumericInput(session,"numericbody1", value = myset[1])
@@ -591,8 +573,7 @@ server <- function(input, output, session) {
   })
   
   # action button update lines and lables ----
-  observeEvent(input$actionlineslabels,{
-    req(first_file())
+  observeEvent(input$actionlineslabels,ignoreInit = TRUE,{
     print("action lines and lables")
     myset <- c(input$numericbody1,
     input$numericbody2,
@@ -628,8 +609,7 @@ server <- function(input, output, session) {
   })
   
   # replot with smooth update ----
-  observeEvent(input$checkboxsmooth, {
-    req(first_file())
+  observeEvent(input$checkboxsmooth, ignoreInit = TRUE,{
     reactive_values$Y_Axis_Lable <- YAxisLable(input$myMath, input$checkboxrf, input$checkboxrgf, input$numericnormbin, input$checkboxsmooth)
     reactive_values$Plot_controler <-
       GGplotLineDot(
@@ -644,8 +624,7 @@ server <- function(input, output, session) {
   })
   
   # quick color set change ----
-  observeEvent(input$kbrewer, {
-    req(first_file())
+  observeEvent(input$kbrewer, ignoreInit = TRUE,{
     print("kbrewer")
     kListColorSet <<- brewer.pal(8, input$kbrewer)
     common_name <- names(LIST_DATA$gene_info)[1]
@@ -684,8 +663,7 @@ server <- function(input, output, session) {
   })
   
   # sort tool action ----
-  observeEvent(input$actionsorttool,{
-    req(first_file())
+  observeEvent(input$actionsorttool,ignoreInit = TRUE,{
     print("sort tool")
     LIST_DATA <<- SortTop(LIST_DATA, input$pickergene0onoff, 
                       input$slidersortbinrange[1], 
@@ -711,12 +689,9 @@ server <- function(input, output, session) {
   })
   
   # sort quick tool action ----
-  observeEvent(input$actionsortquick,{
-    req(first_file())
+  observeEvent(input$actionsortquick,ignoreInit = TRUE,{
     print("quick sort")
   })
-  
-  
   
   shinyjs::addClass(selector = "body", class = "sidebar-collapse")
 }
