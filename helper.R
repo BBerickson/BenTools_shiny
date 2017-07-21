@@ -113,8 +113,7 @@ isColor <- function(x) {
 }
 
 # reads in file, tests, fills out info and returns list_data
-LoadTableFile <- function(file_path, file_name, list_data) {
-  # load remote files TODO
+LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gene_list = FALSE) {
   if(length(file_name) == 1 && length(grep(".url",file_name))==1){
     file_path <- read_lines(file_path)
     file_name <- NULL
@@ -122,11 +121,16 @@ LoadTableFile <- function(file_path, file_name, list_data) {
       file_name <- c(file_name, last(strsplit(i, "/")[[1]]))
     }
   }
-  file_count <- length(list_data$table_file)
+  file_count <- length(list_data)
   for (x in seq_along(file_path)) {
+    if(gene_list){
+      legend_nickname <-
+        strsplit(as.character(file_name[x]), '.txt')[[1]][1]
+    } else {
     legend_nickname <-
       strsplit(as.character(file_name[x]), '.tab')[[1]][1]
-    if (any(legend_nickname == names(list_data$table_file))) {
+    }
+    if (any(legend_nickname == names(list_data))) {
       showModal(modalDialog(
         title = "Information message",
         paste(file_name[x], "has already been loaded"), size = "s",
@@ -140,32 +144,32 @@ LoadTableFile <- function(file_path, file_name, list_data) {
         count_fields(file_path[x],
                      n_max = 1,
                      skip = 1,
-                     tokenizer = tokenizer_tsv()) - 1
-      
-      if (num_bins == 2) {
+                     tokenizer = tokenizer_tsv())
+      if(num_bins == 1 && gene_list){
         setProgress(1, detail = "load file")
-        tablefile <- suppressMessages(read_tsv(file_path[x],
-                                               col_names = c("gene", "bin", "score"))) %>%
-          mutate(set = legend_nickname) %>% na_if(Inf)
-        num_bins <- collapse(summarise(tablefile, max(bin)))[[1]]
-        if (file_count > 0 & num_bins != list_data$x_plot_range[2]) {
-            showModal(modalDialog(
-              title = "Information message",
-              "Can't load file, different number of bins", size = "s",
-              easyClose = TRUE
-            ))
-            break ()
-          }
-      } else if (num_bins == 5) {
-        setProgress(1, detail = "load file")
-        tablefile <- suppressMessages(read_tsv(
-          file_path[x],
-          col_names = c("chr", "start", "end", "gene", "bin", "score")
-        )) %>%
+        tablefile <-
+          suppressMessages(read_tsv(
+            file_path,
+            col_names = "gene",
+            comment = "#",
+            cols(gene = col_character())
+          ))
+      } else if(num_bins == 6){
+          col_names <- c("chr", "start", "end", "gene", "bin", "score")
+        } else {
+          col_names <- c("gene", "bin", "score")
+        }
+      setProgress(1, detail = "load file")
+      tablefile <-
+          suppressMessages(read_tsv(
+            file_path[x],
+            comment = "#",
+            col_names = col_names
+          )) %>%
           select(gene, bin, score) %>%
           mutate(set = legend_nickname) %>% na_if(Inf)
-        num_bins <- collapse(summarise(tablefile, max(bin)))[[1]]
-        if (file_count > 0 & num_bins != list_data$x_plot_range[2]) {
+      num_bins <- collapse(summarise(tablefile, max(bin)))[[1]]
+        if (file_count > 0 & num_bins != x_plot_range) {
             showModal(modalDialog(
               title = "Information message",
               "Can't load file, different number of bins", size = "s",
@@ -173,52 +177,14 @@ LoadTableFile <- function(file_path, file_name, list_data) {
             ))
             break ()
           }
-      } else{
-      # checks if last row is an empty and fixes
-      tablefile <- suppressMessages(read_tsv(file_path[x],
-                                             col_names = c("gene", 1:(num_bins)),
-                                             skip = 1, n_max = 5))
-      if(sum(is.na(tablefile[,num_bins+1])) == 5){
-        test <- TRUE
-        num_bins2 <- num_bins - 1
-      } else {
-        test <- FALSE
-        num_bins2 <- num_bins
-      }
       
-      if(file_count > 0 & num_bins2 != list_data$x_plot_range[2]){
-        showModal(modalDialog(
-          title = "Information message",
-          "Can't load file, different number of bins", size = "s",
-          easyClose = TRUE
-        ))
-        break ()
-      }
-      setProgress(1, detail = "load file")
-      
-      tablefile <- suppressMessages(read_tsv(file_path[x],
-                                             col_names = c("gene", 1:(num_bins)),
-                                             skip = 1) %>%
-                                      gather(., bin, score, 2:(num_bins + 1))) %>%
-        mutate(
-          set = legend_nickname,
-          bin = as.numeric(bin),
-          score = as.numeric(score)
-        ) %>%
-        na_if(Inf)
-      
-      if(test){
-        tablefile <- tablefile %>% filter(., bin != num_bins)
-      }
-      
-      num_bins <- num_bins2
       setProgress(2, detail = "process gene list")
       }
     zero_genes <-
-      group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test !=
-                                                                                         0)
+      group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test != 0)
     
     tablefile <- semi_join(tablefile, zero_genes, by = "gene")
+    
     gene_names <- collapse(distinct(tablefile, gene))[[1]]
     if (file_count > 0) {
       gene_names <-
