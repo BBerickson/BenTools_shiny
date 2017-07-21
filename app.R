@@ -132,8 +132,13 @@ server <- function(input, output, session) {
         selected = last(ff)
       )
       num <- 0
+<<<<<<< HEAD
       for(i in names(LIST_DATA$gene_file)){
         onoff <- c(paste(strsplit(i, "\nn =")[[1]][1], ff, sep = "-"))
+=======
+      for(i in ff){
+        onoff <- c(paste(strsplit(i, "\nn =")[[1]][1], ff),sep = "-")
+>>>>>>> e5126dbc4901a8c99e7baa8112d7a0a97e9b9938
         
         TF <- c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)
         mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":")
