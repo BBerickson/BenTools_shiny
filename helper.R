@@ -113,7 +113,7 @@ isColor <- function(x) {
 }
 
 # reads in file, tests, fills out info and returns list_data
-LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gene_list = FALSE) {
+LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALSE, convert = FALSE) {
   if(length(file_name) == 1 && length(grep(".url",file_name))==1){
     file_path <- read_lines(file_path)
     file_name <- NULL
@@ -121,15 +121,10 @@ LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gen
       file_name <- c(file_name, last(strsplit(i, "/")[[1]]))
     }
   }
-  file_count <- length(list_data)
+  file_count <- length(list_data$table_file)
   for (x in seq_along(file_path)) {
-    if(gene_list){
-      legend_nickname <-
-        strsplit(as.character(file_name[x]), '.txt')[[1]][1]
-    } else {
     legend_nickname <-
       strsplit(as.character(file_name[x]), '.tab')[[1]][1]
-    }
     if (any(legend_nickname == names(list_data))) {
       showModal(modalDialog(
         title = "Information message",
@@ -145,19 +140,17 @@ LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gen
                      n_max = 1,
                      skip = 1,
                      tokenizer = tokenizer_tsv())
-      if(num_bins == 1 && gene_list){
-        setProgress(1, detail = "load file")
-        tablefile <-
-          suppressMessages(read_tsv(
-            file_path,
-            col_names = "gene",
-            comment = "#",
-            cols(gene = col_character())
-          ))
-      } else if(num_bins == 6){
+      if(num_bins == 6){
           col_names <- c("chr", "start", "end", "gene", "bin", "score")
-        } else {
+        } else if(num_bins == 3){
           col_names <- c("gene", "bin", "score")
+        } else {
+          showModal(modalDialog(
+            title = "Information message",
+            " I dont know how to load this file, I use windowed bed files ", size = "s",
+            easyClose = TRUE
+          ))
+          break()
         }
       setProgress(1, detail = "load file")
       tablefile <-
@@ -169,7 +162,7 @@ LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gen
           select(gene, bin, score) %>%
           mutate(set = legend_nickname) %>% na_if(Inf)
       num_bins <- collapse(summarise(tablefile, max(bin)))[[1]]
-        if (file_count > 0 & num_bins != x_plot_range) {
+        if (file_count > 0 & num_bins != list_data$x_plot_range[2]) {
             showModal(modalDialog(
               title = "Information message",
               "Can't load file, different number of bins", size = "s",
@@ -179,17 +172,15 @@ LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gen
           }
       
       setProgress(2, detail = "process gene list")
-    zero_genes <-
-      group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test != 0)
-    
-    tablefile <- semi_join(tablefile, zero_genes, by = "gene")
-    
-    gene_names <- collapse(distinct(tablefile, gene))[[1]]
+      
+        zero_genes <-
+          group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test != 0)
+        
+        tablefile <- semi_join(tablefile, zero_genes, by = "gene")
+   
     if (file_count > 0) {
-      gene_names <-
-        c(list_data$gene_file[[1]]$use, gene_names)
-      gene_names <- gene_names[duplicated(gene_names)]
-      if (length(gene_names) == 0) {
+      gene_names <- semi_join(tablefile, list_data$gene_file[[1]]$use, by = "gene") %>% select(gene)
+      if (nrow(gene_names) == 0) {
         showModal(modalDialog(
           title = "Information message",
           " No genes in common ", size = "s",
@@ -198,10 +189,12 @@ LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gen
         break()
       }
     } else {
+      gene_names <- group_by(tablefile, gene) %>% select(gene)
       list_data$x_plot_range <- c(1, num_bins)
 
     }
-    my_name <- paste("common\nn =", length(gene_names))
+      
+    my_name <- paste("common\nn =", n_distinct(gene_names$gene))
     list_data$STATE[2] <- my_name
     if (file_count > 0) {
     names(list_data$gene_file)[1] <- my_name
@@ -450,7 +443,7 @@ SortTop <- function(list_data, nick_name, start_bin, end_bin, num, topbottom) {
   lapply(nick_name, function(j) {
     nick_name2 <- strsplit(sub('-', '\n!', j), '\n!')[[1]]
     enesg <-
-      data_frame(gene = list_data$gene_file[[grep(nick_name2[1], names(list_data$gene_file),value = T)]]$use)
+      list_data$gene_file[[grep(nick_name2[1], names(list_data$gene_file),value = T)]]$use
     df <-
       semi_join(list_data$table_file[[nick_name2[2]]], enesg, by = 'gene')
       apply_bins <- group_by(df, gene) %>%
@@ -530,7 +523,7 @@ ApplyMath <-
               break()
             }
           } else {
-            enesg <- data_frame(gene = gene_file[[i]]$use)
+            enesg <- gene_file[[i]]$use
           }
           truefalse <-
             c(sapply(

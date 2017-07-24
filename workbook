@@ -11,6 +11,8 @@ shinyWidgetsGallery()
 2 #records check box on/off ---- observeEvent() recorded on plot button generic loop
 3 fix show/hide if it exists show
 4 update selectors on page switch
+5 load file tests ... mix good and bad
+
   
 gene tools ... 
 sort ...

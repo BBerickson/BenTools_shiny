@@ -92,6 +92,21 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "selectgenelistoptions",
                         choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+      output$DynamicGenePicker <- renderUI({
+        pickerlist <- list()        
+        for(i in names(LIST_DATA$gene_info)){
+          pickerlist[[i]] <- list(pickerInput(inputId = strsplit(i, "\nn =")[[1]][1], 
+                                       label = i, 
+                                       width = "99%",
+                                       choices = names(LIST_DATA$table_file),
+                                       selected = names(LIST_DATA$table_file)[c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)],
+                                       multiple = T,
+                                       options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0"),
+                                       choicesOpt = list(style = paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":"))
+                                       ))
+        }       
+        pickerlist                     
+      })
       if (LIST_DATA$STATE[1] == 0) {
         show("filegene1")
         show("checkboxconvert")
@@ -704,6 +719,7 @@ ui <- dashboardPage(
     menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
     hidden(div(style = "padding-left: 15%",
                id = "showpicker",
+               uiOutput("DynamicGenePicker"),
                pickerInput(inputId = "pickergene0onoff", width = "99%",
                            label = " <> Common gene list",
                            choices = "Load data file",
