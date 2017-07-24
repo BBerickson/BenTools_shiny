@@ -179,7 +179,6 @@ LoadTableFile <- function(file_path, file_name, list_data, x_plot_range = 0, gen
           }
       
       setProgress(2, detail = "process gene list")
-      }
     zero_genes <-
       group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test != 0)
     
