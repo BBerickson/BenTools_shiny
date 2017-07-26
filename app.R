@@ -33,18 +33,11 @@ server <- function(input, output, session) {
   
   # show hide checkbox and action button ----
   observeEvent(input$tabs, ignoreInit = TRUE,{
+    print("switching tabs")
     toggle(
       "showpicker",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
       )
-    toggle(
-      "showpickergene1onoff",
-      condition = (input$tabs == "mainplot" & sum(names(LIST_DATA$gene_file) != "sort") > 1)
-    )
-    toggle(
-      "showpickergene2onoff",
-      condition = (input$tabs == "mainplot" & sum(names(LIST_DATA$gene_file) != "sort") > 2)
-    )
     toggle(
       "showpickersortgeneonoff",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0 & LIST_DATA$STATE[3] != 0)
@@ -95,7 +88,7 @@ server <- function(input, output, session) {
       output$DynamicGenePicker <- renderUI({
         pickerlist <- list()        
         for(i in names(LIST_DATA$gene_info)){
-          pickerlist[[i]] <- list(pickerInput(inputId = strsplit(i, "\nn =")[[1]][1], 
+          pickerlist[[i]] <- list(pickerInput(inputId = gsub("\nn = ", "-bensspace-", i), 
                                        label = i, 
                                        width = "99%",
                                        choices = names(LIST_DATA$table_file),
@@ -146,19 +139,6 @@ server <- function(input, output, session) {
         choices = ff,
         selected = last(ff)
       )
-      num <- 0
-      for(i in names(LIST_DATA$gene_file)){
-        onoff <- c(paste(strsplit(i, "\nn =")[[1]][1], ff, sep = "-"))
-        TF <- c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)
-        mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":")
-        pp <- paste0("pickergene", num,"onoff")
-        updatePickerInput(session, pp,
-                          choices = onoff, 
-                          selected = onoff[TF],
-                          choicesOpt = list(style = mycolors)
-        )
-        num <- num + 1
-      }
   })
   
   # loads gene list file ----
@@ -167,9 +147,9 @@ server <- function(input, output, session) {
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...', value = 0, {
     # load info, update select boxes, switching works and chaning info and ploting
-    LD <- LoadGeneFile(input$filegene1$datapath,
+    LD <- LoadTableFile(input$filegene1$datapath,
                                input$filegene1$name,
-                               LIST_DATA, input$checkboxconvert,1)
+                               LIST_DATA, TRUE, input$checkboxconvert)
                  })
     if(!is.null(LD)){
       LIST_DATA <<- LD
@@ -177,21 +157,21 @@ server <- function(input, output, session) {
       onoff <- paste(lb, names(LIST_DATA$table_file), sep = "-")
       TF <- c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[2]]], "[[",5) != 0)
       mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[2]]], "[[",4)), sep = ":")
-      updatePickerInput(session, "pickergene1onoff", label = lb,
-                        choices = onoff, 
-                        selected = onoff[TF],
-                        choicesOpt = list(style = mycolors)
-      )
+      # updatePickerInput(session, "pickergene1onoff", label = lb,
+      #                   choices = onoff, 
+      #                   selected = onoff[TF],
+      #                   choicesOpt = list(style = mycolors)
+      # )
       if(sum(names(LIST_DATA$gene_file) != "sort") == 3){
         lb <- strsplit(names(LIST_DATA$gene_file)[3], "\nn =")[[1]][1]
         onoff <- paste(lb, names(LIST_DATA$table_file), sep = "-")
         TF <- c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[3]]], "[[",5) != 0)
         mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[3]]], "[[",4)), sep = ":")
-        updatePickerInput(session, "pickergene2onoff", label = lb,
-                          choices = onoff, 
-                          selected = onoff[TF],
-                          choicesOpt = list(style = mycolors)
-        )
+        # updatePickerInput(session, "pickergene2onoff", label = lb,
+        #                   choices = onoff, 
+        #                   selected = onoff[TF],
+        #                   choicesOpt = list(style = mycolors)
+        # )
       }
     }
     reset("filegene1")
@@ -416,41 +396,46 @@ server <- function(input, output, session) {
       }
     }
   })
+   
+  # reactive picker watcher
+  observeEvent(reactiveValuesToList(input)[gsub("\nn = ", "-bensspace-", names(LIST_DATA$gene_info))], 
+               ignoreNULL = FALSE, ignoreInit = TRUE,{
+                 print("reacive picker")
+                 reactive_values$picker <- reactiveValuesToList(input)[gsub("\nn = ", "-bensspace-", names(LIST_DATA$gene_info))]
+                 
     
+  })
+   
   #records check box on/off ----
-  observeEvent(c(input$pickergene0onoff, input$pickergene1onoff, input$pickergene2onoff, input$pickersortgeneonoff), ignoreInit = TRUE, ignoreNULL = FALSE,{
-        print("checkbox on/off")
-        checkboxonoff <- list()
-        for(tt in strsplit(sub("-"," ", input$pickergene0onoff)," ")){
-          selectgenelistonoff <- grep(tt[1], names(LIST_DATA$gene_file),value = T)
-          checkboxonoff[[selectgenelistonoff]] <- c(checkboxonoff[[selectgenelistonoff]], tt[2])
+  observeEvent(reactive_values$picker, ignoreNULL = FALSE, ignoreInit = TRUE,{
+
+    if (LIST_DATA$STATE[4] != 0) {
+      print("checkbox on/off")
+
+          ttt <- reactive_values$picker
+
+      checkboxonoff <- list()
+      for(i in names(ttt)){
+        for(tt in ttt[i]){
+          selectgenelistonoff <- gsub("-bensspace-","\nn = ", i)
+          checkboxonoff[[selectgenelistonoff]] <- c(checkboxonoff[[selectgenelistonoff]], tt)
         }
-        if(sum(names(LIST_DATA$gene_file) != "sort") > 1){
-          for(tt in strsplit(sub("-"," ", input$pickergene1onoff)," ")){
-            selectgenelistonoff <- grep(tt[1], names(LIST_DATA$gene_file),value = T)
-            checkboxonoff[[selectgenelistonoff]] <- c(checkboxonoff[[selectgenelistonoff]], tt[2])
-          }
-        }
-        if(sum(names(LIST_DATA$gene_file) != "sort") > 2){
-          for(tt in strsplit(sub("-"," ", input$pickergene2onoff)," ")){
-            selectgenelistonoff <- grep(tt[1], names(LIST_DATA$gene_file),value = T)
-            checkboxonoff[[selectgenelistonoff]] <- c(checkboxonoff[[selectgenelistonoff]], tt[2])
-          }
-        }
-        
-        if(sum(names(LIST_DATA$gene_file) == "sort") > 0){
-          for(tt in strsplit(sub("-"," ", input$pickersortgeneonoff)," ")){
-            selectgenelistonoff <- grep(tt[1], names(LIST_DATA$gene_file),value = T)
-            checkboxonoff[[selectgenelistonoff]] <- c(checkboxonoff[[selectgenelistonoff]], tt[2])
-          }
-        }
+
+      }
         LIST_DATA$gene_info <<-
           CheckBoxOnOff(checkboxonoff,
                         LIST_DATA$gene_info)
-        LIST_DATA$STATE[1] <<- 2
-        toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
-        disable("selectlineslablesshow")
-        disable("hidemainplot")
+        
+        if(LIST_DATA$STATE[4] == 2){
+          LIST_DATA$STATE[1] <<- 2
+          print("toggle on/off")
+          toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
+          disable("selectlineslablesshow")
+          disable("hidemainplot")
+        } else {
+          LIST_DATA$STATE[4] <<- 2
+        }
+    }
   })
   
   # plots when action button is pressed ----
@@ -677,30 +662,30 @@ server <- function(input, output, session) {
   })
   
   # sort tool action ----
-  observeEvent(input$actionsorttool,ignoreInit = TRUE,{
-    print("sort tool")
-    LIST_DATA <<- SortTop(LIST_DATA, input$pickergene0onoff, 
-                      input$slidersortbinrange[1], 
-                      input$slidersortbinrange[2], input$slidersortpercent, input$selectsorttop)
-
-    output$sorttable <- renderDataTable(LIST_DATA$gene_file$sort$full,
-                                        options = list(
-                                          pageLength = 5
-                                          )
-    )
-    
-    
-    onoff <- paste("sort", names(LIST_DATA$table_file), sep = "-")
-    TF <- c(sapply(LIST_DATA$gene_info$sort, "[[",5) != 0)
-    mycolors <- paste("color", c(sapply(LIST_DATA$gene_info$sort, "[[",4)), sep = ":")
-    updatePickerInput(session, "pickersortgeneonoff", 
-                      choices = onoff, 
-                      selected = onoff[TF],
-                      choicesOpt = list(style = mycolors)
-    )
-    
-    LIST_DATA$STATE[3] <<- 1
-  })
+  # observeEvent(input$actionsorttool,ignoreInit = TRUE,{
+  #   print("sort tool")
+  #   LIST_DATA <<- SortTop(LIST_DATA, input$pickergene0onoff, 
+  #                     input$slidersortbinrange[1], 
+  #                     input$slidersortbinrange[2], input$slidersortpercent, input$selectsorttop)
+  # 
+  #   output$sorttable <- renderDataTable(LIST_DATA$gene_file$sort$full,
+  #                                       options = list(
+  #                                         pageLength = 5
+  #                                         )
+  #   )
+  #   
+  #   
+  #   onoff <- paste("sort", names(LIST_DATA$table_file), sep = "-")
+  #   TF <- c(sapply(LIST_DATA$gene_info$sort, "[[",5) != 0)
+  #   mycolors <- paste("color", c(sapply(LIST_DATA$gene_info$sort, "[[",4)), sep = ":")
+  #   updatePickerInput(session, "pickersortgeneonoff", 
+  #                     choices = onoff, 
+  #                     selected = onoff[TF],
+  #                     choicesOpt = list(style = mycolors)
+  #   )
+  #   
+  #   LIST_DATA$STATE[3] <<- 1
+  # })
   
   # sort quick tool action ----
   observeEvent(input$actionsortquick,ignoreInit = TRUE,{
@@ -719,27 +704,7 @@ ui <- dashboardPage(
     menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
     hidden(div(style = "padding-left: 15%",
                id = "showpicker",
-               uiOutput("DynamicGenePicker"),
-               pickerInput(inputId = "pickergene0onoff", width = "99%",
-                           label = " <> Common gene list",
-                           choices = "Load data file",
-                           multiple = T,
-                           options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0")
-               ),
-               hidden(div(id = "showpickergene1onoff",
-                          pickerInput(inputId = "pickergene1onoff", width = "99%",
-                                      label = "load gene file",
-                           choices = "Load data file",
-                           multiple = T,
-                           options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0")
-               ))),
-               hidden(div(id = "showpickergene2onoff",
-                          pickerInput(inputId = "pickergene2onoff", width = "99%",
-                                      label = "load gene file",
-                           choices = "Load data file",
-                           multiple = T,
-                           options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0")
-               )))
+               uiOutput("DynamicGenePicker")
                )),
     hidden(div(style = "padding-left: 15%",
                id = "showpickersortgeneonoff",

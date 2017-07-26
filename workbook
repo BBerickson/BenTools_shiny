@@ -7,12 +7,12 @@ https://rstudio.github.io/shinydashboard/index.html
 https://rdrr.io/cran/shinyWidgets/
 shinyWidgetsGallery()
 
-1 make loop that is triggered by loaing gene list or using tool to create on/off pikers
-2 #records check box on/off ---- observeEvent() recorded on plot button generic loop
-3 fix show/hide if it exists show
-4 update selectors on page switch
-5 load file tests ... mix good and bad
-
+1 combind load file functions
+2 load file tests ... mix good and bad
+3 move plot action button to main area and blank out plot
+4 
+5 
+6 
   
 gene tools ... 
 sort ...
