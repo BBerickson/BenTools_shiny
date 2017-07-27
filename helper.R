@@ -125,7 +125,7 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
   for (x in seq_along(file_path)) {
     legend_nickname <-
       strsplit(as.character(file_name[x]), '.tab')[[1]][1]
-    if (any(legend_nickname == names(list_data))) {
+    if (any(legend_nickname == names(list_data$table_file))) {
       showModal(modalDialog(
         title = "Information message",
         paste(file_name[x], "has already been loaded"), size = "s",
@@ -160,7 +160,7 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
             " I dont know how to load this file, I use windowed bed files ", size = "s",
             easyClose = TRUE
           ))
-          break()
+          next()
         }
       setProgress(1, detail = "load file")
       tablefile <-
@@ -178,7 +178,7 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
               "Can't load file, different number of bins", size = "s",
               easyClose = TRUE
             ))
-            break ()
+            next ()
           }
       }
       setProgress(2, detail = "process gene list")

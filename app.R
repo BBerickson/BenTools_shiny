@@ -77,11 +77,16 @@ server <- function(input, output, session) {
       disable("hidemainplot")
       withProgress(message = 'Calculation in progress',
                    detail = 'This may take a while...', value = 0, style = "old", {
-      LIST_DATA <<-
+      LD <-
         LoadTableFile(input$filetable$datapath,
                       input$filetable$name,
                       LIST_DATA)
                    })
+      if(!is_empty(LD$table_file)){
+        LIST_DATA <<- LD
+      } else {
+        return()
+      }
       updateSelectInput(session,
                         "selectgenelistoptions",
                         choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
@@ -153,32 +158,27 @@ server <- function(input, output, session) {
                  })
     if(!is.null(LD)){
       LIST_DATA <<- LD
-      lb <- strsplit(names(LIST_DATA$gene_file)[2], "\nn =")[[1]][1]
-      onoff <- paste(lb, names(LIST_DATA$table_file), sep = "-")
-      TF <- c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[2]]], "[[",5) != 0)
-      mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[2]]], "[[",4)), sep = ":")
-      # updatePickerInput(session, "pickergene1onoff", label = lb,
-      #                   choices = onoff, 
-      #                   selected = onoff[TF],
-      #                   choicesOpt = list(style = mycolors)
-      # )
-      if(sum(names(LIST_DATA$gene_file) != "sort") == 3){
-        lb <- strsplit(names(LIST_DATA$gene_file)[3], "\nn =")[[1]][1]
-        onoff <- paste(lb, names(LIST_DATA$table_file), sep = "-")
-        TF <- c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[3]]], "[[",5) != 0)
-        mycolors <- paste("color", c(sapply(LIST_DATA$gene_info[[names(LIST_DATA$gene_file)[3]]], "[[",4)), sep = ":")
-        # updatePickerInput(session, "pickergene2onoff", label = lb,
-        #                   choices = onoff, 
-        #                   selected = onoff[TF],
-        #                   choicesOpt = list(style = mycolors)
-        # )
-      }
     }
     reset("filegene1")
     updateCheckboxInput(session, "checkboxconvert", value = FALSE)
     updateSelectInput(session,
                       "selectgenelistoptions",
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+    output$DynamicGenePicker <- renderUI({
+      pickerlist <- list()        
+      for(i in names(LIST_DATA$gene_info)){
+        pickerlist[[i]] <- list(pickerInput(inputId = gsub("\nn = ", "-bensspace-", i), 
+                                            label = i, 
+                                            width = "99%",
+                                            choices = names(LIST_DATA$table_file),
+                                            selected = names(LIST_DATA$table_file)[c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)],
+                                            multiple = T,
+                                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0"),
+                                            choicesOpt = list(style = paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":"))
+        ))
+      }       
+      pickerlist                     
+    })
   })
   
   # loads color file ----
