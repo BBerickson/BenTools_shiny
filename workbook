@@ -2,24 +2,23 @@
 https://github.com/daattali/advanced-shiny#readme
 
 http://fontawesome.io/icons/
+https://www.w3schools.com/html/html_css.asp
+
 https://rstudio.github.io/shinydashboard/index.html
 
 https://rdrr.io/cran/shinyWidgets/
 shinyWidgetsGallery()
 
-1 combind load file functions
-2 load file tests ... mix good and bad
-3 move plot action button to main area and blank out plot
-4 
-5 
-6 
-  
+
 gene tools ... 
 sort ...
 
   
-  on sort tab show selector for gene lists and a picker for data,(fix what is passed to function) 
-    and name it is saved under LIST_DATA$gene_info$sort-genelist n = #
+  do I need state[3]?
+  sort \nn # is not being reconized as a picker name 
+    need sort to overwrite old entry 
+    can I add sort gene list info
+  
   fix function to output gene name and rank with data name as column name
   save output$gene to LIST_DATA$gene_file$sort$use
   

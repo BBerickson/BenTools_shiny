@@ -38,7 +38,7 @@ LIST_DATA <- list(
   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
   clust = list(), # Cluster holder
   x_plot_range = c(0, 0),
-  STATE = c(0, "common", 0, 0) # flow control, gene list flow control, tool tab trigger, first time plot tab
+  STATE = c(0, "common", 0, 0) # flow control, gene list flow control, none, first time plot tab
 )      
 
 # types of dots to be used in plotting
@@ -406,18 +406,18 @@ CheckBoxOnOff <- function(check_box, list_data) {
 }
 
 # sorts active gene list contain top % signal based on selected bins and file
-SortTop <- function(list_data, nick_name, start_bin, end_bin, num, topbottom) {
-  if (is.null(nick_name)) {
+SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, topbottom) {
+  if (is.null(file_names)) {
     return (data.frame(gene=NA, score=0, myper=0))
   }
   lc <- 0
   outlist <- NULL
-  lapply(nick_name, function(j) {
-    nick_name2 <- strsplit(sub('-', '\n!', j), '\n!')[[1]]
+  nick_name2 <- strsplit(list_name, "\nn =")[[1]][1]
+  lapply(file_names, function(j) {
     enesg <-
-      list_data$gene_file[[grep(nick_name2[1], names(list_data$gene_file),value = T)]]$use
+      list_data$gene_file[[grep(nick_name2, names(list_data$gene_file),value = T)]]$use
     df <-
-      semi_join(list_data$table_file[[nick_name2[2]]], enesg, by = 'gene')
+      semi_join(list_data$table_file[[j]], enesg, by = 'gene')
       apply_bins <- group_by(df, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
@@ -445,10 +445,10 @@ SortTop <- function(list_data, nick_name, start_bin, end_bin, num, topbottom) {
     }
     lc <<- lc + 1
   })
-  
-  list_data$gene_file[["sort"]]$full <- outlist
-  list_data$gene_file[["sort"]]$use <- outlist$gene
-  list_data$gene_info[["sort"]] <-
+  nick_name <- paste("Sort \nn =", n_distinct(outlist$gene) )#, "\n", nick_name2)
+  list_data$gene_file[[nick_name]]$full <- outlist
+  list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
+  list_data$gene_info[[nick_name]] <-
     lapply(setNames(
       names(list_data$gene_info[[1]]),
       names(list_data$gene_info[[1]])
@@ -458,11 +458,13 @@ SortTop <- function(list_data, nick_name, start_bin, end_bin, num, topbottom) {
         set = i,
         mydot = kDotOptions[1],
         myline = kLineOptions[1],
-        mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != "sort")]][[i]]$mycol, tint = T),
+        mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol, 
+                         tint = length(list_data$gene_file)*.15),
         onoff = 0,
         rnorm = "1"
       ))
   
+  list_data$STATE[c(2,3)] <- c(nick_name, 0)
   list_data  
 }
 

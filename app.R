@@ -31,7 +31,7 @@ server <- function(input, output, session) {
     mynorm = "none"
   )
   
-  # show hide checkbox and action button ----
+  # change tab controls ----
   observeEvent(input$tabs, ignoreInit = TRUE,{
     print("switching tabs")
     toggle(
@@ -39,9 +39,12 @@ server <- function(input, output, session) {
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
       )
     toggle(
-      "showpickersortgeneonoff",
-      condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0 & LIST_DATA$STATE[3] != 0)
+      "showsorttoolpicker",
+      condition = (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0)
     )
+    if(input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0){
+      updateSelectInput(session, "selectsortfile",choices = names(LIST_DATA$gene_file))
+    }
     toggle(
       "selectlineslablesshow",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
@@ -57,7 +60,7 @@ server <- function(input, output, session) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         enable("hidemainplot")
         enable("selectlineslablesshow")
-        LIST_DATA$STATE[c(1,4)] <<- 1
+        LIST_DATA$STATE[c(1,3,4)] <<- 1
       } else{
         disable("hidemainplot")
         disable("selectlineslablesshow")
@@ -397,10 +400,9 @@ server <- function(input, output, session) {
     }
   })
    
-  # reactive picker watcher
+  # reactive picker watcher (watches everything) ----
   observeEvent(reactiveValuesToList(input)[gsub("\nn = ", "-bensspace-", names(LIST_DATA$gene_info))], 
                ignoreNULL = FALSE, ignoreInit = TRUE,{
-                 print("reacive picker")
                  reactive_values$picker <- reactiveValuesToList(input)[gsub("\nn = ", "-bensspace-", names(LIST_DATA$gene_info))]
                  
     
@@ -409,7 +411,7 @@ server <- function(input, output, session) {
   #records check box on/off ----
   observeEvent(reactive_values$picker, ignoreNULL = FALSE, ignoreInit = TRUE,{
 
-    if (LIST_DATA$STATE[4] != 0) {
+    if (LIST_DATA$STATE[4] != 0 | LIST_DATA$STATE[3] != 0) {
       print("checkbox on/off")
 
           ttt <- reactive_values$picker
@@ -430,12 +432,14 @@ server <- function(input, output, session) {
           LIST_DATA$STATE[1] <<- 2
           print("toggle on/off")
           toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
+          reactive_values$Plot_controler <- plot(0,type='n',axes=FALSE,ann=FALSE)
           disable("selectlineslablesshow")
           disable("hidemainplot")
         } else {
           LIST_DATA$STATE[4] <<- 2
         }
     }
+    LIST_DATA$STATE[3] <<- 1
   })
   
   # plots when action button is pressed ----
@@ -454,6 +458,11 @@ server <- function(input, output, session) {
     } else{
       disable("hidemainplot")
       disable("selectlineslablesshow")
+      text = paste("Nothing selected to plot.\n")
+      reactive_values$Plot_controler <- ggplot() + 
+        annotate("text", x = 4, y = 25, size=8, label = text) + 
+        theme_void()
+      return()
     }
     hide("actionmyplotshow")
     LIST_DATA$STATE[1] <<- 1
@@ -639,8 +648,9 @@ server <- function(input, output, session) {
             LIST_DATA$gene_info[[i]][[j]][4] <<-
               kListColorSet[color_safe]
           } else {
+            nn <- which(names(LIST_DATA$gene_info) == i)
             LIST_DATA$gene_info[[i]][[j]][4] <<-
-              RgbToHex(my_hex = kListColorSet[color_safe], tint = T)
+              RgbToHex(my_hex = kListColorSet[color_safe], tint = nn*.15)
           }
         })
       })
@@ -661,31 +671,53 @@ server <- function(input, output, session) {
     }
   })
   
+  # sort tool picker control ----
+  observeEvent(input$selectsortfile, ignoreInit = TRUE,{
+    print("sort picker update")
+    updatePickerInput(session, "pickersortfile",
+                      choices = names(LIST_DATA$table_file),
+    choicesOpt = list(style = paste("color", c(sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[",4)), sep = ":"))
+    )
+  })
+  
   # sort tool action ----
-  # observeEvent(input$actionsorttool,ignoreInit = TRUE,{
-  #   print("sort tool")
-  #   LIST_DATA <<- SortTop(LIST_DATA, input$pickergene0onoff, 
-  #                     input$slidersortbinrange[1], 
-  #                     input$slidersortbinrange[2], input$slidersortpercent, input$selectsorttop)
-  # 
-  #   output$sorttable <- renderDataTable(LIST_DATA$gene_file$sort$full,
-  #                                       options = list(
-  #                                         pageLength = 5
-  #                                         )
-  #   )
-  #   
-  #   
-  #   onoff <- paste("sort", names(LIST_DATA$table_file), sep = "-")
-  #   TF <- c(sapply(LIST_DATA$gene_info$sort, "[[",5) != 0)
-  #   mycolors <- paste("color", c(sapply(LIST_DATA$gene_info$sort, "[[",4)), sep = ":")
-  #   updatePickerInput(session, "pickersortgeneonoff", 
-  #                     choices = onoff, 
-  #                     selected = onoff[TF],
-  #                     choicesOpt = list(style = mycolors)
-  #   )
-  #   
-  #   LIST_DATA$STATE[3] <<- 1
-  # })
+  observeEvent(input$actionsorttool,ignoreInit = TRUE,{
+    print("sort tool")
+    LD <- SortTop(LIST_DATA, input$selectsortfile, input$pickersortfile,
+                      input$slidersortbinrange[1],
+                      input$slidersortbinrange[2], input$slidersortpercent, input$selectsorttop)
+    if(!is_empty(LD$table_file)){
+      LIST_DATA <<- LD
+    } else {
+      return()
+    }
+    
+    output$sorttable <- renderDataTable(LIST_DATA$gene_file$sort$full,
+                                        options = list(
+                                          pageLength = 5
+                                          )
+    )
+
+
+    updateSelectInput(session,
+                      "selectgenelistoptions",
+                      choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+    output$DynamicGenePicker <- renderUI({
+      pickerlist <- list()        
+      for(i in names(LIST_DATA$gene_info)){
+        pickerlist[[i]] <- list(pickerInput(inputId = gsub("\nn = ", "-bensspace-", i), 
+                                            label = i, 
+                                            width = "99%",
+                                            choices = names(LIST_DATA$table_file),
+                                            selected = names(LIST_DATA$table_file)[c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)],
+                                            multiple = T,
+                                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0"),
+                                            choicesOpt = list(style = paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":"))
+        ))
+      }       
+      pickerlist                     
+    })
+  })
   
   # sort quick tool action ----
   observeEvent(input$actionsortquick,ignoreInit = TRUE,{
@@ -706,29 +738,22 @@ ui <- dashboardPage(
                id = "showpicker",
                uiOutput("DynamicGenePicker")
                )),
-    hidden(div(style = "padding-left: 15%",
-               id = "showpickersortgeneonoff",
-               pickerInput(inputId = "pickersortgeneonoff", width = "99%",
-                           label = "<> Sort gene list", 
-                           choices = "Load data file",
-                           multiple = T,
-                           options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
-               ))),
     menuItem("Sort Tool", tabName = "sorttool", icon = icon("gears")),
     
     hidden(div(style = "padding-left: 15%",
                id = "showsorttoolpicker",
+               selectInput(inputId = "selectsortfile",
+                           label = "Select gene list to sort on",
+                           choices = "Load data file",
+                           width = "99%"),
                pickerInput(inputId = "pickersortfile", width = "99%",
-                           label = "<> File(s) to sort", 
+                           label = "Select files to sort on", 
                            choices = "Load data file",
                            multiple = T,
                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
                ))),
     
     hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-    hidden(div(id = "actionmyplotshow", style = "padding-left: 20%",
-      actionButton("actionmyplot", "Update Plot", icon = icon("area-chart"),
-                   style = "color: #fff; background-color: #337ab7; border-color: #2e6da4"))),
     hidden(div(id = "selectlineslablesshow", style = "padding-left: 10%",  
       selectInput("selectlineslables", width = "85%",
                   label = "quick set lines and lables", 
@@ -814,7 +839,10 @@ ui <- dashboardPage(
                   # main plot tab
                   tabItem(tabName = "mainplot",
                           fluidRow(box(
-                            width = 12, plotOutput("plot")
+                            width = 12, plotOutput("plot"),
+                            hidden(div(id = "actionmyplotshow", style = "position: absolute; z-index: 1; left: 45%; top: 50%;",
+                                       actionButton("actionmyplot", "Update Plot", icon = icon("area-chart"),
+                                                    style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")))
                           )),
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
