@@ -286,16 +286,15 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
     # generate info for new file for loaded gene list(s)
     sapply(names(list_data$gene_file), function(g) {
       if (length(list_data$gene_file[[g]]$full) > 0) {
-        enesg <- c(list_data$gene_file[[g]]$full, gene_names)
-        enesg <- enesg[duplicated(enesg)]
-        if(length(enesg) < 1){
+        enesg <- semi_join(list_data$gene_file[[g]]$full, gene_names, by = "gene")
+        if(n_distinct(enesg$gene) < 1){
           showModal(modalDialog(
             title = "Information message",
             " No genes in common, need to remove gene file", size = "s",
             easyClose = TRUE
           ))
         }
-        my_name_g <- paste(strsplit(g, "\nn =")[[1]][1], "\nn =", length(enesg))
+        my_name_g <- paste0(strsplit(g, "\nn =")[[1]][1], "\nn = ", n_distinct(enesg$gene))
         nn <- which(names(list_data$gene_info) == g)
         names(list_data$gene_file)[nn] <<- my_name_g
         names(list_data$gene_info)[nn] <<- my_name_g
@@ -445,7 +444,13 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
     }
     lc <<- lc + 1
   })
-  nick_name <- paste("Sort \nn =", n_distinct(outlist$gene) )#, "\n", nick_name2)
+  old_name <- grep("Sort", names(list_data$gene_file),value = T)
+  if(length(old_name) > 0){
+    list_data$gene_file[[old_name]] <- NULL
+    list_data$gene_info[[old_name]] <- NULL
+  }
+  
+  nick_name <- paste("Sort\nn =", n_distinct(outlist$gene) )#, "\n", nick_name2)
   list_data$gene_file[[nick_name]]$full <- outlist
   list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
   list_data$gene_info[[nick_name]] <-
@@ -464,7 +469,7 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
         rnorm = "1"
       ))
   
-  list_data$STATE[c(2,3)] <- c(nick_name, 0)
+  list_data$STATE[c(2,4)] <- c(nick_name, 3)
   list_data  
 }
 

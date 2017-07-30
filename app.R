@@ -60,7 +60,7 @@ server <- function(input, output, session) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         enable("hidemainplot")
         enable("selectlineslablesshow")
-        LIST_DATA$STATE[c(1,3,4)] <<- 1
+        LIST_DATA$STATE[c(1,4)] <<- 1
       } else{
         disable("hidemainplot")
         disable("selectlineslablesshow")
@@ -137,6 +137,9 @@ server <- function(input, output, session) {
         
         LIST_DATA$STATE[1] <<- 1
       }
+      if(LIST_DATA$STATE[4] != 0){
+        LIST_DATA$STATE[4] <<- "common"
+      }
       enable("startoff")
       enable("hidemainplot")
       reset("filetable")
@@ -161,6 +164,9 @@ server <- function(input, output, session) {
                  })
     if(!is.null(LD)){
       LIST_DATA <<- LD
+    }
+    if(LIST_DATA$STATE[4] != 0){
+      LIST_DATA$STATE[4] <<- LIST_DATA$STATE[2]
     }
     reset("filegene1")
     updateCheckboxInput(session, "checkboxconvert", value = FALSE)
@@ -411,7 +417,11 @@ server <- function(input, output, session) {
   #records check box on/off ----
   observeEvent(reactive_values$picker, ignoreNULL = FALSE, ignoreInit = TRUE,{
 
-    if (LIST_DATA$STATE[4] != 0 | LIST_DATA$STATE[3] != 0) {
+    if (LIST_DATA$STATE[4] != 0) {
+      if(LIST_DATA$STATE[4] == 3){
+        LIST_DATA$STATE[4] <<- 1
+        return()
+      }
       print("checkbox on/off")
 
           ttt <- reactive_values$picker
@@ -439,7 +449,7 @@ server <- function(input, output, session) {
           LIST_DATA$STATE[4] <<- 2
         }
     }
-    LIST_DATA$STATE[3] <<- 1
+
   })
   
   # plots when action button is pressed ----
@@ -692,7 +702,7 @@ server <- function(input, output, session) {
       return()
     }
     
-    output$sorttable <- renderDataTable(LIST_DATA$gene_file$sort$full,
+    output$sorttable <- renderDataTable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
                                         options = list(
                                           pageLength = 5
                                           )

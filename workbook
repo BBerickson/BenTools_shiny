@@ -12,15 +12,13 @@ shinyWidgetsGallery()
 
 gene tools ... 
 sort ...
-
   
-  do I need state[3]?
-  sort \nn # is not being reconized as a picker name 
-    need sort to overwrite old entry 
+    make plot disapear?
+    on adding a file after gene lists have on/off = 0 
+    
     can I add sort gene list info
   
   fix function to output gene name and rank with data name as column name
-  save output$gene to LIST_DATA$gene_file$sort$use
   
   table: move, adjust length, set max width and overflow, other options 
     https://rstudio.github.io/DT/options.html
@@ -35,6 +33,7 @@ new tools checklist for pluging in list to main functions
   show/hide picker ... need to stream line with constent and values
   record on/off ... need to stream line with constent
   update gene list selector
+do I need state[3]?
 
 R markdown code generation and save option
 gene list pickers overflow fix ... or at least the legend
