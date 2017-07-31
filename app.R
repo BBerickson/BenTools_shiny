@@ -49,6 +49,7 @@ server <- function(input, output, session) {
       "selectlineslablesshow",
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
     )
+    # first time switch tab auto plot
     if(LIST_DATA$STATE[4] == 0){
       reactive_values$Apply_Math <-
         ApplyMath(LIST_DATA,
@@ -138,7 +139,7 @@ server <- function(input, output, session) {
         LIST_DATA$STATE[1] <<- 1
       }
       if(LIST_DATA$STATE[4] != 0){
-        LIST_DATA$STATE[4] <<- "common"
+        LIST_DATA$STATE[4] <<- 3
       }
       enable("startoff")
       enable("hidemainplot")
@@ -166,7 +167,7 @@ server <- function(input, output, session) {
       LIST_DATA <<- LD
     }
     if(LIST_DATA$STATE[4] != 0){
-      LIST_DATA$STATE[4] <<- LIST_DATA$STATE[2]
+      LIST_DATA$STATE[4] <<- 3
     }
     reset("filegene1")
     updateCheckboxInput(session, "checkboxconvert", value = FALSE)

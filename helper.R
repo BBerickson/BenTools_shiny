@@ -38,7 +38,14 @@ LIST_DATA <- list(
   # for holding gene file info in a list of lists, a set for $common and each $gene file(s) [c("set", "dot", "line", "color", plot?, nrom)]
   clust = list(), # Cluster holder
   x_plot_range = c(0, 0),
-  STATE = c(0, "common", 0, 0) # flow control, gene list flow control, none, first time plot tab
+  STATE = c(0, "common", 0, 0) # flow control, 
+    # [1] 1 = at least on file has been loadded and lets reactives fill in info
+    #     2 = lets reactive change tab toggle plot button 
+    # [2] name of most recent loaded gene list, for setting options select, 
+    # [3] none
+    # [4] 1 = first time switching tab auto ploting
+    #     2 = on/off reactive can deactivate plot options until plot button is pressed
+    #     3 = picker(s) have been remade keeps on/off reactive from running
 )      
 
 # types of dots to be used in plotting
@@ -268,7 +275,12 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
     }
     color_select <- kListColorSet[color_safe]
     setProgress(3, detail = "build")
-  
+    # only have plot on if a plot has not been created yet
+    if(list_data$STATE[4] == 0){
+      oo <- legend_nickname
+    } else {
+      oo <- 0
+    }
     list_data$table_file[[legend_nickname]] <- tablefile
     list_data$gene_file[[my_name]]$use <- gene_names
     list_data$gene_info[[my_name]][[legend_nickname]] <-
@@ -278,7 +290,7 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
         mydot = kDotOptions[1],
         myline = kLineOptions[1],
         mycol = color_select,
-        onoff = legend_nickname,
+        onoff = oo,
         rnorm = "1"
       )
     setProgress(4, detail = "adding to gene list")
@@ -468,7 +480,7 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
         onoff = 0,
         rnorm = "1"
       ))
-  
+  # set name for select options and keep reactive on/off from triggering right away
   list_data$STATE[c(2,4)] <- c(nick_name, 3)
   list_data  
 }
