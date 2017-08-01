@@ -13,20 +13,15 @@ shinyWidgetsGallery()
 gene tools ... 
 sort ...
   
-    make plot disapear?
     dissable sort untill a file has been selected
     switching tab updates selected files to none?
-    
-    can I add sort gene list info
-  
-  fix function to output gene name and rank with data name as column name
   
   table: move, adjust length, set max width and overflow, other options 
     https://rstudio.github.io/DT/options.html
     https://datatables.net/reference/option/
     
   adjust posstion and size of selection tools
-  hook up Quick sort and fix function
+  hook up Quick sort
 
 
 new tools checklist for pluging in list to main functions

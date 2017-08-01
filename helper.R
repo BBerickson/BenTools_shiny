@@ -19,6 +19,7 @@ suppressPackageStartupMessages(my_packages(
     "shiny",
     "shinydashboard",
     "shinyWidgets",
+    "shinycssloaders",
     "tidyverse",
     "fastcluster",
     "shinyjs",
@@ -42,7 +43,7 @@ LIST_DATA <- list(
     # [1] 1 = at least on file has been loadded and lets reactives fill in info
     #     2 = lets reactive change tab toggle plot button 
     # [2] name of most recent loaded gene list, for setting options select, 
-    # [3] none
+    # [3] plot ocupancy 
     # [4] 1 = first time switching tab auto ploting
     #     2 = on/off reactive can deactivate plot options until plot button is pressed
     #     3 = picker(s) have been remade keeps on/off reactive from running
@@ -432,8 +433,7 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
       apply_bins <- group_by(df, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
-        mutate(myper = percent_rank(mysums)) %>%
-        ungroup()
+        mutate(myper = percent_rank(mysums)) 
     
     gene_count <- nrow(apply_bins)
     
@@ -446,11 +446,12 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
       num2 <-
         c(ceiling((gene_count + 1) - (gene_count * (num / 100))), gene_count)
     }
-    outlist2 <- arrange(apply_bins, desc(mysums)) %>%
+    outlist2 <- arrange(apply_bins, desc(mysums)) %>% 
+      select(gene) %>% 
+      mutate(!!j := row_number()) %>% 
       slice(num2[1]:num2[2])
     if (lc > 0) {
       outlist <<- inner_join(outlist, outlist2, by = 'gene')
-      names(outlist)[2] <<- "mysums"
     } else {
       outlist <<- outlist2
     }

@@ -443,7 +443,7 @@ server <- function(input, output, session) {
           LIST_DATA$STATE[1] <<- 2
           print("toggle on/off")
           toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
-          reactive_values$Plot_controler <- plot(0,type='n',axes=FALSE,ann=FALSE)
+          reactive_values$Plot_controler <- reactive_values$Plot_controler + geom_blank()  #plot(0,type='n',axes=FALSE,ann=FALSE)
           disable("selectlineslablesshow")
           disable("hidemainplot")
         } else {
@@ -705,7 +705,7 @@ server <- function(input, output, session) {
     
     output$sorttable <- renderDataTable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
                                         options = list(
-                                          pageLength = 5
+                                          pageLength = 3
                                           )
     )
 
@@ -733,6 +733,7 @@ server <- function(input, output, session) {
   # sort quick tool action ----
   observeEvent(input$actionsortquick,ignoreInit = TRUE,{
     print("quick sort")
+    # copy above code but insert new reactive
   })
   
   shinyjs::addClass(selector = "body", class = "sidebar-collapse")
@@ -850,10 +851,10 @@ ui <- dashboardPage(
                   # main plot tab
                   tabItem(tabName = "mainplot",
                           fluidRow(box(
-                            width = 12, plotOutput("plot"),
+                            width = 12, withSpinner(plotOutput("plot"),type = 4),
                             hidden(div(id = "actionmyplotshow", style = "position: absolute; z-index: 1; left: 45%; top: 50%;",
                                        actionButton("actionmyplot", "Update Plot", icon = icon("area-chart"),
-                                                    style = "color: #fff; background-color: #337ab7; border-color: #2e6da4")))
+                                                    style = "color: #fff; background-color: #337ab7; border-color: #2e6da4;")))
                           )),
                           hidden(div(
                             id = "hidemainplot",  fluidRow(
