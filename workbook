@@ -21,7 +21,6 @@ sort ...
     https://datatables.net/reference/option/
     
   adjust posstion and size of selection tools
-  hook up Quick sort
 
 
 new tools checklist for pluging in list to main functions

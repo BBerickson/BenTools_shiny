@@ -17,6 +17,7 @@ my_packages <- function(x) {
 suppressPackageStartupMessages(my_packages(
   c(
     "shiny",
+    "DT",
     "shinydashboard",
     "shinyWidgets",
     "shinycssloaders",
@@ -420,7 +421,7 @@ CheckBoxOnOff <- function(check_box, list_data) {
 # sorts active gene list contain top % signal based on selected bins and file
 SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, topbottom) {
   if (is.null(file_names)) {
-    return (data.frame(gene=NA, score=0, myper=0))
+    return (tibble(gene="none", rank=0))
   }
   lc <- 0
   outlist <- NULL
@@ -483,6 +484,9 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
       ))
   # set name for select options and keep reactive on/off from triggering right away
   list_data$STATE[c(2,4)] <- c(nick_name, 3)
+  if (is.null(list_data)) {
+    return (tibble(gene="none", rank=0))
+  }
   list_data  
 }
 

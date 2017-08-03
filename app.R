@@ -44,6 +44,7 @@ server <- function(input, output, session) {
     )
     if(input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0){
       updateSelectInput(session, "selectsortfile",choices = names(LIST_DATA$gene_file))
+      
     }
     toggle(
       "selectlineslablesshow",
@@ -59,11 +60,11 @@ server <- function(input, output, session) {
                   input$numericnormbin)
       if (!is.null(reactive_values$Apply_Math)) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-        enable("hidemainplot")
+        enable("showmainplot")
         enable("selectlineslablesshow")
         LIST_DATA$STATE[c(1,4)] <<- 1
       } else{
-        disable("hidemainplot")
+        disable("showmainplot")
         disable("selectlineslablesshow")
       }
     } else {
@@ -78,7 +79,7 @@ server <- function(input, output, session) {
       print("load file")
       # add warnings for total size of LIST_DATA TODO
       disable("startoff")
-      disable("hidemainplot")
+      disable("showmainplot")
       withProgress(message = 'Calculation in progress',
                    detail = 'This may take a while...', value = 0, style = "old", {
       LD <-
@@ -114,7 +115,7 @@ server <- function(input, output, session) {
         show("checkboxconvert")
         show("downloadGeneList")
         show("filecolor")
-        show("hidemainplot")
+        show("showmainplot")
         show("startoff")
         print("1st slider and plot lines Ylable")
         reactive_values$Y_Axis_Lable <- YAxisLable()
@@ -142,7 +143,7 @@ server <- function(input, output, session) {
         LIST_DATA$STATE[4] <<- 3
       }
       enable("startoff")
-      enable("hidemainplot")
+      enable("showmainplot")
       reset("filetable")
       ff <- names(LIST_DATA$table_file)
       updateAwesomeRadio(
@@ -443,9 +444,9 @@ server <- function(input, output, session) {
           LIST_DATA$STATE[1] <<- 2
           print("toggle on/off")
           toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
-          reactive_values$Plot_controler <- reactive_values$Plot_controler + geom_blank()  #plot(0,type='n',axes=FALSE,ann=FALSE)
+          # reactive_values$Plot_controler <- plot(0,type='n',axes=FALSE,ann=FALSE)
           disable("selectlineslablesshow")
-          disable("hidemainplot")
+          disable("showmainplot")
         } else {
           LIST_DATA$STATE[4] <<- 2
         }
@@ -464,10 +465,10 @@ server <- function(input, output, session) {
                 input$numericnormbin)
     if (!is.null(reactive_values$Apply_Math)) {
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-      enable("hidemainplot")
+      enable("showmainplot")
       enable("selectlineslablesshow")
     } else{
-      disable("hidemainplot")
+      disable("showmainplot")
       disable("selectlineslablesshow")
       text = paste("Nothing selected to plot.\n")
       reactive_values$Plot_controler <- ggplot() + 
@@ -691,6 +692,15 @@ server <- function(input, output, session) {
     )
   })
   
+  # sort tool picker enable/disable ----
+  observeEvent(input$pickersortfile, ignoreNULL = FALSE,{
+    if(!is.null(input$pickersortfile)){
+      enable("enablemainsort")
+    } else {
+      disable("enablemainsort")
+    }
+  })
+  
   # sort tool action ----
   observeEvent(input$actionsorttool,ignoreInit = TRUE,{
     print("sort tool")
@@ -703,9 +713,10 @@ server <- function(input, output, session) {
       return()
     }
     
-    output$sorttable <- renderDataTable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
+    output$sorttable <- DT::renderDataTable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
+                                            rownames = FALSE,
                                         options = list(
-                                          pageLength = 3
+                                          pageLength = 5
                                           )
     )
 
@@ -733,7 +744,41 @@ server <- function(input, output, session) {
   # sort quick tool action ----
   observeEvent(input$actionsortquick,ignoreInit = TRUE,{
     print("quick sort")
-    # copy above code but insert new reactive
+    LD <- SortTop(LIST_DATA, input$selectsortfile, input$pickersortfile,
+                  input$slidersortbinrange[1],
+                  input$slidersortbinrange[2], input$slidersortpercent, "Quick%")
+    if(!is_empty(LD$table_file)){
+      LIST_DATA <<- LD
+    } else {
+      return()
+    }
+    
+    output$sorttable <- DT::renderDataTable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
+                                            rownames = FALSE,
+                                            options = list(
+                                              pageLength = 5
+                                            )
+    )
+    
+    
+    updateSelectInput(session,
+                      "selectgenelistoptions",
+                      choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+    output$DynamicGenePicker <- renderUI({
+      pickerlist <- list()        
+      for(i in names(LIST_DATA$gene_info)){
+        pickerlist[[i]] <- list(pickerInput(inputId = gsub("\nn = ", "-bensspace-", i), 
+                                            label = i, 
+                                            width = "99%",
+                                            choices = names(LIST_DATA$table_file),
+                                            selected = names(LIST_DATA$table_file)[c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)],
+                                            multiple = T,
+                                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0"),
+                                            choicesOpt = list(style = paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":"))
+        ))
+      }       
+      pickerlist                     
+    })
   })
   
   shinyjs::addClass(selector = "body", class = "sidebar-collapse")
@@ -857,7 +902,7 @@ ui <- dashboardPage(
                                                     style = "color: #fff; background-color: #337ab7; border-color: #2e6da4;")))
                           )),
                           hidden(div(
-                            id = "hidemainplot",  fluidRow(
+                            id = "showmainplot",  fluidRow(
                               
                               box(title = "Sliders", status = "primary", solidHeader = T,
                                   width = 7, collapsible = TRUE,
@@ -919,25 +964,29 @@ ui <- dashboardPage(
                               )
                             )
                           ))),
-                  # main plot tab
+                  # main sort tab
                   tabItem(tabName = "sorttool",
                           
-                          box(title = "Sort tool", status = "primary", solidHeader = T,
-                            width = 8,
-                            selectInput(
+                          div(
+                            id = "enablemainsort",
+                            
+                            box(title = "Sort tool", status = "primary", solidHeader = T,
+                            width = 12,
+                            selectInput(width = "25%",
                               "selectsorttop",
                               "Sort Options",
                               choices = c("Top%", "Bottom%"),
                               selected = "Top%"
                             ),
-                            sliderInput(
+                            sliderInput(width = "25%",
                               "slidersortpercent",
                               label = "% select:",
+                              post = "%",
                               min = 1,
                               max = 100,
                               value = 80
                             ),
-                            sliderInput(
+                            sliderInput(width = "25%",
                               "slidersortbinrange",
                               label = "Select Bin Range:",
                               min = 0,
@@ -945,9 +994,14 @@ ui <- dashboardPage(
                               value = c(0, 80)
                             ),
                             actionButton("actionsorttool", "Sort selected"),
-                            actionButton("actionsortquick", "Quick% Sort selected"),
-                            dataTableOutput('sorttable')
-                          ))
+                            actionButton("actionsortquick", "Quick% Sort selected")
+                           
+                          ),
+                  box(title = "Sort Table", status = "primary", solidHeader = T,
+                      width = 12, 
+                      DT::dataTableOutput('sorttable')
+                      )
+                  ))
                 ))
 )
 
