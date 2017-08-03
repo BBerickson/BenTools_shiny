@@ -9,26 +9,11 @@ https://rstudio.github.io/shinydashboard/index.html
 https://rdrr.io/cran/shinyWidgets/
 shinyWidgetsGallery()
 
+# data tables
+https://rstudio.github.io/DT/options.html
 
 gene tools ... 
 sort ...
-  
-    dissable sort untill a file has been selected
-    switching tab updates selected files to none?
-  
-  table: move, adjust length, set max width and overflow, other options 
-    https://rstudio.github.io/DT/options.html
-    https://datatables.net/reference/option/
-    
-  adjust posstion and size of selection tools
-
-
-new tools checklist for pluging in list to main functions
-  place picker (generator?)
-  show/hide picker ... need to stream line with constent and values
-  record on/off ... need to stream line with constent
-  update gene list selector
-do I need state[3]?
 
 R markdown code generation and save option
 gene list pickers overflow fix ... or at least the legend
@@ -46,7 +31,7 @@ intersect
 
 work on slider math ... rescale?
 collaps sidebar untill file loaded
-
+do I need state[3]?
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0
 # add icons to buttons

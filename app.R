@@ -972,29 +972,33 @@ ui <- dashboardPage(
                             
                             box(title = "Sort tool", status = "primary", solidHeader = T,
                             width = 12,
-                            selectInput(width = "25%",
+                            fluidRow(
+                              column(2,
+                            selectInput(
                               "selectsorttop",
                               "Sort Options",
                               choices = c("Top%", "Bottom%"),
                               selected = "Top%"
-                            ),
-                            sliderInput(width = "25%",
+                            )),
+                            column(5,
+                            sliderInput(
                               "slidersortpercent",
                               label = "% select:",
                               post = "%",
                               min = 1,
                               max = 100,
                               value = 80
-                            ),
-                            sliderInput(width = "25%",
+                            )),
+                            column(5,
+                            sliderInput(
                               "slidersortbinrange",
                               label = "Select Bin Range:",
                               min = 0,
                               max = 80,
                               value = c(0, 80)
-                            ),
-                            actionButton("actionsorttool", "Sort selected"),
-                            actionButton("actionsortquick", "Quick% Sort selected")
+                            ))),
+                            actionButton("actionsorttool", "Sort"),
+                            actionButton("actionsortquick", "Quick Sort")
                            
                           ),
                   box(title = "Sort Table", status = "primary", solidHeader = T,
