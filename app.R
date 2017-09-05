@@ -42,6 +42,17 @@ server <- function(input, output, session) {
       "showsorttoolpicker",
       condition = (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0)
     )
+    if(input$tabs == "sorttool" & sum(grepl("Sort\nn =", names(LIST_DATA$gene_file))) == 0){
+      if(LIST_DATA$STATE[1] != 0){
+        updateSliderInput(
+          session,
+          "slidersortbinrange",
+          min = LIST_DATA$x_plot_range[1],
+          max = LIST_DATA$x_plot_range[2],
+          value = LIST_DATA$x_plot_range
+        )
+      }
+    }
     if(input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0){
       updateSelectInput(session, "selectsortfile",choices = names(LIST_DATA$gene_file))
       
@@ -51,7 +62,7 @@ server <- function(input, output, session) {
       condition = (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0)
     )
     # first time switch tab auto plot
-    if(LIST_DATA$STATE[4] == 0){
+    if(input$tabs == "mainplot" & LIST_DATA$STATE[4] == 0){
       reactive_values$Apply_Math <-
         ApplyMath(LIST_DATA,
                   input$myMath,
@@ -81,7 +92,7 @@ server <- function(input, output, session) {
       disable("startoff")
       disable("showmainplot")
       withProgress(message = 'Calculation in progress',
-                   detail = 'This may take a while...', value = 0, style = "old", {
+                   detail = 'This may take a while...', value = 0,   {
       LD <-
         LoadTableFile(input$filetable$datapath,
                       input$filetable$name,
@@ -704,21 +715,38 @@ server <- function(input, output, session) {
   # sort tool action ----
   observeEvent(input$actionsorttool,ignoreInit = TRUE,{
     print("sort tool")
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...', value = 0,   {
     LD <- SortTop(LIST_DATA, input$selectsortfile, input$pickersortfile,
                       input$slidersortbinrange[1],
                       input$slidersortbinrange[2], input$slidersortpercent, input$selectsorttop)
+                 })
     if(!is_empty(LD$table_file)){
       LIST_DATA <<- LD
     } else {
       return()
     }
-    
-    output$sorttable <- DT::renderDataTable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
-                                            rownames = FALSE,
-                                        options = list(
-                                          pageLength = 5
-                                          )
-    )
+    newnames <- gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full))
+    dt <- datatable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
+                    rownames = FALSE,
+                    colnames = strtrim(newnames, 24),
+                    class = 'cell-border stripe compact',
+                    filter = 'top',
+                    caption = 'rank percent',
+                    options = list(
+                      pageLength = 15,
+                      scrollX = TRUE,
+                      scrollY = TRUE,
+                      autoWidth = TRUE,
+                      columnDefs = list(list(className = 'dt-center ', targets = "_all"),
+                                        list(targets = 0,
+                                             render = JS(
+                                               "function(data, type, row, meta) {",
+                                               "return type === 'display' && data.length > 24 ?",
+                                               "'<span title=\"' + data + '\">' + data.substr(0, 19,) + '...</span>' : data;",
+                                               "}")))
+                    )) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
+    output$sorttable <- DT::renderDataTable(dt) 
 
 
     updateSelectInput(session,
@@ -744,23 +772,39 @@ server <- function(input, output, session) {
   # sort quick tool action ----
   observeEvent(input$actionsortquick,ignoreInit = TRUE,{
     print("quick sort")
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...', value = 0, {
     LD <- SortTop(LIST_DATA, input$selectsortfile, input$pickersortfile,
                   input$slidersortbinrange[1],
                   input$slidersortbinrange[2], input$slidersortpercent, "Quick%")
+                 })
     if(!is_empty(LD$table_file)){
       LIST_DATA <<- LD
     } else {
       return()
     }
     
-    output$sorttable <- DT::renderDataTable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
-                                            rownames = FALSE,
-                                            options = list(
-                                              pageLength = 5
-                                            )
-    )
-    
-    
+    newnames <- gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full))
+    dt <- datatable(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
+                    rownames = FALSE,
+                    colnames = strtrim(newnames, 24),
+                    class = 'cell-border stripe compact',
+                    filter = 'top',
+                    caption = 'rank percent',
+                    options = list(
+                      pageLength = 15,
+                      scrollX = TRUE,
+                      scrollY = TRUE,
+                      autoWidth = TRUE,
+                      columnDefs = list(list(className = 'dt-center ', targets = "_all"),
+                                        list(targets = 0,
+                                             render = JS(
+                                               "function(data, type, row, meta) {",
+                                               "return type === 'display' && data.length > 24 ?",
+                                               "'<span title=\"' + data + '\">' + data.substr(0, 19,) + '...</span>' : data;",
+                                               "}")))
+                    )) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
+    output$sorttable <- DT::renderDataTable(dt) 
     updateSelectInput(session,
                       "selectgenelistoptions",
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
@@ -791,13 +835,13 @@ ui <- dashboardPage(
     id = "tabs",
     menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
     menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
-    hidden(div(style = "padding-left: 15%",
+    hidden(div(style = "padding-left: 15%;",
                id = "showpicker",
                uiOutput("DynamicGenePicker")
                )),
     menuItem("Sort Tool", tabName = "sorttool", icon = icon("gears")),
     
-    hidden(div(style = "padding-left: 15%",
+    hidden(div(style = "padding-left: 15%;",
                id = "showsorttoolpicker",
                selectInput(inputId = "selectsortfile",
                            label = "Select gene list to sort on",
@@ -810,8 +854,8 @@ ui <- dashboardPage(
                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 1")
                ))),
     
-    hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4"),
-    hidden(div(id = "selectlineslablesshow", style = "padding-left: 10%",  
+    hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4;"),
+    hidden(div(id = "selectlineslablesshow", style = "padding-left: 10%;",  
       selectInput("selectlineslables", width = "85%",
                   label = "quick set lines and lables", 
                   choices = c("543 bins 20,20,40","543 bins 10,10,10", "5' 1k 1k 80bins", "5' .25k 10k 205bins", "3'","4")
@@ -827,8 +871,8 @@ ui <- dashboardPage(
                             tabBox(title = "Load files", id = "loadfiles",
                               width = 4, 
                               tabPanel("Table", 
-                                       div(style = "height: 200px",
-                                           fluidRow(div(style = "padding: 5px 15px",
+                                       div(style = "height: 200px;",
+                                           fluidRow(div(style = "padding: 5px 15px;",
                                                         fileInput(
                                 "filetable", 
                                 label = "Load table file",
@@ -838,8 +882,8 @@ ui <- dashboardPage(
                               helpText("load table file(s) or bedGraph file(s)")
                               )),
                               tabPanel(title = "Gene",  
-                                       div(style = "height: 200px",
-                                           fluidRow(div(style = "padding: 5px 15px",
+                                       div(style = "height: 200px;",
+                                           fluidRow(div(style = "padding: 5px 15px;",
                                                         hidden(fileInput(
                                 "filegene1",
                                 label = "Load 1st gene list",
@@ -853,8 +897,8 @@ ui <- dashboardPage(
                               ),
                               
                               tabPanel(title = "Color",
-                                       div(style = "height: 200px",
-                                           fluidRow(div(style = "padding: 5px 15px",
+                                       div(style = "height: 200px;",
+                                           fluidRow(div(style = "padding: 5px 15px;",
                                        hidden(fileInput(
                                 "filecolor",
                                 label = "Load color list",
@@ -867,7 +911,7 @@ ui <- dashboardPage(
                               id = "startoff",
                               box(title =  "Select Gene list", width = 8,status = "primary", solidHeader = T,
                                 selectInput("selectgenelistoptions", "", choices = "common"),
-                                div(style = "height: 170px; overflow: auto",fluidRow(div(style = "padding: 0px 30px",
+                                div(style = "height: 170px; overflow: auto;",fluidRow(div(style = "padding: 0px 30px;",
                                 awesomeRadio("radiodataoption", "select data", choices = "Load data file")
                                 )))
                                 ),
@@ -943,15 +987,15 @@ ui <- dashboardPage(
                               ),
                               box(title = "Lines and Labels", width = 9, status = "primary", solidHeader = T,
                                   collapsible = TRUE, collapsed = TRUE,
-                                  div(style="padding:2px; display:inline-block", numericInput("numerictss", "TSS bin",value = 15, min = 0, max = 100)),
-                                  div(style="padding:2px; display:inline-block", numericInput("numerictes", "TES bin",value = 45, min = 0, max = 100)),
-                                  div(style="padding:2px; display:inline-block", numericInput("numericbinsize", 
+                                  div(style="padding:2px; display:inline-block;", numericInput("numerictss", "TSS bin",value = 15, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block;", numericInput("numerictes", "TES bin",value = 45, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block;", numericInput("numericbinsize", 
                                                                                  "bp/bin",value = 100, min = 20, max = 1000, step = 5)),
                                   
-                                  div(style="padding:2px; display:inline-block", numericInput("numericbody1", "5|4 bin",value = 20, min = 0, max = 100)),
-                                  div(style="padding:2px; display:inline-block",numericInput("numericbody2", "4|3 bin",value = 40, min = 0, max = 100)),
-                                  div(style="padding:2px; display:inline-block",numericInput("numericlabelspaceing", "every bin",value = 5, min = 0, max = 100)),
-                                  div(style= "padding-left:33%", actionButton("actionlineslabels", "Update Lines and Lables"))
+                                  div(style="padding:2px; display:inline-block;", numericInput("numericbody1", "5|4 bin",value = 20, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block;",numericInput("numericbody2", "4|3 bin",value = 40, min = 0, max = 100)),
+                                  div(style="padding:2px; display:inline-block;",numericInput("numericlabelspaceing", "every bin",value = 5, min = 0, max = 100)),
+                                  div(style= "padding-left:33%;", actionButton("actionlineslabels", "Update Lines and Lables"))
                               ),
                               box(title = "Quick Color Change",
                                 width = 3, status = "primary", solidHeader = T,

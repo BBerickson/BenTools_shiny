@@ -278,7 +278,7 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
     color_select <- kListColorSet[color_safe]
     setProgress(3, detail = "build")
     # only have plot on if a plot has not been created yet
-    if(list_data$STATE[4] == 0){
+    if(list_data$STATE[4] == 0 & length(list_data$table_file) < 5){
       oo <- legend_nickname
     } else {
       oo <- 0
@@ -427,6 +427,7 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
   outlist <- NULL
   nick_name2 <- strsplit(list_name, "\nn =")[[1]][1]
   lapply(file_names, function(j) {
+    setProgress(lc+1, detail = paste("sorting", j))
     enesg <-
       list_data$gene_file[[grep(nick_name2, names(list_data$gene_file),value = T)]]$use
     df <-
@@ -434,7 +435,7 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
       apply_bins <- group_by(df, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
-        mutate(myper = percent_rank(mysums)) 
+        mutate(myper = as.numeric(strtrim(cume_dist(mysums), 5))) 
     
     gene_count <- nrow(apply_bins)
     
@@ -447,9 +448,10 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
       num2 <-
         c(ceiling((gene_count + 1) - (gene_count * (num / 100))), gene_count)
     }
-    outlist2 <- arrange(apply_bins, desc(mysums)) %>% 
-      select(gene) %>% 
-      mutate(!!j := row_number()) %>% 
+    nickname <- list_data$gene_info[[1]][[j]]$set
+    outlist2 <- arrange(apply_bins, desc(mysums)) %>%
+      mutate(!!nickname := myper) %>% 
+      select(gene, !!nickname) %>% 
       slice(num2[1]:num2[2])
     if (lc > 0) {
       outlist <<- inner_join(outlist, outlist2, by = 'gene')
@@ -463,7 +465,7 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
     list_data$gene_file[[old_name]] <- NULL
     list_data$gene_info[[old_name]] <- NULL
   }
-  
+  setProgress(lc+2, detail = "building list")
   nick_name <- paste("Sort\nn =", n_distinct(outlist$gene) )#, "\n", nick_name2)
   list_data$gene_file[[nick_name]]$full <- outlist
   list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
@@ -483,7 +485,11 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
         rnorm = "1"
       ))
   # set name for select options and keep reactive on/off from triggering right away
-  list_data$STATE[c(2,4)] <- c(nick_name, 3)
+  if(list_data$STATE[4] == 0){
+    list_data$STATE[2] <- nick_name
+  } else{
+    list_data$STATE[c(2,4)] <- c(nick_name, 3) 
+  }
   if (is.null(list_data)) {
     return (tibble(gene="none", rank=0))
   }
@@ -664,16 +670,15 @@ LinesLablesList <- function(body1bin = 20,
     use_plot_breaks_labels <- c(LOCname1, LOCname2)
     use_virtical_line <- c(tssbin, tesbin, body1bin, body2bin) + .5
   } else if (mytype == "5'"){
-    use_plot_breaks <- seq(1, by = everybin, length.out = (totbins/everybin))
+    use_plot_breaks <- seq(1, by = everybin, length.out = (totbins/everybin) + 1)
     use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin -1)] <- tssbin + .5
-    use_plot_breaks_labels <- seq(-everybp, by = everybp, length.out = length(use_plot_breaks))
+    use_plot_breaks_labels <- seq(-tssbin*binbp, by = everybp, length.out = length(use_plot_breaks))
     use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -1)] <- "TSS"
     use_virtical_line <- c(tssbin, NA, NA, NA) + .5
   } else if(mytype == "3'"){
-    use_plot_breaks <- seq(1, by = everybin, length.out = (totbins/everybin))
+    use_plot_breaks <- seq(1, by = everybin, length.out = (totbins/everybin) + 1)
     use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin -1)] <- tesbin + .5
-    use_plot_breaks_labels <- abs(seq(-everybp, by = everybp, length.out = length(use_plot_breaks)))
-    #use_plot_breaks_labels <- abs(seq(-(tesbin-totbins)*binbp, by = everybp, length.out = length(use_plot_breaks)))
+    use_plot_breaks_labels <- abs(seq(-(tesbin-totbins)*binbp, by = everybp, length.out = length(use_plot_breaks)))
     use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -1)] <- "TES"
     use_virtical_line <- c(NA, tesbin, NA, NA) + .5
   } else if(mytype == "none"){
