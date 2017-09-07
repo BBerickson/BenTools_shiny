@@ -14,12 +14,13 @@ https://rstudio.github.io/DT/options.html
 https://rstudio.github.io/DT/
 
 
-save color list 
-  
 gene tools ... 
 
 region ...
-
+ add tab and 
+ add selector and picker to sidebar
+ set up tab selector control
+ 
 
 cluster
   ntile instead of cluster?

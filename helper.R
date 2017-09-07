@@ -334,7 +334,7 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
 }
 
 # read in and match up names and change colors
-LoadColorFile <- function(file_path, list_data) {
+LoadColorFile <- function(file_path, list_data, gene_list) {
    
   num_bins <-
     count_fields(file_path,
@@ -370,7 +370,7 @@ LoadColorFile <- function(file_path, list_data) {
     for(i in seq_along(color_file$X1)){
       nickname <-
         strsplit(as.character(color_file$X1[i]), '.tab')[[1]][1]
-      num <- grep(nickname, names(list_data$table_file), ignore.case = TRUE)
+      num <- grep(nickname, names(list_data$table_file), ignore.case = TRUE, value = T)
 
       if(length(num) > 0){
         if (suppressWarnings(!is.na(as.numeric(substr(
@@ -393,9 +393,8 @@ LoadColorFile <- function(file_path, list_data) {
           color_file$X2[i] <- "black"
         }
         
-       lapply(seq_along(list_data$gene_info), function(j) {
-            list_data$gene_info[[j]][[nickname]]['mycol'] <<- color_file$X2[i]
-          })
+       list_data$gene_info[[gene_list]][[num]]['mycol'] <- color_file$X2[i]
+       
     }
  
   } 

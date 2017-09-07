@@ -4,11 +4,8 @@ Load Data tab
 
   load file(s)
   
-    can read HM.table files
-      gene	A.x0	A.x1	A.x2	B.x0	B.x1	
-      chrI:100060-101169-;YAL025C	0.0273242100	0.01438116316	0.01294304685	0.01821527550	0.0377316421
-      
-    can read windowed bed files (checks for smaller 3 column version)
+    
+    can read windowed bed/bedgraph files
       col_names = c("chr", "start", "end", "gene", "bin", "score")
       col_names = c("gene", "bin", "score")
       
@@ -29,9 +26,10 @@ Load Data tab
     can have # comment lines
       
   load color file
+    applies color pallet to selected gene list
     can be just a one column list of colors 
     can be a two column list file name (partial matching) and colors 
-    color format name = "blue" rgb = 255,0,0 and hex = #E41A1C
+    color format can be a named ("blue"), rgb (255,0,0) or hex (#E41A1C)
     can save color list based on drop down selected gene list
     
   select gene list and file
@@ -39,6 +37,11 @@ Load Data tab
     select color by rgb or hex
     plot legend label
     apply normilization factor 
+    
+  save gene/color list
+    save selected gene list to txt file
+      can split location from name(s)
+    when color tab selected color pallet for selected gene list is saved for loaded genes
     
 Plot tab
 

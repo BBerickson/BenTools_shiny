@@ -211,7 +211,7 @@ server <- function(input, output, session) {
     print("load color file")
     # load info, update select boxes, switching works and chaning info and ploting
     LIST_DATA <<- LoadColorFile(input$filecolor$datapath,
-                               LIST_DATA)
+                               LIST_DATA, my_list)
     updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mycol"]))
     if (LIST_DATA$STATE[1] == 1 &
         !is.null(reactive_values$Apply_Math)) {
@@ -258,22 +258,33 @@ server <- function(input, output, session) {
   # saves gene list ----
   output$downloadGeneList <- downloadHandler(
     filename = function() {
-      paste(gsub("\nn = ", " n = ", input$selectgenelistoptions), Sys.Date(), ".txt", sep = "_")
+      if(input$loadfiles == "Color"){
+        paste(Sys.Date(), ".color.txt", sep = "")
+      } else {
+        paste(gsub("\nn = ", " n = ", input$selectgenelistoptions), Sys.Date(), ".txt", sep = "_")
+      }
       },
     content = function(file) {
-      new_comments <- paste("#", Sys.Date(), "\n# File(s) used:")
-      new_comments <- c(new_comments, paste("#", names(LIST_DATA$table_file)))
-      new_comments <- c(new_comments,  paste("\n#", gsub("\nn = ", " n = ",  input$selectgenelistoptions)))
-      new_comments <- c(new_comments, paste("#", gsub("\nn = ", " n = ",  
-                                                      paste(LIST_DATA$gene_file[[input$selectgenelistoptions]]$info))))
-      if(input$checkboxsavesplit){
-        new_comments <-
-          c(new_comments, gsub(";|\\+;|\\-;|\\|", "\t", pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use)))
+      if(input$loadfiles == "Color"){
+        new_comments <- NULL
+        for(i in names(LIST_DATA$gene_info[[input$selectgenelistoptions]])){
+          new_comments <- c(new_comments, paste(i,LIST_DATA$gene_info[[input$selectgenelistoptions]][[i]][4]))}
       } else {
-        new_comments <- c(new_comments, pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use))
+        new_comments <- paste("#", Sys.Date(), "\n# File(s) used:")
+        new_comments <- c(new_comments, paste("#", names(LIST_DATA$table_file)))
+        new_comments <- c(new_comments,  paste("\n#", gsub("\nn = ", " n = ",  input$selectgenelistoptions)))
+        new_comments <- c(new_comments, paste("#", gsub("\nn = ", " n = ",  
+                                                        paste(LIST_DATA$gene_file[[input$selectgenelistoptions]]$info))))
+        if(input$checkboxsavesplit){
+          new_comments <-
+            c(new_comments, gsub(";|\\+;|\\-;|\\|", "\t", pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use)))
+        } else {
+          new_comments <- c(new_comments, pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use))
+        }
+        
       }
       write_lines(new_comments, file)
-    }
+      }
   )
   
   
@@ -864,6 +875,9 @@ server <- function(input, output, session) {
     })
   })
   
+  
+  # hides sidebar on start up
+  shinyjs::addClass(selector = "body", class = "sidebar-collapse")
 }
 
 # UI -----
@@ -928,9 +942,7 @@ ui <- dashboardPage(
                                 accept = c('.txt')
                               ),
                               checkboxInput("checkboxconvert",
-                                            "gene list partial matching", value = FALSE),
-                              downloadButton("downloadGeneList", "Save Gene List"),
-                              checkboxInput("checkboxsavesplit", "split location and name")
+                                            "gene list partial matching", value = FALSE)
                               
                                        )
                                            )))
@@ -943,7 +955,8 @@ ui <- dashboardPage(
                                 "filecolor",
                                 label = "Load color list",
                                 accept = c('.color.txt')
-                              )))))
+                              )),
+                              helpText("Applies to current gene list"))))
                               )
                             ),
                     
@@ -973,7 +986,11 @@ ui <- dashboardPage(
                                 numericInput("normfactor", "Set norm factor, score/rpm", value = 1),
                                 actionButton("actionoptions", "Update"),
                                 helpText("Need to update Nickname and/or nrom factor")
-                              )
+                              ),
+                              box(title = "Save", width = 4, status = "primary", solidHeader = T,
+                                  downloadButton("downloadGeneList", "Save Gene/Color List"),
+                                  checkboxInput("checkboxsavesplit", "split location and name"),
+                                  helpText("Switch to Color tab to save Color list"))
                             ))
                           )),
                   
