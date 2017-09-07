@@ -6,7 +6,7 @@ Load Data tab
   
     can read HM.table files
       gene	A.x0	A.x1	A.x2	B.x0	B.x1	
-      chrI:100060-101169-;YAL025C	0.0273242100195962	0.0143811631682207	0.0129430468513899	0.0182152755007295	0.0377316421086745
+      chrI:100060-101169-;YAL025C	0.0273242100	0.01438116316	0.01294304685	0.01821527550	0.0377316421
       
     can read windowed bed files (checks for smaller 3 column version)
       col_names = c("chr", "start", "end", "gene", "bin", "score")
@@ -15,7 +15,8 @@ Load Data tab
     can load a test file containg file names ... requres file end in .url.txt
       files can be local or remote
     
-    trys to set some defalt plot options based on the first file loaded 
+    trys to set some defalt plot options based on the first file loaded
+    only first 4 files are automaticly selected to plot
       
   load gene lists ... limited number at a time
     gene lists are unchecked for plotting by default,
@@ -51,6 +52,17 @@ Plot tab
   
   
 Sort tool
+
+  select gene list and file(s) for that list
+  select bin range to work on
+  select top/bottom rank % cut off
+  
+  returns data table
+    search data table
+    sort on each file
+    additional filter on rank %
+    table results are added to gene lists
+    
 
   
   

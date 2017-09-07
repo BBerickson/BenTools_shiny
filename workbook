@@ -14,21 +14,13 @@ https://rstudio.github.io/DT/options.html
 https://rstudio.github.io/DT/
 
 
+save color list 
+  
 gene tools ... 
-sort ...
 
-overflow handling of gene names and column names
+region ...
 
-spinner on load files
-spinner on table, 
-table output filter?
 
-work on save function
-  commented header add
-  save common list
-  save color list added
-    
-region
 cluster
   ntile instead of cluster?
 cdp
@@ -37,7 +29,7 @@ intersect
 
 work on slider math ... rescale?
 collaps sidebar untill file loaded
-do I need state[3]?
+overflow handling of gene names and column names
 # restrict gene list to all loaded files or just plotted option innerjoin
 # data after list length of enesg ... deal with == 0
 # add icons to buttons

@@ -125,6 +125,7 @@ server <- function(input, output, session) {
         show("filegene1")
         show("checkboxconvert")
         show("downloadGeneList")
+        show("checkboxsavesplit")
         show("filecolor")
         show("showmainplot")
         show("startoff")
@@ -249,22 +250,29 @@ server <- function(input, output, session) {
                       selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
     if(my_list == names(LIST_DATA$gene_info)[1]){
       enable("normfactor")
-      disable("downloadGeneList")
     } else {
       disable("normfactor")
-      enable("downloadGeneList")
     }
   })
   
   # saves gene list ----
   output$downloadGeneList <- downloadHandler(
     filename = function() {
-      paste(strsplit(input$selectgenelistoptions, " ")[[1]][1], ".txt", sep = "")
-    },
+      paste(gsub("\nn = ", " n = ", input$selectgenelistoptions), Sys.Date(), ".txt", sep = "_")
+      },
     content = function(file) {
-      new_comments <- paste("#", Sys.Date())
-      tt <- c(new_comments, LIST_DATA$gene_file[[input$selectgenelistoptions]]$full)
-      write_lines(tt, file)
+      new_comments <- paste("#", Sys.Date(), "\n# File(s) used:")
+      new_comments <- c(new_comments, paste("#", names(LIST_DATA$table_file)))
+      new_comments <- c(new_comments,  paste("\n#", gsub("\nn = ", " n = ",  input$selectgenelistoptions)))
+      new_comments <- c(new_comments, paste("#", gsub("\nn = ", " n = ",  
+                                                      paste(LIST_DATA$gene_file[[input$selectgenelistoptions]]$info))))
+      if(input$checkboxsavesplit){
+        new_comments <-
+          c(new_comments, gsub(";|\\+;|\\-;|\\|", "\t", pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use)))
+      } else {
+        new_comments <- c(new_comments, pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use))
+      }
+      write_lines(new_comments, file)
     }
   )
   
@@ -709,6 +717,7 @@ server <- function(input, output, session) {
       enable("enablemainsort")
     } else {
       disable("enablemainsort")
+      hide('hidesorttable')
     }
   })
   
@@ -743,11 +752,11 @@ server <- function(input, output, session) {
                                              render = JS(
                                                "function(data, type, row, meta) {",
                                                "return type === 'display' && data.length > 24 ?",
-                                               "'<span title=\"' + data + '\">' + data.substr(0, 19,) + '...</span>' : data;",
+                                               "'<span title=\"' + data + '\">' + data.substr(0, 19) + '...</span>' : data;",
                                                "}")))
                     )) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
     output$sorttable <- DT::renderDataTable(dt) 
-
+    show('hidesorttable')
 
     updateSelectInput(session,
                       "selectgenelistoptions",
@@ -801,10 +810,11 @@ server <- function(input, output, session) {
                                              render = JS(
                                                "function(data, type, row, meta) {",
                                                "return type === 'display' && data.length > 24 ?",
-                                               "'<span title=\"' + data + '\">' + data.substr(0, 19,) + '...</span>' : data;",
+                                               "'<span title=\"' + data + '\">' + data.substr(0, 19) + '...</span>' : data;",
                                                "}")))
                     )) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
     output$sorttable <- DT::renderDataTable(dt) 
+    show('hidesorttable')
     updateSelectInput(session,
                       "selectgenelistoptions",
                       choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
@@ -825,7 +835,35 @@ server <- function(input, output, session) {
     })
   })
   
-  shinyjs::addClass(selector = "body", class = "sidebar-collapse")
+  # sort tool gene list $use ----
+  observeEvent(input$sorttable_rows_all,ignoreInit = TRUE,{
+    print("sort filter $use")
+    LIST_DATA$STATE[2] <<- paste("Sort\nn =", length(input$sorttable_rows_all))
+    names(LIST_DATA$gene_file)[grep("Sort\nn =", names(LIST_DATA$gene_info))] <<- LIST_DATA$STATE[2]
+    names(LIST_DATA$gene_info)[grep("Sort\nn =", names(LIST_DATA$gene_info))] <<- LIST_DATA$STATE[2]
+ 
+    LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<- tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$sorttable_rows_all])
+    
+    updateSelectInput(session,
+                      "selectgenelistoptions",
+                      choices = names(LIST_DATA$gene_info), selected = LIST_DATA$STATE[2])
+    output$DynamicGenePicker <- renderUI({
+      pickerlist <- list()        
+      for(i in names(LIST_DATA$gene_info)){
+        pickerlist[[i]] <- list(pickerInput(inputId = gsub("\nn = ", "-bensspace-", i), 
+                                            label = i, 
+                                            width = "99%",
+                                            choices = names(LIST_DATA$table_file),
+                                            selected = names(LIST_DATA$table_file)[c(sapply(LIST_DATA$gene_info[[i]], "[[",5) != 0)],
+                                            multiple = T,
+                                            options = list(`actions-box` = TRUE,`selected-text-format` = "count > 0"),
+                                            choicesOpt = list(style = paste("color", c(sapply(LIST_DATA$gene_info[[i]], "[[",4)), sep = ":"))
+        ))
+      }       
+      pickerlist                     
+    })
+  })
+  
 }
 
 # UI -----
@@ -879,7 +917,7 @@ ui <- dashboardPage(
                                 accept = c('.table'),
                                 multiple = TRUE)
                               )),
-                              helpText("load table file(s) or bedGraph file(s)")
+                              helpText("load windowed bedGraph file(s)")
                               )),
                               tabPanel(title = "Gene",  
                                        div(style = "height: 200px;",
@@ -890,8 +928,10 @@ ui <- dashboardPage(
                                 accept = c('.txt')
                               ),
                               checkboxInput("checkboxconvert",
-                                            "gene list partial matching,      !!!can be slow!!!", value = FALSE),
-                              downloadButton("downloadGeneList", "Save Gene List")
+                                            "gene list partial matching", value = FALSE),
+                              downloadButton("downloadGeneList", "Save Gene List"),
+                              checkboxInput("checkboxsavesplit", "split location and name")
+                              
                                        )
                                            )))
                               ),
@@ -1045,11 +1085,12 @@ ui <- dashboardPage(
                             actionButton("actionsortquick", "Quick Sort")
                            
                           ),
-                  box(title = "Sort Table", status = "primary", solidHeader = T,
+                  div(id = "hidesorttable",
+                    box(title = "Sort Table", status = "primary", solidHeader = T,
                       width = 12, 
                       DT::dataTableOutput('sorttable')
                       )
-                  ))
+                  )))
                 ))
 )
 

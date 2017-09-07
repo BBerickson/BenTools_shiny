@@ -204,7 +204,7 @@ LoadTableFile <- function(file_path, file_name, list_data, load_gene_list = FALS
 
         } else if (n_distinct(gene_names$gene) == 0 & convert){
           setProgress(2, detail = "looking for gene name matches")
-          gene_names <- distinct(tibble(gene = grep(paste(genefile$gene, collapse = "|"),
+          gene_names <- distinct(tibble(gene = grep(paste(tablefile$gene, collapse = "|"),
                                                    pull(distinct(list_data$gene_file[[1]]$use)), value = T)))
           if (n_distinct(gene_names$gene) == 0) {
             showModal(modalDialog(
@@ -421,7 +421,7 @@ CheckBoxOnOff <- function(check_box, list_data) {
 # sorts active gene list contain top % signal based on selected bins and file
 SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, topbottom) {
   if (is.null(file_names)) {
-    return (tibble(gene="none", rank=0))
+    return(NULL)
   }
   lc <- 0
   outlist <- NULL
@@ -441,12 +441,14 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
     
     if (topbottom == "Top%") {
       num2 <- c(1, ceiling(gene_count * (num / 100)))
+      topbottom <- paste(topbottom, paste0(num,"%"))
     } else if (topbottom == "Quick%") {
       num2 <-
         c(1, count(apply_bins, myper >= mean(myper, na.rm = TRUE))[[2]][2])
     } else {
       num2 <-
         c(ceiling((gene_count + 1) - (gene_count * (num / 100))), gene_count)
+      topbottom <- paste(topbottom, paste0(num,"%"))
     }
     nickname <- list_data$gene_info[[1]][[j]]$set
     outlist2 <- arrange(apply_bins, desc(mysums)) %>%
@@ -466,9 +468,10 @@ SortTop <- function(list_data, list_name, file_names, start_bin, end_bin, num, t
     list_data$gene_info[[old_name]] <- NULL
   }
   setProgress(lc+2, detail = "building list")
-  nick_name <- paste("Sort\nn =", n_distinct(outlist$gene) )#, "\n", nick_name2)
+  nick_name <- paste("Sort\nn =", n_distinct(outlist$gene)) 
   list_data$gene_file[[nick_name]]$full <- outlist
   list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
+  list_data$gene_file[[nick_name]]$info <- paste("Sort", topbottom, "bins", start_bin, "to", end_bin, "from", list_name, Sys.Date())
   list_data$gene_info[[nick_name]] <-
     lapply(setNames(
       names(list_data$gene_info[[1]]),
@@ -854,4 +857,3 @@ function(list_long_data_frame, xBinRange, plot_options, yBinRange, line_list, us
     suppressMessages(print(gp))
     return(suppressMessages(gp))
   }
-
