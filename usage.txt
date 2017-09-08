@@ -66,7 +66,16 @@ Sort tool
     additional filter on rank %
     table results are added to gene lists
     
-
+Ratio tool
   
+  select gene list and  2 files for that list
+  select bin range(s) to work on
+  select fold change cut off
+  preforms a[1]/b[2] or (a[1]/a[2])/(b[1]/b[2])
+  
+  returns 3 data tables with fold cut off for each file and non fold cut off 
+    search and sort data table
+    additional filter on fold cut off
+    table results are added to gene lists
   
   
