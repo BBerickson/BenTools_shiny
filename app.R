@@ -76,7 +76,7 @@ server <- function(input, output, session) {
       updateSliderInput(
         session,
         "sliderbinratio2",
-        min = LIST_DATA$x_plot_range[1],
+        min = 0,
         max = LIST_DATA$x_plot_range[2],
         value = c(0,0)
       )
@@ -1068,7 +1068,7 @@ server <- function(input, output, session) {
                })
   
   # keep ratio number above 0 ----
-  observeEvent(input$numericratio, ignoreNULL = FALSE, {
+  observeEvent(input$numericratio, ignoreInit = TRUE, {
     print("ratio num")
     if(is.numeric(input$numericratio)){
       if(input$numericratio < 0){
@@ -1080,7 +1080,7 @@ server <- function(input, output, session) {
     })
   
   # keep ration bins from overlaping ----
-  observeEvent(c(input$sliderbinratio1, input$sliderbinratio2), ignoreNULL = FALSE, {
+  observeEvent(c(input$sliderbinratio1, input$sliderbinratio2), ignoreInit = TRUE, {
     print("ration bin")
     if(sum(input$sliderbinratio2)>0){
       if(input$sliderbinratio1[2] > input$sliderbinratio2[1]){
