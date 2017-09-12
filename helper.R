@@ -317,7 +317,7 @@ LoadTableFile <-
         }
         color_select <- kListColorSet[color_safe]
         setProgress(3, detail = "build")
-        # only have plot on if a plot has not been created yet
+        # only have plot on if a plot has not been created yet for first 4 files
         if (list_data$STATE[4] == 0 &
             length(list_data$table_file) < 5) {
           oo <- legend_nickname
@@ -471,6 +471,36 @@ CheckBoxOnOff <- function(check_box, list_data) {
   list_data
 }
 
+# removes gene list
+RemoveGeneList <-
+  function(list_data, list_name) {
+      list_data$gene_file[[list_name]] <- NULL
+      list_data$gene_info[[list_name]] <- NULL
+      if (list_data$STATE[4] == 0) {
+        list_data$STATE[2] <- names(list_data$gene_file)[1]
+      } else{
+        list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
+      }
+    list_data
+  }
+
+# removes data file
+RemoveFile <- function(list_data, file_name){
+  if (length(list_data$table_file) > 1) {
+    sapply(names(list_data$gene_file), function(g) {
+      list_data$gene_info[[g]][[file_name]] <<- NULL
+      list_data$gene_info[[g]][[file_name]] <<- NULL
+    })
+    list_data$table_file[[file_name]] <- NULL
+    if (list_data$STATE[4] == 0) {
+      list_data$STATE[2] <- names(list_data$gene_file)[1]
+    } else{
+      list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
+    }
+  }
+  list_data
+}
+
 # sorts active gene list contain top % signal based on selected bins and file
 SortTop <-
   function(list_data,
@@ -559,9 +589,6 @@ SortTop <-
       list_data$STATE[2] <- nick_name
     } else{
       list_data$STATE[c(2, 4)] <- c(nick_name, 3)
-    }
-    if (is.null(list_data)) {
-      return (tibble(gene = "none", rank = 0))
     }
     list_data
   }

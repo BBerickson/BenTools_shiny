@@ -16,30 +16,48 @@ https://rstudio.github.io/DT/
 
 gene tools ... 
 
-region ...
+cluster ...
  add tab and 
- add selector and picker to sidebar
- set up tab selector control
- 
+ add selector and picker(1) to sidebar
+ add bin slider 1-max, # clusters 1-4, Cluster button and groups button (ntile?)
+ set up tab selector controls
+ add 4 tab DT
+ set up reactives
+ create function and hookup
+ test
 
-cluster
-  ntile instead of cluster?
 cdp
+  add tab and 
+  add  2 selector and 2 picker(multi) to sidebar
+  add bin sliders 1-max and 1-max, cdf button
+  set up tab selector controls
+  add 2 tab DT and plot area
+  set up reactives ... filter updates genelist and plot
+  create function and hookup
+  test
+ 
 intersect
+  add tab and 
+  add  picker(multi of gene lists) to sidebar
+  set up tab selector controls
+  add 3 tab DT
+  set up reactives
+  create function and hookup
+  test
+
+
+
+
 # file size restriction the set correctly?
 
 work on slider math ... rescale?
-collaps sidebar untill file loaded
+
 overflow handling of gene names and column names
-# restrict gene list to all loaded files or just plotted option innerjoin
-# data after list length of enesg ... deal with == 0
-# add icons to buttons
-on loading first file set lines and lables to apropriat one if posible 
+add icons to buttons
+
 # if y slider gets too cumbersum the switch to numiricInputs
 numericInput("inNumber", "Number input:",
                    min = 1, max = 20, value = 5, step = 0.5),
       numericInput("inNumber2", "Number input 2:",
                    min = 1, max = 20, value = 5, step = 0.5),
                   
-# if it is worth it, rework reactive to observeEvent and rework firstfile()(check on this first)      
-R markdown code generation and save option

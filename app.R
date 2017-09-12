@@ -61,6 +61,14 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "selectsortfile",
                         choices = names(LIST_DATA$gene_file))
+      updatePickerInput(
+        session,
+        "pickersortfile",
+        choices = names(LIST_DATA$table_file),
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
+        ), sep = ":"))
+      )
       
     }
     if (input$tabs == "ratiotool" &
@@ -85,6 +93,14 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "selectratiofile",
                         choices = names(LIST_DATA$gene_file))
+      updatePickerInput(
+        session,
+        "pickerratiofile",
+        choices = names(LIST_DATA$table_file),
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
+        ), sep = ":"))
+      )
       
     }
     toggle(
@@ -168,8 +184,6 @@ server <- function(input, output, session) {
       num_bins <-
         collapse(summarise(LIST_DATA$table_file[[1]], max(bin)))[[1]]
       if (num_bins == 80) {
-        # add second critirea for 5' TODO
-        # updateSelectInput(session, "selectlineslables", selected = "5' 1k 1k 80bins")
       } else if (num_bins <= 30) {
         updateSelectInput(session, "selectlineslables", selected = "543 bins 10,10,10")
       }
@@ -270,9 +284,11 @@ server <- function(input, output, session) {
                                    "selectline",
                                    selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
                  if (my_list == names(LIST_DATA$gene_info)[1]) {
-                   enable("normfactor")
+                   show("normfactor")
+                   hide("actionremovegene")
                  } else {
-                   disable("normfactor")
+                   hide("normfactor")
+                   show("actionremovegene")
                  }
                })
   
@@ -871,6 +887,31 @@ server <- function(input, output, session) {
     })
   })
   
+  # Remove data file ----
+  observeEvent(input$actionremovefile, ignoreInit = TRUE,{
+    print("remove file")
+    LIST_DATA <<- RemoveFile(LIST_DATA, input$radiodataoption) 
+    ff <- names(LIST_DATA$table_file)
+    updateAwesomeRadio(session,
+                       "radiodataoption",
+                       choices = ff,
+                       selected = last(ff))
+    
+    reactive_values$Picker_controler <- names(LIST_DATA$table_file)
+  })
+  
+  # Remove gene list ----
+  observeEvent(input$actionremovegene, ignoreInit = TRUE,{
+    print("remove gene list")
+    LIST_DATA <<- RemoveGeneList(LIST_DATA, input$selectgenelistoptions) 
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = LIST_DATA$STATE[2]
+    )
+    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+  })
   
   # sort tool picker enable/disable ----
   observeEvent(input$pickersortfile, ignoreNULL = FALSE, {
@@ -1456,7 +1497,7 @@ ui <- dashboardPage(
                                 ))
                               ),
                               box(
-                                title =  "Set Plot Options",
+                                title =  "Set Plot Color Options",
                                 width = 4,
                                 status = "primary",
                                 solidHeader = T,
@@ -1477,23 +1518,25 @@ ui <- dashboardPage(
                                 )
                               ),
                               box(
-                                title =  "Set Plot Options",
+                                title =  "Set File Plot Options",
                                 width = 4,
                                 status = "primary",
                                 solidHeader = T,
                                 textInput("textnickname", "Update Nickname"),
                                 numericInput("normfactor", "Set norm factor, score/rpm", value = 1),
-                                actionButton("actionoptions", "Update"),
-                                helpText("Need to update Nickname and/or nrom factor")
+                                actionButton("actionoptions", "Set Nickname"),
+                                helpText("Need to update Nickname and/or nrom factor"),
+                                actionButton("actionremovefile", "Remove File")
                               ),
                               box(
-                                title = "Save",
+                                title = "Save/Remove gene list",
                                 width = 4,
                                 status = "primary",
                                 solidHeader = T,
                                 downloadButton("downloadGeneList", "Save Gene/Color List"),
                                 checkboxInput("checkboxsavesplit", "split location and name"),
-                                helpText("Switch to Color tab to save Color list")
+                                helpText("Switch to Color tab to save Color list"),
+                                actionButton("actionremovegene", "Remove Gene list")
                               )
                             ))
                           )),
