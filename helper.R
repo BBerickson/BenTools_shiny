@@ -301,7 +301,6 @@ LoadTableFile <-
         } else {
           gene_names <- distinct(tablefile, gene)
           list_data$x_plot_range <- c(1, num_bins)
-          
         }
         
         my_name <- paste("common\nn =", n_distinct(gene_names$gene))
@@ -551,13 +550,13 @@ SortTop <-
       }
       lc <<- lc + 1
     })
-    old_name <- grep("Sort", names(list_data$gene_file), value = T)
-    if (length(old_name) > 0) {
-      list_data$gene_file[[old_name]] <- NULL
-      list_data$gene_info[[old_name]] <- NULL
-    }
+    # old_name <- grep("Sort", names(list_data$gene_file), value = T)
+    # if (length(old_name) > 0) {
+    #   list_data$gene_file[[old_name]] <- NULL
+    #   list_data$gene_info[[old_name]] <- NULL
+    # }
     setProgress(lc + 2, detail = "building list")
-    nick_name <- paste("Sort\nn =", n_distinct(outlist$gene))
+    nick_name <- strtrim(gsub("(.{30})", "\\1... ", paste("Sort\nn =", n_distinct(outlist$gene), list_name)),33)
     list_data$gene_file[[nick_name]]$full <- outlist
     list_data$gene_file[[nick_name]]$info <-
       paste("Sort",
@@ -568,6 +567,7 @@ SortTop <-
             end_bin,
             "from",
             list_name,
+            paste(file_names, collapse = " "),
             Sys.Date())
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
@@ -584,12 +584,7 @@ SortTop <-
                  onoff = 0,
                  rnorm = "1"
                ))
-    # set name for select options and keep reactive on/off from triggering right away
-    if (list_data$STATE[4] == 0) {
-      list_data$STATE[2] <- nick_name
-    } else{
-      list_data$STATE[c(2, 4)] <- c(nick_name, 3)
-    }
+    list_data$STATE[2] <- nick_name
     list_data
   }
 
@@ -662,10 +657,13 @@ CompareRatios <-
       list_data$gene_file[[old_name3]] <- NULL
       list_data$gene_info[[old_name3]] <- NULL
     }
+    nick_name <- NULL
     setProgress(2, detail = paste("building list", ratio1file))
     upratio <- filter(outlist[[1]], Ratio < 1 / num)
+    if(n_distinct(upratio$gene) > 0){
     nick_name1 <-
       paste("Ratio_Up_file1\nn =", n_distinct(upratio$gene))
+    nick_name <- c(nick_name, nick_name1)
     list_data$gene_file[[nick_name1]]$full <- upratio
     list_data$gene_file[[nick_name1]]$info <-
       paste(
@@ -687,11 +685,13 @@ CompareRatios <-
         "gene list",
         Sys.Date()
       )
-    
+    }
     setProgress(3, detail = paste("building list", ratio2file))
     upratio <- filter(outlist[[1]], Ratio > num)
+    if(n_distinct(upratio$gene) > 0){
     nick_name2 <-
       paste("Ratio_Up_file2\nn =", n_distinct(upratio$gene))
+    nick_name <- c(nick_name, nick_name2)
     list_data$gene_file[[nick_name2]]$full <- upratio
     list_data$gene_file[[nick_name2]]$info <-
       paste(
@@ -713,11 +713,13 @@ CompareRatios <-
         "gene list",
         Sys.Date()
       )
-    
+    }
     setProgress(4, detail = paste("building list: no change"))
     upratio <- filter(outlist[[1]], Ratio <= num & Ratio >= 1 / num)
+    if(n_distinct(upratio$gene) > 0){
     nick_name3 <-
       paste("Ratio_No_Diff\nn =", n_distinct(upratio$gene))
+    nick_name <- c(nick_name, nick_name3)
     list_data$gene_file[[nick_name3]]$full <- upratio
     list_data$gene_file[[nick_name3]]$info <-
       paste(
@@ -739,9 +741,9 @@ CompareRatios <-
         "gene list",
         Sys.Date()
       )
+    }
     
-    
-    for (nn in c(nick_name1, nick_name2, nick_name3)) {
+    for (nn in nick_name) {
       list_data$gene_info[[nn]] <-
         lapply(setNames(
           names(list_data$gene_info[[1]]),
@@ -763,6 +765,34 @@ CompareRatios <-
     setProgress(5, detail = "finishing up")
     list_data
   }
+
+# Change the number of clusters
+ClusterNumList <- function() {
+  #remove old gene list and info
+  #remake gene list and info
+  
+  # $use <- as.data.frame(enesg[cutree(cm$cm, R_cluster) == i, ])$gene
+}
+
+# finds 2 - 4 clusers from the one active file, plotting the patterns and displaying the gene lists
+FindClusters <- function(list_data,
+                         list_name,
+                         clusterfile,
+                         start_bin,
+                         end_bin,
+                         num) {
+  
+  # enesg <-
+  #   data_frame(gene = LIST_DATA$gene_file[[nick_name[1]]]$use)
+  # df <-
+  #   semi_join(LIST_DATA$table_file[[my_ref]], enesg, by = 'gene')
+  # df2 <- as.data.frame(spread(df, bin, score))
+  # cm <-
+  #   hclust.vector(df2[, c((R_start_bin:R_stop_bin) + 2)], method = "ward")
+  # LIST_DATA[["clust"]][["cm"]] <<- cm
+  # LIST_DATA[["clust"]][["use"]] <<- df2[, 1]
+  
+}
 
 # Applys math to on data in each gene list
 ApplyMath <-

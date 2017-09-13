@@ -46,63 +46,81 @@ server <- function(input, output, session) {
       condition = (input$tabs == "ratiotool" &
                      LIST_DATA$STATE[1] != 0)
     )
-    if (input$tabs == "sorttool" &
-        sum(grepl("Sort\nn =", names(LIST_DATA$gene_file))) == 0 &
-        LIST_DATA$STATE[1] != 0) {
-      updateSliderInput(
-        session,
-        "slidersortbinrange",
-        min = LIST_DATA$x_plot_range[1],
-        max = LIST_DATA$x_plot_range[2],
-        value = LIST_DATA$x_plot_range
-      )
-    }
+    toggle(
+      "showclustertoolpicker",
+      condition = (input$tabs == "clustertool" &
+                     LIST_DATA$STATE[1] != 0)
+    )
+    
     if (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0) {
-      updateSelectInput(session,
-                        "selectsortfile",
-                        choices = names(LIST_DATA$gene_file))
-      updatePickerInput(
+      ol <- input$selectsortfile
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- names(LIST_DATA$gene_file)[1]
+      }
+      updateSelectInput(
         session,
-        "pickersortfile",
-        choices = names(LIST_DATA$table_file),
-        choicesOpt = list(style = paste("color", c(
-          sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
-        ), sep = ":"))
+        "selectsortfile",
+        choices = names(LIST_DATA$gene_file),
+        selected = ol
       )
-      
+      if (sum(grepl("Sort\nn =", names(LIST_DATA$gene_file))) == 0) {
+        updateSliderInput(
+          session,
+          "slidersortbinrange",
+          min = LIST_DATA$x_plot_range[1],
+          max = LIST_DATA$x_plot_range[2],
+          value = LIST_DATA$x_plot_range
+        )
+      }
     }
-    if (input$tabs == "ratiotool" &
-        sum(grepl("Ratio_Up_file1\nn =", names(LIST_DATA$gene_file))) == 0 &
-        LIST_DATA$STATE[1] != 0) {
-      updateSliderInput(
-        session,
-        "sliderbinratio1",
-        min = LIST_DATA$x_plot_range[1],
-        max = LIST_DATA$x_plot_range[2],
-        value = LIST_DATA$x_plot_range
-      )
-      updateSliderInput(
-        session,
-        "sliderbinratio2",
-        min = 0,
-        max = LIST_DATA$x_plot_range[2],
-        value = c(0,0)
-      )
-    }
+    
     if (input$tabs == "ratiotool" & LIST_DATA$STATE[1] != 0) {
+      ol <- input$selectratiofile
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- names(LIST_DATA$gene_file)[1]
+      }
       updateSelectInput(session,
                         "selectratiofile",
-                        choices = names(LIST_DATA$gene_file))
-      updatePickerInput(
-        session,
-        "pickerratiofile",
-        choices = names(LIST_DATA$table_file),
-        choicesOpt = list(style = paste("color", c(
-          sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
-        ), sep = ":"))
-      )
-      
+                        choices = names(LIST_DATA$gene_file),
+                        selected = ol)
+      if (sum(grepl("Ratio_", names(LIST_DATA$gene_file))) == 0) {
+        updateSliderInput(
+          session,
+          "sliderbinratio1",
+          min = LIST_DATA$x_plot_range[1],
+          max = LIST_DATA$x_plot_range[2],
+          value = LIST_DATA$x_plot_range
+        )
+        updateSliderInput(
+          session,
+          "sliderbinratio2",
+          min = 0,
+          max = LIST_DATA$x_plot_range[2],
+          value = c(0,0)
+        )
+      }
     }
+    
+    if (input$tabs == "clustertool" & LIST_DATA$STATE[1] != 0) {
+      ol <- input$selectclusterfile
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- names(LIST_DATA$gene_file)[1]
+      }
+      updateSelectInput(session,
+                        "selectclusterfile",
+                        choices = names(LIST_DATA$gene_file),
+                        selected = ol)
+      if (sum(grepl("Cluster_1\nn =", names(LIST_DATA$gene_file))) == 0) {
+        updateSliderInput(
+          session,
+          "sliderbincluster",
+          min = LIST_DATA$x_plot_range[1],
+          max = LIST_DATA$x_plot_range[2],
+          value = LIST_DATA$x_plot_range
+        )
+      }
+    }
+    
     toggle(
       "selectlineslablesshow",
       condition = (input$tabs == "mainplot" &
@@ -859,7 +877,7 @@ server <- function(input, output, session) {
   })
   
   # update plot picker ----
-  observeEvent(reactive_values$Picker_controler, ignoreNULL = FALSE, {
+  observeEvent(reactive_values$Picker_controler, ignoreNULL = FALSE, ignoreInit = TRUE,{
     print("plot pickers update")
     output$DynamicGenePicker <- renderUI({
       pickerlist <- list()
@@ -914,12 +932,12 @@ server <- function(input, output, session) {
   })
   
   # sort tool picker enable/disable ----
-  observeEvent(input$pickersortfile, ignoreNULL = FALSE, {
+  observeEvent(input$pickersortfile, ignoreNULL = FALSE, ignoreInit = TRUE,{
     if (!is.null(input$pickersortfile)) {
       enable("enablemainsort")
     } else {
       disable("enablemainsort")
-      hide('hidesorttable')
+      hide('sorttable')
     }
   })
   
@@ -974,7 +992,7 @@ server <- function(input, output, session) {
       )
     ) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
     output$sorttable <- DT::renderDataTable(dt)
-    show('hidesorttable')
+    show('sorttable')
     
     updateSelectInput(
       session,
@@ -1044,7 +1062,7 @@ server <- function(input, output, session) {
       )
     ) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
     output$sorttable <- DT::renderDataTable(dt)
-    show('hidesorttable')
+    show('sorttable')
   })
   
   # sort tool gene list $use ----
@@ -1097,14 +1115,14 @@ server <- function(input, output, session) {
   })
   
   # ratio tool picker enable/disable ----
-  observeEvent(c(input$pickerratio1file, input$pickerratio2file),
+  observeEvent(c(input$pickerratio1file, input$pickerratio2file), ignoreInit = TRUE,
                ignoreNULL = FALSE,
                {
                  if (input$pickerratio1file != "" & input$pickerratio2file != "") {
                    enable("enablemainratio")
                  } else {
                    disable("enablemainratio")
-                   hide('hideratiotable')
+                   hide('ratiotooltab')
                  }
                })
   
@@ -1236,7 +1254,11 @@ server <- function(input, output, session) {
     } else {
       return()
     }
+    mytab <- "No Fold Change"
+    updateTabItems(session, "ratiotooltab", selected = "Up Fold Change file 1")
     newnames1 <- gsub("(.{20})", "\\1... ", input$pickerratio1file)
+    if(any(grep("Ratio_Up_file1\nn =",names(LIST_DATA$gene_info))>0)){
+      mytab <- "Up Fold Change file 1"
     output$ratio1table <-
       DT::renderDataTable(
         datatable(
@@ -1267,7 +1289,18 @@ server <- function(input, output, session) {
           )
         )
       )
+    } else {
+      output$ratio1table <-
+        DT::renderDataTable(
+          datatable(LIST_DATA$gene_file[[1]]$empty, 
+                    rownames = FALSE,
+                    colnames = strtrim(newnames1, 24),
+                    options = list(searching = FALSE)))
+      mytab <- "Up Fold Change file 2"
+    }
+    updateTabItems(session, "ratiotooltab", selected = "Up Fold Change file 2")
     newnames2 <- gsub("(.{20})", "\\1... ", input$pickerratio2file)
+    if(any(grep("Ratio_Up_file2\nn =",names(LIST_DATA$gene_info))>0)){
     output$ratio2table <-
       DT::renderDataTable(
         datatable(
@@ -1298,17 +1331,25 @@ server <- function(input, output, session) {
           )
         )
       )
-    newnames3 <-
-      gsub("(.{20})",
-           "\\1... ",
-           grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info), value = T))
+    } else {
+      output$ratio2table <-
+        DT::renderDataTable(
+          datatable(LIST_DATA$gene_file[[1]]$empty, 
+                    rownames = FALSE,
+                    colnames = strtrim(newnames2, 24),
+                    options = list(searching = FALSE)))
+      mytab <- "No Fold Change"
+    }
+    updateTabItems(session, "ratiotooltab", selected = "No Fold Change")
+    if(any(grep("Ratio_No_Diff\nn =",names(LIST_DATA$gene_info))>0)){
+      newnames3 <- gsub("\n", " ", grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info), value = T))
     output$ratio3table <-
       DT::renderDataTable(
         datatable(
           LIST_DATA$gene_file[[grep("Ratio_No_Diff\nn =",
                                     names(LIST_DATA$gene_info))]]$full,
           rownames = FALSE,
-          colnames = strtrim(newnames3, 24),
+          colnames = newnames3,
           class = 'cell-border stripe compact',
           filter = 'top',
           caption = 'Ratio_No_Diff',
@@ -1332,9 +1373,270 @@ server <- function(input, output, session) {
           )
         )
       )
-    show('hideratiotable')
+  } else {
+    output$ratio3table <-
+      DT::renderDataTable(
+        datatable(LIST_DATA$gene_file[[1]]$empty, 
+                  rownames = FALSE,
+                  colnames = "Ratio_No_Diff n = 0",
+                  options = list(searching = FALSE)))
+  }
+    updateTabItems(session, "ratiotooltab", selected = mytab)
+    show('ratiotooltab')
   })
   
+  # cluster tool picker control ----
+  observeEvent(input$selectclusterfile, ignoreInit = TRUE, {
+    print("cluster picker update")
+    updatePickerInput(
+      session,
+      "pickerclusterfile",
+      choices = names(LIST_DATA$table_file),
+      choicesOpt = list(style = paste("color", c(
+        sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
+      ), sep = ":"))
+    )
+  })
+  
+  # cluster tool picker enable/disable ----
+  observeEvent(input$pickerclusterfile, ignoreInit = TRUE,
+               ignoreNULL = FALSE,
+               {
+                 if (!is.null(input$pickerclusterfile)) {
+                   enable("enablemaincluster")
+                 } else {
+                   disable("enablemaincluster")
+                   hide('clustertooltab')
+                 }
+               })
+  
+  # cluster tool gene lists $use ----
+  observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, {
+    print("cluster1 filter $use")
+    oldname <-
+      grep("Cluster_1\nn =", names(LIST_DATA$gene_info))
+    LIST_DATA$STATE[2] <<-
+      paste("Cluster_1\nn =",
+            length(input$cluster1table_rows_all))
+    names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
+    names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
+    LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
+      tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster1table_rows_all])
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = LIST_DATA$STATE[2]
+    )
+    ol <- input$selectclusterfile
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
+    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+  })
+  
+  observeEvent(input$cluster2table_rows_all, ignoreInit = TRUE, {
+    print("cluster2 filter $use")
+    oldname <-
+      grep("Cluster_2\nn =", names(LIST_DATA$gene_info))
+    LIST_DATA$STATE[2] <<-
+      paste("Cluster_2\nn =",
+            length(input$cluster2table_rows_all))
+    names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
+    names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
+    LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
+      tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster2table_rows_all])
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = LIST_DATA$STATE[2]
+    )
+    ol <- input$selectclusterfile
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
+    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+  })
+  
+  observeEvent(input$cluster3table_rows_all, ignoreInit = TRUE, {
+    print("cluster3 filter $use")
+    oldname <-
+      grep("Cluster_3\nn =", names(LIST_DATA$gene_info))
+    LIST_DATA$STATE[2] <<-
+      paste("Cluster_3\nn =", length(input$cluster3table_rows_all))
+    names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
+    names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
+    LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
+      tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster3table_rows_all])
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = LIST_DATA$STATE[2]
+    )
+    ol <- input$selectclusterfile
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
+    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+  })
+  
+  observeEvent(input$cluster4table_rows_all, ignoreInit = TRUE, {
+    print("cluster4 filter $use")
+    oldname <-
+      grep("Cluster_4\nn =", names(LIST_DATA$gene_info))
+    LIST_DATA$STATE[2] <<-
+      paste("Cluster_4\nn =", length(input$cluster4table_rows_all))
+    names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
+    names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
+    LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
+      tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster4table_rows_all])
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = LIST_DATA$STATE[2]
+    )
+    ol <- input$selectclusterfile
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
+    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+  })
+  
+  # Cluster tool action ----
+  observeEvent(input$actionclustertool, ignoreInit = TRUE, {
+    print("cluster tool action")
+    # withProgress(message = 'Calculation in progress',
+    #              detail = 'This may take a while...',
+    #              value = 0,
+    #              {
+    #                LD <-
+    #                  FindClusters(
+    #                    LIST_DATA,
+    #                    input$selectclusterfile,
+    #                    input$pickerclusterfile,
+    #                    input$sliderbincluster[1],
+    #                    input$sliderbincluster[2],
+    #                    input$selectclusternumber
+    #                  )
+    #              })
+    # if (!is_empty(LD$table_file)) {
+    #   LIST_DATA <<- LD
+    # } else {
+    #   return()
+    # }
+    # newnames1 <- gsub("(.{20})", "\\1... ", input$pickercluster1file)
+    # output$cluster1table <-
+    #   DT::renderDataTable(
+    #     datatable(
+    #       LIST_DATA$gene_file[[grep("cluster_Up_file1\nn =",
+    #                                 names(LIST_DATA$gene_info))]]$full,
+    #       rownames = FALSE,
+    #       colnames = strtrim(newnames1, 24),
+    #       class = 'cell-border stripe compact',
+    #       filter = 'top',
+    #       caption = 'cluster_Up_file1',
+    #       options = list(
+    #         pageLength = 15,
+    #         scrollX = TRUE,
+    #         scrollY = TRUE,
+    #         autoWidth = TRUE,
+    #         columnDefs = list(
+    #           list(className = 'dt-center ', targets = "_all"),
+    #           list(
+    #             targets = 0,
+    #             render = JS(
+    #               "function(data, type, row, meta) {",
+    #               "return type === 'display' && data.length > 44 ?",
+    #               "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+    #               "}"
+    #             )
+    #           )
+    #         )
+    #       )
+    #     )
+    #   )
+    # newnames2 <- gsub("(.{20})", "\\1... ", input$pickercluster2file)
+    # output$cluster2table <-
+    #   DT::renderDataTable(
+    #     datatable(
+    #       LIST_DATA$gene_file[[grep("cluster_Up_file2\nn =",
+    #                                 names(LIST_DATA$gene_info))]]$full,
+    #       rownames = FALSE,
+    #       colnames = strtrim(newnames2, 24),
+    #       class = 'cell-border stripe compact',
+    #       filter = 'top',
+    #       caption = 'cluster_Up_file2',
+    #       options = list(
+    #         pageLength = 15,
+    #         scrollX = TRUE,
+    #         scrollY = TRUE,
+    #         autoWidth = TRUE,
+    #         columnDefs = list(
+    #           list(className = 'dt-center ', targets = "_all"),
+    #           list(
+    #             targets = 0,
+    #             render = JS(
+    #               "function(data, type, row, meta) {",
+    #               "return type === 'display' && data.length > 44 ?",
+    #               "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+    #               "}"
+    #             )
+    #           )
+    #         )
+    #       )
+    #     )
+    #   )
+    # newnames3 <-
+    #   gsub("(.{20})",
+    #        "\\1... ",
+    #        grep("cluster_No_Diff\nn =", names(LIST_DATA$gene_info), value = T))
+    # output$cluster3table <-
+    #   DT::renderDataTable(
+    #     datatable(
+    #       LIST_DATA$gene_file[[grep("cluster_No_Diff\nn =",
+    #                                 names(LIST_DATA$gene_info))]]$full,
+    #       rownames = FALSE,
+    #       colnames = strtrim(newnames3, 24),
+    #       class = 'cell-border stripe compact',
+    #       filter = 'top',
+    #       caption = 'cluster_No_Diff',
+    #       options = list(
+    #         pageLength = 15,
+    #         scrollX = TRUE,
+    #         scrollY = TRUE,
+    #         autoWidth = TRUE,
+    #         columnDefs = list(
+    #           list(className = 'dt-center ', targets = "_all"),
+    #           list(
+    #             targets = 0,
+    #             render = JS(
+    #               "function(data, type, row, meta) {",
+    #               "return type === 'display' && data.length > 44 ?",
+    #               "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+    #               "}"
+    #             )
+    #           )
+    #         )
+    #       )
+    #     )
+    #   )
+    show('clustertooltab')
+  })
   
   # hides sidebar on start up
   shinyjs::addClass(selector = "body", class = "sidebar-collapse")
@@ -1400,6 +1702,28 @@ ui <- dashboardPage(
             choices = "Load data file",
             multiple = F,
             options = list(title = "Select second file")
+          )
+        )
+      ),
+      
+      menuItem("Cluster Tools", tabName = "clustertool", icon = icon("gears")),
+      hidden(
+        div(
+          style = "padding-left: 15%;",
+          id = "showclustertoolpicker",
+          selectInput(
+            inputId = "selectclusterfile",
+            label = "Select gene list to sort on",
+            choices = "Load data file",
+            width = "99%"
+          ),
+          pickerInput(
+            inputId = "pickerclusterfile",
+            width = "99%",
+            label = "Select first file",
+            choices = "Load data file",
+            multiple = F,
+            options = list(title = "Select first file")
           )
         )
       ),
@@ -1813,6 +2137,63 @@ ui <- dashboardPage(
                                            DT::dataTableOutput('ratio2table')),
                                   tabPanel("No Fold Change",
                                            DT::dataTableOutput('ratio3table'))
+                                )
+                              )
+                            )
+                          )),
+                  # main cluster tool tab
+                  tabItem(tabName = "clustertool",
+                          div(
+                            id = "enablemaincluster",
+                            box(
+                              title = "Cluster tools",
+                              status = "primary",
+                              solidHeader = T,
+                              width = 12,
+                              fluidRow(
+                                column(
+                                  2,
+                                  selectInput(
+                                    inputId = "selectclusternumber",
+                                    label = "Select number of clusters",
+                                    choices = c(1:4),
+                                    selected = 4,
+                                    width = "99%"
+                                  )
+                                ),
+                                column(
+                                  5,
+                                  sliderInput(
+                                    "sliderbincluster",
+                                    label = "Select Bin Range:",
+                                    min = 0,
+                                    max = 80,
+                                    value = c(0, 80)
+                                  )
+                                )
+                              ),
+                              actionButton("actionclustertool", "Get clusters"),
+                              actionButton("actiongroupstool", "Get groups")
+                              
+                            ),
+                            div(
+                              id = "hideclustertable",
+                              box(
+                                title = "Cluster Tables",
+                                status = "primary",
+                                solidHeader = T,
+                                width = 12,
+                                tabBox(
+                                  id = "clustertooltab",
+                                  width = 12,
+                                  tabPanel("Cluster 1",
+                                           DT::dataTableOutput('cluster1table')),
+                                  tabPanel("Cluster 2",
+                                           DT::dataTableOutput('cluster2table')),
+                                  tabPanel("Cluster 3",
+                                           DT::dataTableOutput('cluster3table')),
+                                  tabPanel("Cluster 4",
+                                           DT::dataTableOutput('cluster4table'))
                                 )
                               )
                             )
