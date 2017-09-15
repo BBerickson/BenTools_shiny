@@ -13,6 +13,10 @@ shinyWidgetsGallery()
 https://rstudio.github.io/DT/options.html
 https://rstudio.github.io/DT/
 
+Deleat
+  fix plot tab switch updates pickers
+  fix tab switch deselcts files
+  disable tables not just boxes?
 
 gene tools ... 
 
@@ -47,10 +51,18 @@ intersect
   add usage
 
 
+... testing and using ...
 
 # file size restriction the set correctly?
 
+loading gene lists stores info if avalible 
+more $info work and updating on loading/deleting files
+
+better handleing of loading 0 gene lists?
+
 work on slider math ... rescale?
+
+remove tool gene lists on file removel? 
 
 overflow handling of gene names and column names
 add icons to buttons
@@ -60,4 +72,5 @@ numericInput("inNumber", "Number input:",
                    min = 1, max = 20, value = 5, step = 0.5),
       numericInput("inNumber2", "Number input 2:",
                    min = 1, max = 20, value = 5, step = 0.5),
-                  
+                   
+search TODO

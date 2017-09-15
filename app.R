@@ -127,7 +127,9 @@ server <- function(input, output, session) {
                      LIST_DATA$STATE[1] != 0)
     )
     # first time switch tab auto plot
-    if (input$tabs == "mainplot" & LIST_DATA$STATE[4] == 0) {
+    if (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0){
+      reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+      if(LIST_DATA$STATE[4] == 0) {
       reactive_values$Apply_Math <-
         ApplyMath(
           LIST_DATA,
@@ -150,7 +152,7 @@ server <- function(input, output, session) {
              condition = (input$tabs == "mainplot" &
                             LIST_DATA$STATE[1] == 2))
     }
-    
+    }
   })
   
   # loads data file(s) ----
@@ -179,7 +181,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_info),
       selected = LIST_DATA$STATE[2]
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+    
     if (LIST_DATA$STATE[1] == 0) {
       show("filegene1")
       show("checkboxconvert")
@@ -220,6 +222,7 @@ server <- function(input, output, session) {
                        "radiodataoption",
                        choices = ff,
                        selected = last(ff))
+     
   })
   
   # loads gene list file ----
@@ -252,7 +255,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_info),
       selected = LIST_DATA$STATE[2]
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
   })
   
   # loads color file ----
@@ -914,6 +917,12 @@ server <- function(input, output, session) {
                        "radiodataoption",
                        choices = ff,
                        selected = last(ff))
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = LIST_DATA$STATE[2]
+    )
     
     reactive_values$Picker_controler <- names(LIST_DATA$table_file)
   })
@@ -928,7 +937,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_info),
       selected = LIST_DATA$STATE[2]
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
   })
   
   # sort tool picker enable/disable ----
@@ -1000,24 +1009,6 @@ server <- function(input, output, session) {
     }
     output$sorttable <- DT::renderDataTable(dt)
     enable('hidesorttable')
-    
-    updateSelectInput(
-      session,
-      "selectgenelistoptions",
-      choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
-    )
-    ol <- input$selectsortfile
-    if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
-    }
-    updateSelectInput(
-      session,
-      "selectsortfile",
-      choices = names(LIST_DATA$gene_file),
-      selected = ol
-    )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
   })
   
   # sort quick tool action ----
@@ -1085,7 +1076,10 @@ server <- function(input, output, session) {
   
   # sort tool gene list $use ----
   observeEvent(input$sorttable_rows_all, ignoreInit = TRUE, {
-    newname <- strtrim(gsub("(.{30})", "\\1... ", paste0("Sort\nn = ", length(input$sorttable_rows_all), "-", gsub("\nn = ", ":",input$selectsortfile))),33)
+    ol <- input$selectsortfile
+    newname <- strtrim(gsub("(.{30})", "\\1... ", paste0(sub("([0-9]+)", length(input$sorttable_rows_all), LIST_DATA$STATE[2]), "-", ol)), 33)
+    print(newname)
+    print(LIST_DATA$STATE[2])
     if(newname != LIST_DATA$STATE[2]){
     print("sort filter $use")
     oldname <- grep("Sort\nn =", names(LIST_DATA$gene_info))
@@ -1102,7 +1096,6 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_info),
       selected = LIST_DATA$STATE[2]
     )
-    ol <- input$selectsortfile
     if(!ol %in% names(LIST_DATA$gene_file)){
       ol <- names(LIST_DATA$gene_file)[1]
     }
@@ -1112,7 +1105,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   
@@ -1200,7 +1193,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   
@@ -1231,7 +1224,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   
@@ -1261,7 +1254,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   
@@ -1466,7 +1459,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   
@@ -1496,7 +1489,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   
@@ -1526,7 +1519,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   
@@ -1556,7 +1549,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-    reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+     
     }
   })
   

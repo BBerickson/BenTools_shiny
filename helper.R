@@ -272,7 +272,7 @@ LoadTableFile <-
               myline = kLineOptions[1],
               mycol = RgbToHex(
                 my_hex = list_data$gene_info[[1]][[i]]$mycol,
-                tint = nn * .15
+                tint = nn * .1
               ),
               onoff = 0,
               rnorm = "1"
@@ -338,39 +338,32 @@ LoadTableFile <-
         setProgress(4, detail = "adding to gene list")
         
         # generate info for new file for loaded gene list(s)
-        sapply(names(list_data$gene_file), function(g) {
-          if (length(list_data$gene_file[[g]]$full) > 0) {
-            enesg <-
-              semi_join(list_data$gene_file[[g]]$full, gene_names, by = "gene")
-            if (n_distinct(enesg$gene) < 1) {
-              showModal(
-                modalDialog(
-                  title = "Information message",
-                  " No genes in common, need to remove gene file",
-                  size = "s",
-                  easyClose = TRUE
-                )
+        sapply(seq_along(list_data$gene_file)[-1], function(g) {
+          enesg <- inner_join(list_data$gene_file[[g]]$full, list_data$gene_file[[1]]$use, by = "gene")
+          if (n_distinct(enesg$gene) < 1) {
+            showModal(
+              modalDialog(
+                title = "Information message",
+                " No genes in common, need to remove gene file",
+                size = "s",
+                easyClose = TRUE
               )
-            }
-            my_name_g <-
-              paste0(strsplit(g, "\nn =")[[1]][1],
-                     "\nn = ",
-                     n_distinct(enesg$gene))
-            nn <- which(names(list_data$gene_info) == g)
-            names(list_data$gene_file)[nn] <<- my_name_g
-            names(list_data$gene_info)[nn] <<- my_name_g
-            list_data$gene_file[[my_name_g]]$use <<- enesg
-            
-            list_data$gene_info[[my_name_g]][[legend_nickname]] <<-
-              tibble(
-                set = legend_nickname,
-                mydot = kDotOptions[1],
-                myline = kLineOptions[1],
-                mycol = RgbToHex(my_hex = color_select, tint = nn * .12),
-                onoff = 0,
-                rnorm = "1"
-              )
+            )
           }
+          list_data$gene_file[[g]]$use <<- select(enesg, gene)
+          my_name_g <- sub("([0-9]+)", n_distinct(list_data$gene_file[[g]]$full$gene), names(list_data$gene_file)[g])
+          names(list_data$gene_file)[g] <<- my_name_g
+          names(list_data$gene_info)[g] <<- my_name_g
+          
+          list_data$gene_info[[g]][[legend_nickname]] <<-
+            tibble(
+              set = legend_nickname,
+              mydot = kDotOptions[1],
+              myline = kLineOptions[1],
+              mycol = RgbToHex(my_hex = color_select, tint = g * .1),
+              onoff = 0,
+              rnorm = "1"
+            )
         })
         file_count <- 1
       }
@@ -486,16 +479,35 @@ RemoveGeneList <-
 # removes data file
 RemoveFile <- function(list_data, file_name){
   if (length(list_data$table_file) > 1) {
+    # remove tool gene lists ? TODO
     sapply(names(list_data$gene_file), function(g) {
-      list_data$gene_info[[g]][[file_name]] <<- NULL
+      list_data$gene_file[[g]][[file_name]] <<- NULL
       list_data$gene_info[[g]][[file_name]] <<- NULL
     })
     list_data$table_file[[file_name]] <- NULL
-    if (list_data$STATE[4] == 0) {
-      list_data$STATE[2] <- names(list_data$gene_file)[1]
-    } else{
-      list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
-    }
+    list_data$gene_file[[1]]$use <- distinct(list_data$table_file[[1]], gene)
+  }
+  if (length(names(list_data$table_file)) > 1) {
+    sapply(list_data$table_file[-1], function(i) {
+      list_data$gene_file[[1]]$use <<- semi_join(list_data$gene_file[[1]]$use, i, by="gene")
+      })
+  }
+  my_name <- paste("common\nn =", n_distinct(list_data$gene_file[[1]]$use$gene))
+  names(list_data$gene_file)[1] <- my_name
+  names(list_data$gene_info)[1] <- my_name
+  
+  sapply(seq_along(list_data$gene_file)[-1], function(g) {
+      list_data$gene_file[[g]]$full <<- inner_join(list_data$gene_file[[g]]$full, list_data$gene_file[[1]]$use, by = "gene")
+      list_data$gene_file[[g]]$use <<- select(list_data$gene_file[[g]]$full, gene)
+      my_name_g <- sub("([0-9]+)", n_distinct(list_data$gene_file[[g]]$full$gene), names(list_data$gene_file)[g])
+      names(list_data$gene_file)[g] <<- my_name_g
+      names(list_data$gene_info)[g] <<- my_name_g
+  })
+  
+  if (list_data$STATE[4] == 0) {
+    list_data$STATE[2] <- names(list_data$gene_file)[1]
+  } else{
+    list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
   }
   list_data
 }
@@ -556,7 +568,7 @@ SortTop <-
       list_data$gene_info[[old_name]] <- NULL
     }
     setProgress(lc + 2, detail = "building list")
-    nick_name <- strtrim(gsub("(.{30})", "\\1... ", paste0("Sort\nn = ", n_distinct(outlist$gene), "-", gsub("\nn = ", ":",list_name))),33)
+    nick_name <- strtrim(gsub("(.{30})", "\\1... ", paste0("Sort\nn = ", n_distinct(outlist$gene))),33)
     list_data$gene_file[[nick_name]]$full <- outlist
     list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
     list_data$gene_file[[nick_name]]$info <-
@@ -580,7 +592,7 @@ SortTop <-
                  myline = kLineOptions[1],
                  mycol = RgbToHex(
                    my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
-                   tint = length(list_data$gene_file) * .12
+                   tint = length(list_data$gene_file) * .1
                  ),
                  onoff = 0,
                  rnorm = "1"
@@ -760,7 +772,7 @@ CompareRatios <-
             myline = kLineOptions[1],
             mycol = RgbToHex(
               my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
-              tint = length(list_data$gene_file) * .12
+              tint = length(list_data$gene_file) * .1
             ),
             onoff = 0,
             rnorm = "1"
