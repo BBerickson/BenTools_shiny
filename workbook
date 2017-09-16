@@ -13,17 +13,12 @@ shinyWidgetsGallery()
 https://rstudio.github.io/DT/options.html
 https://rstudio.github.io/DT/
 
-Deleat
-  fix plot tab switch updates pickers
-  fix tab switch deselcts files
-  disable tables not just boxes?
 
 gene tools ... 
 
 cluster ...
  
- set up reactives
- create function and hookup
+ create function and hookup ... need LIST_DATA$clust?
  test
  add usage
 
@@ -50,7 +45,7 @@ intersect
   test
   add usage
 
-
+# ADD back loading hm table files
 ... testing and using ...
 
 # file size restriction the set correctly?

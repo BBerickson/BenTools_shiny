@@ -45,7 +45,7 @@ LIST_DATA <- list(
   # [1] 1 = at least on file has been loadded and lets reactives fill in info
   #     2 = lets reactive change tab toggle plot button
   # [2] name of most recent loaded gene list, for setting options select,
-  # [3] plot ocupancy
+  # [3] name of most recent deleted gene list, for resetting tool datatables
   # [4] 1 = first time switching tab auto ploting
   #     2 = on/off reactive can deactivate plot options until plot button is pressed
   #     3 = picker(s) have been remade keeps on/off reactive from running
@@ -473,6 +473,7 @@ RemoveGeneList <-
       } else{
         list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
       }
+      list_data$STATE[3] <- strtrim(list_name, 6)
     list_data
   }
 

@@ -54,14 +54,27 @@ server <- function(input, output, session) {
     
     if (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectsortfile
+      og <- input$pickersortfile
       if(!ol %in% names(LIST_DATA$gene_file)){
         ol <- names(LIST_DATA$gene_file)[1]
+      } else if(!all(og %in% names(LIST_DATA$table_file)) | 
+                LIST_DATA$STATE[3] == "Sort\nn"){
+        og <- NULL
       }
       updateSelectInput(
         session,
         "selectsortfile",
         choices = names(LIST_DATA$gene_file),
         selected = ol
+      )
+      updatePickerInput(
+        session,
+        "pickersortfile",
+        choices = names(LIST_DATA$table_file),
+        selected = og,
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
+        ), sep = ":"))
       )
       if (sum(grepl("Sort\nn =", names(LIST_DATA$gene_file))) == 0) {
         updateSliderInput(
@@ -76,13 +89,35 @@ server <- function(input, output, session) {
     
     if (input$tabs == "ratiotool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectratiofile
+      og <- c(input$pickerratio1file, input$pickerratio2file)
       if(!ol %in% names(LIST_DATA$gene_file)){
         ol <- names(LIST_DATA$gene_file)[1]
+      } else if(!all(og %in% names(LIST_DATA$table_file)) | 
+                LIST_DATA$STATE[3] == "Ratio_"){
+        og <- c("","")
       }
       updateSelectInput(session,
                         "selectratiofile",
                         choices = names(LIST_DATA$gene_file),
                         selected = ol)
+      updatePickerInput(
+        session,
+        "pickerratio1file",
+        choices = names(LIST_DATA$table_file),
+        selected = og[1],
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
+        ), sep = ":"))
+      )
+      updatePickerInput(
+        session,
+        "pickerratio2file",
+        choices = names(LIST_DATA$table_file),
+        selected = og[2],
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
+        ), sep = ":"))
+      )
       if (sum(grepl("Ratio_", names(LIST_DATA$gene_file))) == 0) {
         updateSliderInput(
           session,
@@ -103,13 +138,26 @@ server <- function(input, output, session) {
     
     if (input$tabs == "clustertool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectclusterfile
+      og <- input$pickerclusterfile
       if(!ol %in% names(LIST_DATA$gene_file)){
         ol <- names(LIST_DATA$gene_file)[1]
+      }else if(!all(og %in% names(LIST_DATA$table_file)) |
+               LIST_DATA$STATE[3] == "Cluste"){
+        og <- NULL
       }
       updateSelectInput(session,
                         "selectclusterfile",
                         choices = names(LIST_DATA$gene_file),
                         selected = ol)
+      updatePickerInput(
+        session,
+        "pickerclusterfile",
+        choices = names(LIST_DATA$table_file),
+        selected = og,
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
+        ), sep = ":"))
+      )
       if (sum(grepl("Cluster_1\nn =", names(LIST_DATA$gene_file))) == 0) {
         updateSliderInput(
           session,
@@ -128,7 +176,7 @@ server <- function(input, output, session) {
     )
     # first time switch tab auto plot
     if (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0){
-      reactive_values$Picker_controler <- names(LIST_DATA$gene_info)
+      reactive_values$Picker_controler <- sapply(LIST_DATA, function(i) (names(i)))
       if(LIST_DATA$STATE[4] == 0) {
       reactive_values$Apply_Math <-
         ApplyMath(
@@ -943,10 +991,8 @@ server <- function(input, output, session) {
   # sort tool picker enable/disable ----
   observeEvent(input$pickersortfile, ignoreNULL = FALSE, ignoreInit = TRUE,{
     if (!is.null(input$pickersortfile)) {
-      enable("enablemainsort")
     } else {
-      disable("enablemainsort")
-      disable('hidesorttable')
+      hide('sorttable')
     }
   })
   
@@ -1008,7 +1054,7 @@ server <- function(input, output, session) {
                       options = list(searching = FALSE))
     }
     output$sorttable <- DT::renderDataTable(dt)
-    enable('hidesorttable')
+    show('sorttable')
   })
   
   # sort quick tool action ----
@@ -1071,7 +1117,7 @@ server <- function(input, output, session) {
     }
     
     output$sorttable <- DT::renderDataTable(dt)
-    enable('hidesorttable')
+    show('sorttable')
   })
   
   # sort tool gene list $use ----
@@ -1089,12 +1135,12 @@ server <- function(input, output, session) {
     
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$sorttable_rows_all])
-    
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = glo
     )
     if(!ol %in% names(LIST_DATA$gene_file)){
       ol <- names(LIST_DATA$gene_file)[1]
@@ -1137,10 +1183,10 @@ server <- function(input, output, session) {
                ignoreNULL = FALSE,
                {
                  if (input$pickerratio1file != "" | input$pickerratio2file != "") {
-                   enable("enablemainratio")
                  } else {
-                   disable("enablemainratio")
-                   disable('hideratiotable')
+                   hide('ratio1table')
+                   hide('ratio2table')
+                   hide('ratio3table')
                  }
                })
   
@@ -1177,11 +1223,12 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio1table_rows_all])
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = glo
     )
     ol <- input$selectratiofile
     if(!ol %in% names(LIST_DATA$gene_file)){
@@ -1208,12 +1255,12 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio2table_rows_all])
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
-    )
+      selected = glo)
     ol <- input$selectratiofile
     if(!ol %in% names(LIST_DATA$gene_file)){
       ol <- names(LIST_DATA$gene_file)[1]
@@ -1238,12 +1285,12 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio3table_rows_all])
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
-    )
+      selected = glo)
     ol <- input$selectratiofile
     if(!ol %in% names(LIST_DATA$gene_file)){
       ol <- names(LIST_DATA$gene_file)[1]
@@ -1323,6 +1370,7 @@ server <- function(input, output, session) {
                     rownames = FALSE,
                     colnames = strtrim(newnames1, 24),
                     options = list(searching = FALSE)))
+      mytab <- "Up Fold Change file 2"
     }
     newnames2 <- gsub("(.{20})", "\\1... ", input$pickerratio2file)
     if(any(grep("Ratio_Up_file2\nn =",names(LIST_DATA$gene_info))>0)){
@@ -1363,6 +1411,9 @@ server <- function(input, output, session) {
                     rownames = FALSE,
                     colnames = strtrim(newnames2, 24),
                     options = list(searching = FALSE)))
+      if(mytab == "Up Fold Change file 2"){
+        mytab <- "No Fold Change"
+      }
     }
     if(any(grep("Ratio_No_Diff\nn =",names(LIST_DATA$gene_info))>0)){
       newnames3 <- gsub("\n", " ", grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info), value = T))
@@ -1403,8 +1454,14 @@ server <- function(input, output, session) {
                   rownames = FALSE,
                   colnames = "Ratio_No_Diff n = 0",
                   options = list(searching = FALSE)))
+    if(mytab == "No Fold Change"){
+      mytab <- "Up Fold Change file 1"
+    }
   }
-    enable('ratiotooltab')
+    show('ratio1table')
+    show('ratio2table')
+    show('ratio3table')
+    updateTabItems(session, "ratiotooltab", mytab)
   })
   
   # cluster tool picker control ----
@@ -1425,10 +1482,11 @@ server <- function(input, output, session) {
                ignoreNULL = FALSE,
                {
                  if (!is.null(input$pickerclusterfile)) {
-                   enable("enablemaincluster")
                  } else {
-                   disable("enablemaincluster")
-                   disable('hideclustertable')
+                   hide("cluster1table")
+                   hide("cluster2table")
+                   hide("cluster3table")
+                   hide("cluster4table")
                  }
                })
   
@@ -1443,12 +1501,13 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster1table_rows_all])
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
-    )
+      selected = glo
+      )
     ol <- input$selectclusterfile
     if(!ol %in% names(LIST_DATA$gene_file)){
       ol <- names(LIST_DATA$gene_file)[1]
@@ -1473,11 +1532,12 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster2table_rows_all])
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = glo
     )
     ol <- input$selectclusterfile
     if(!ol %in% names(LIST_DATA$gene_file)){
@@ -1503,11 +1563,12 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster3table_rows_all])
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = glo
     )
     ol <- input$selectclusterfile
     if(!ol %in% names(LIST_DATA$gene_file)){
@@ -1533,11 +1594,12 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster4table_rows_all])
+    glo <- input$selectgenelistoptions
     updateSelectInput(
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = glo
     )
     ol <- input$selectclusterfile
     if(!ol %in% names(LIST_DATA$gene_file)){
@@ -1738,7 +1800,10 @@ server <- function(input, output, session) {
                     colnames = strtrim(newnames4, 24),
                     options = list(searching = FALSE)))
     }
-    enable('hideclustertable')
+    show("cluster1table")
+    show("cluster2table")
+    show("cluster3table")
+    show("cluster4table")
   })
   
   # hides sidebar on start up
