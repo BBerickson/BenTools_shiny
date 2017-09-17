@@ -193,7 +193,8 @@ LoadTableFile <-
                                     comment = "#",
                                     col_names = col_names)) %>%
           select(gene, bin, score) %>%
-          mutate(set = legend_nickname) %>% na_if(Inf)
+          mutate(set = legend_nickname) %>% na_if(Inf) %>%
+          replace_na(list(score = 0))
         num_bins <- n_distinct(tablefile$bin)
         if (file_count > 0 & num_bins != list_data$x_plot_range[2]) {
           showModal(
@@ -272,7 +273,7 @@ LoadTableFile <-
               myline = kLineOptions[1],
               mycol = RgbToHex(
                 my_hex = list_data$gene_info[[1]][[i]]$mycol,
-                tint = nn * .1
+                tint = nn * 0.08
               ),
               onoff = 0,
               rnorm = "1"
@@ -360,7 +361,7 @@ LoadTableFile <-
               set = legend_nickname,
               mydot = kDotOptions[1],
               myline = kLineOptions[1],
-              mycol = RgbToHex(my_hex = color_select, tint = g * .1),
+              mycol = RgbToHex(my_hex = color_select, tint = g * 0.08),
               onoff = 0,
               rnorm = "1"
             )
@@ -531,9 +532,9 @@ SortTop <-
       setProgress(lc + 1, detail = paste("sorting", j))
       enesg <-
         list_data$gene_file[[list_name]]$use
-      df <-
+      apply_bins <-
         semi_join(list_data$table_file[[j]], enesg, by = 'gene')
-      apply_bins <- group_by(df, gene) %>%
+      apply_bins <- group_by(apply_bins, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
         mutate(myper = as.numeric(strtrim(cume_dist(mysums), 5)))
@@ -593,7 +594,7 @@ SortTop <-
                  myline = kLineOptions[1],
                  mycol = RgbToHex(
                    my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
-                   tint = length(list_data$gene_file) * .1
+                   tint = length(list_data$gene_file) * 0.08
                  ),
                  onoff = 0,
                  rnorm = "1"
@@ -613,7 +614,7 @@ CompareRatios <-
            start2_bin,
            end2_bin,
            num) {
-    if (ratio1file == "") {
+    if (ratio1file == "" | ratio2file == "") {
       return()
     }
     setProgress(1, detail = paste("dividing one by the other"))
@@ -653,24 +654,13 @@ CompareRatios <-
       }
     })
     
-    old_name1 <-
-      grep("Ratio_Up_file1\nn =", names(list_data$gene_file), value = T)
-    if (length(old_name1) > 0) {
-      list_data$gene_file[[old_name1]] <- NULL
-      list_data$gene_info[[old_name1]] <- NULL
+    for(rr in grep("Ratio_", names(LIST_DATA$gene_file), value = T)){
+      if (length(rr) > 0) {
+        list_data$gene_file[[rr]] <- NULL
+        list_data$gene_info[[rr]] <- NULL
+      }
     }
-    old_name2 <-
-      grep("Ratio_Up_file2\nn =", names(list_data$gene_file), value = T)
-    if (length(old_name2) > 0) {
-      list_data$gene_file[[old_name2]] <- NULL
-      list_data$gene_info[[old_name2]] <- NULL
-    }
-    old_name3 <-
-      grep("Ratio_No_Diff\nn =", names(list_data$gene_file), value = T)
-    if (length(old_name3) > 0) {
-      list_data$gene_file[[old_name3]] <- NULL
-      list_data$gene_info[[old_name3]] <- NULL
-    }
+    
     nick_name <- NULL
     setProgress(2, detail = paste("building list", ratio1file))
     upratio <- filter(outlist[[1]], Ratio < 1 / num)
@@ -773,7 +763,7 @@ CompareRatios <-
             myline = kLineOptions[1],
             mycol = RgbToHex(
               my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
-              tint = length(list_data$gene_file) * .1
+              tint = length(list_data$gene_file) * 0.08
             ),
             onoff = 0,
             rnorm = "1"
@@ -784,11 +774,68 @@ CompareRatios <-
   }
 
 # Change the number of clusters
-ClusterNumList <- function() {
-  #remove old gene list and info
-  #remake gene list and info
-  
-  # $use <- as.data.frame(enesg[cutree(cm$cm, R_cluster) == i, ])$gene
+ClusterNumList <- function(list_data,list_name,
+                           clusterfile, start_bin,
+                           end_bin, num, myname) {
+
+  if(is_empty(list_data$clust)){
+    return(NULL)
+  }
+  setProgress(3, detail = "spliting into clusters")
+  for(rr in grep("Cluster_", names(list_data$gene_file), value = T)){
+    if (length(rr) > 0) {
+      list_data$gene_file[[rr]] <- NULL
+      list_data$gene_info[[rr]] <- NULL
+    }
+  }
+  for(rr in grep("Group_", names(list_data$gene_file), value = T)){
+    if (length(rr) > 0) {
+      list_data$gene_file[[rr]] <- NULL
+      list_data$gene_info[[rr]] <- NULL
+    }
+  }
+  if(myname == "Cluster_"){
+    gene_list <- mutate(list_data$clust$use, cm = cutree(list_data$clust$cm, num))
+  } else {
+    gene_list <- mutate(list_data$clust$full, cm = ntile(cm, as.numeric(num)))
+  }
+  for(nn in 1:num){
+    outlist <- filter(gene_list, cm == nn)
+    nick_name <- paste(paste0(myname, nn, "\nn ="), n_distinct(outlist$gene))
+    list_data$gene_file[[nick_name]]$full <- outlist
+    list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
+    list_data$gene_file[[nick_name]]$info <-
+      paste(nick_name,
+            "bins",
+            start_bin,
+            "to",
+            end_bin,
+            "from",
+            list_name,
+            clusterfile,
+            num,
+            myname,
+            "total",
+            Sys.Date())
+    setProgress(4, detail = paste("finishing cluster", nn))
+    list_data$gene_info[[nick_name]] <-
+      lapply(setNames(names(list_data$gene_info[[1]]),
+                      names(list_data$gene_info[[1]])),
+             function(i)
+               tibble(
+                 set = i,
+                 mydot = kDotOptions[1],
+                 myline = kLineOptions[1],
+                 mycol = RgbToHex(
+                   my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
+                   tint = length(list_data$gene_file) * 0.08
+                 ),
+                 onoff = 0,
+                 rnorm = "1"
+               ))
+  }
+  list_data$STATE[2] <- grep(paste0(myname, "1"), names(list_data$gene_file), value = T)
+  list_data
 }
 
 # finds 2 - 4 clusers from the one active file, plotting the patterns and displaying the gene lists
@@ -798,17 +845,39 @@ FindClusters <- function(list_data,
                          start_bin,
                          end_bin,
                          num) {
-  
-  # enesg <-
-  #   data_frame(gene = LIST_DATA$gene_file[[nick_name[1]]]$use)
-  # df <-
-  #   semi_join(LIST_DATA$table_file[[my_ref]], enesg, by = 'gene')
-  # df2 <- as.data.frame(spread(df, bin, score))
-  # cm <-
-  #   hclust.vector(df2[, c((R_start_bin:R_stop_bin) + 2)], method = "ward")
-  # LIST_DATA[["clust"]][["cm"]] <<- cm
-  # LIST_DATA[["clust"]][["use"]] <<- df2[, 1]
-  
+  if (clusterfile == "") {
+    return(NULL)
+  }
+  setProgress(1, detail = paste("gathering data"))
+  df <- semi_join(list_data$table_file[[clusterfile]], 
+                  list_data$gene_file[[list_name]]$use, by = 'gene')
+  setProgress(2, detail = "hierarchical clustering using ward method")
+  list_data$clust <- list()
+  list_data$clust$cm <- hclust.vector(as.data.frame(spread(df, bin, score))[, c((start_bin:end_bin) + 2)], method = "ward")
+  list_data$clust$use <- distinct(df, gene)
+  list_data
+}
+
+# finds 2 - 4 groups from the one active file, plotting the patterns and displaying the gene lists
+FindGroups <- function(list_data,
+                         list_name,
+                         clusterfile,
+                         start_bin,
+                         end_bin,
+                         num) {
+  if (clusterfile == "") {
+    return(NULL)
+  }
+  setProgress(1, detail = paste("gathering data"))
+  df <- semi_join(list_data$table_file[[clusterfile]], 
+                  list_data$gene_file[[list_name]]$use, by = 'gene')
+  setProgress(2, detail = "finding groups")
+  list_data$clust <- list()
+  list_data$clust$full <- group_by(df, gene) %>% 
+    filter(bin %in% start_bin:end_bin) %>%
+    summarise(cm = sum(score, na.rm = TRUE))
+  list_data$clust$use <- distinct(df, gene)
+  list_data
 }
 
 # Applys math to on data in each gene list

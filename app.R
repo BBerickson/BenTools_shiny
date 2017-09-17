@@ -155,7 +155,7 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$table_file),
         selected = og,
         choicesOpt = list(style = paste("color", c(
-          sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
+          sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
         ), sep = ":"))
       )
       if (sum(grepl("Cluster_1\nn =", names(LIST_DATA$gene_file))) == 0) {
@@ -1472,7 +1472,7 @@ server <- function(input, output, session) {
       "pickerclusterfile",
       choices = names(LIST_DATA$table_file),
       choicesOpt = list(style = paste("color", c(
-        sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
+        sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
       ), sep = ":"))
     )
   })
@@ -1492,8 +1492,8 @@ server <- function(input, output, session) {
   
   # cluster tool gene lists $use ----
   observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, {
-    newname <-  paste("Cluster_1\nn =", length(input$cluster1table_rows_all))
-    oldname <- grep("Cluster_1\nn =", names(LIST_DATA$gene_info))
+    newname <-  paste0(reactive_values$clustergroups, "1\nn = ", length(input$cluster1table_rows_all))
+    oldname <- grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info))
     if(newname != oldname){
     print("cluster1 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1523,8 +1523,8 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$cluster2table_rows_all, ignoreInit = TRUE, {
-    newname <-  paste("Cluster_2\nn =", length(input$cluster2table_rows_all))
-    oldname <- grep("Cluster_2\nn =", names(LIST_DATA$gene_info))
+    newname <-  paste0(reactive_values$clustergroups, "2\nn = ", length(input$cluster2table_rows_all))
+    oldname <- grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info))
     if(newname != oldname){
     print("cluster2 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1554,8 +1554,8 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$cluster3table_rows_all, ignoreInit = TRUE, {
-    newname <-  paste("Cluster_3\nn =", length(input$cluster3table_rows_all))
-    oldname <- grep("Cluster_3\nn =", names(LIST_DATA$gene_info))
+    newname <-  paste0(reactive_values$clustergroups, "3\nn = ", length(input$cluster3table_rows_all))
+    oldname <- grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info))
     if(newname != oldname){
     print("cluster3 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1585,8 +1585,8 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$cluster4table_rows_all, ignoreInit = TRUE, {
-    newname <-  paste("Cluster_4\nn =", length(input$cluster4table_rows_all))
-    oldname <- grep("Cluster_4\nn =", names(LIST_DATA$gene_info))
+    newname <-  paste0(reactive_values$clustergroups, "4\nn = ", length(input$cluster4table_rows_all))
+    oldname <- grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info))
     if(newname != oldname){
     print("cluster4 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1618,78 +1618,126 @@ server <- function(input, output, session) {
   # Cluster tool action ----
   observeEvent(input$actionclustertool, ignoreInit = TRUE, {
     print("cluster tool action")
-    # withProgress(message = 'Calculation in progress',
-    #              detail = 'This may take a while...',
-    #              value = 0,
-    #              {
-    #                LD <-
-    #                  FindClusters(
-    #                    LIST_DATA,
-    #                    input$selectclusterfile,
-    #                    input$pickerclusterfile,
-    #                    input$sliderbincluster[1],
-    #                    input$sliderbincluster[2],
-    #                    input$selectclusternumber
-    #                  )
-    #              })
-    # if (!is_empty(LD$table_file)) {
-    #   LIST_DATA <<- LD
-    # } else {
-    #   return()
-    # }
-    newnames1 <- gsub("(.{20})", "\\1... ", input$pickercluster1file)
-    if(any(grep("cluster_Up_file1\nn =",names(LIST_DATA$gene_info))>0)){
-    output$cluster1table <-
-      DT::renderDataTable(
-        datatable(
-          LIST_DATA$gene_file[[grep("cluster_Up_file1\nn =",
-                                    names(LIST_DATA$gene_info))]]$full,
-          rownames = FALSE,
-          colnames = strtrim(newnames1, 24),
-          class = 'cell-border stripe compact',
-          filter = 'top',
-          caption = 'cluster_Up_file1',
-          options = list(
-            pageLength = 15,
-            scrollX = TRUE,
-            scrollY = TRUE,
-            autoWidth = TRUE,
-            columnDefs = list(
-              list(className = 'dt-center ', targets = "_all"),
-              list(
-                targets = 0,
-                render = JS(
-                  "function(data, type, row, meta) {",
-                  "return type === 'display' && data.length > 44 ?",
-                  "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
-                  "}"
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0, {
+                   LD <-
+                     FindClusters(
+                       LIST_DATA,
+                       input$selectclusterfile,
+                       input$pickerclusterfile,
+                       input$sliderbincluster[1],
+                       input$sliderbincluster[2],
+                       input$selectclusternumber
+                     )
+                 })
+    if (!is_empty(LD$table_file)) {
+      LIST_DATA <<- LD
+      reactive_values$clustergroups <- "Cluster_"
+    } else {
+      return()
+    }
+  })
+  
+  # Group tool action ----
+  observeEvent(input$actiongroupstool, ignoreInit = TRUE, {
+    print("group tool action")
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0, {
+                   LD <-
+                     FindGroups(
+                       LIST_DATA,
+                       input$selectclusterfile,
+                       input$pickerclusterfile,
+                       input$sliderbincluster[1],
+                       input$sliderbincluster[2],
+                       input$selectclusternumber
+                     )
+                 })
+    if (!is_empty(LD$table_file)) {
+      LIST_DATA <<- LD
+      reactive_values$clustergroups <- "Group_"
+    } else {
+      return()
+    }
+  })
+  
+  # Cluster tool numbers ----
+  observeEvent(c(input$selectclusternumber, reactive_values$clustergroups), ignoreInit = TRUE, {
+    print("cluster tool number")
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0, {
+                   LD <-
+                     ClusterNumList(
+                       LIST_DATA,
+                       input$selectclusterfile,
+                       input$pickerclusterfile,
+                       input$sliderbincluster[1],
+                       input$sliderbincluster[2],
+                       input$selectclusternumber,
+                       reactive_values$clustergroups
+                     )
+                 })
+    if (!is_empty(LD$table_file)) {
+      LIST_DATA <<- LD
+    } else {
+      return()
+    }
+    updateTabItems(session, "clustertooltab", "Cluster 1")
+    newnames <- gsub("(.{20})", "\\1... ", input$pickerclusterfile)
+    if(any(grep(paste0(reactive_values$clustergroups, "1\nn ="),names(LIST_DATA$gene_info))>0)){
+      output$cluster1table <-
+        DT::renderDataTable(
+          datatable(
+            LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "1\nn ="),
+                                      names(LIST_DATA$gene_info))]]$full,
+            rownames = FALSE,
+            colnames = strtrim(newnames, 24),
+            class = 'cell-border stripe compact',
+            filter = 'top',
+            caption = paste0(reactive_values$clustergroups, "1"),
+            options = list(
+              pageLength = 15,
+              scrollX = TRUE,
+              scrollY = TRUE,
+              autoWidth = TRUE,
+              columnDefs = list(
+                list(className = 'dt-center ', targets = "_all"),
+                list(
+                  targets = 0,
+                  render = JS(
+                    "function(data, type, row, meta) {",
+                    "return type === 'display' && data.length > 44 ?",
+                    "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+                    "}"
+                  )
                 )
               )
             )
           )
         )
-      )
     } else {
       output$cluster1table <-
         DT::renderDataTable(
           datatable(LIST_DATA$gene_file[[1]]$empty, 
                     rownames = FALSE,
-                    colnames = strtrim(newnames1, 24),
+                    colnames = strtrim(newnames, 24),
                     options = list(searching = FALSE)))
     }
     
-    newnames2 <- gsub("(.{20})", "\\1... ", input$pickercluster2file)
-    if(any(grep("cluster_Up_file2\nn =",names(LIST_DATA$gene_info))>0)){
+    if(any(grep(paste0(reactive_values$clustergroups, "2\nn ="),names(LIST_DATA$gene_info))>0)){
       output$cluster2table <-
         DT::renderDataTable(
           datatable(
-            LIST_DATA$gene_file[[grep("cluster_Up_file2\nn =",
+            LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "2\nn ="),
                                       names(LIST_DATA$gene_info))]]$full,
             rownames = FALSE,
-            colnames = strtrim(newnames2, 24),
+            colnames = strtrim(newnames, 24),
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = 'cluster_Up_file2',
+            caption = paste0(reactive_values$clustergroups, "2"),
             options = list(
               pageLength = 15,
               scrollX = TRUE,
@@ -1715,22 +1763,21 @@ server <- function(input, output, session) {
         DT::renderDataTable(
           datatable(LIST_DATA$gene_file[[1]]$empty, 
                     rownames = FALSE,
-                    colnames = strtrim(newnames2, 24),
+                    colnames = strtrim(newnames, 24),
                     options = list(searching = FALSE)))
     }
     
-    newnames3 <- gsub("(.{20})", "\\1... ", input$pickercluster3file)
-    if(any(grep("cluster_Up_file3\nn =",names(LIST_DATA$gene_info))>0)){
+    if(any(grep(paste0(reactive_values$clustergroups, "3\nn ="),names(LIST_DATA$gene_info))>0)){
       output$cluster3table <-
         DT::renderDataTable(
           datatable(
-            LIST_DATA$gene_file[[grep("cluster_Up_file3\nn =",
+            LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "3\nn ="),
                                       names(LIST_DATA$gene_info))]]$full,
             rownames = FALSE,
-            colnames = strtrim(newnames3, 24),
+            colnames = strtrim(newnames, 24),
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = 'cluster_Up_file3',
+            caption = paste0(reactive_values$clustergroups, "3"),
             options = list(
               pageLength = 15,
               scrollX = TRUE,
@@ -1756,22 +1803,21 @@ server <- function(input, output, session) {
         DT::renderDataTable(
           datatable(LIST_DATA$gene_file[[1]]$empty, 
                     rownames = FALSE,
-                    colnames = strtrim(newnames3, 24),
+                    colnames = strtrim(newnames, 24),
                     options = list(searching = FALSE)))
     }
     
-    newnames4 <- gsub("(.{20})", "\\1... ", input$pickercluster4file)
-    if(any(grep("cluster_Up_file4\nn =",names(LIST_DATA$gene_info))>0)){
+    if(any(grep(paste0(reactive_values$clustergroups, "4\nn ="),names(LIST_DATA$gene_info))>0)){
       output$cluster4table <-
         DT::renderDataTable(
           datatable(
-            LIST_DATA$gene_file[[grep("cluster_Up_file4\nn =",
+            LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "4\nn ="),
                                       names(LIST_DATA$gene_info))]]$full,
             rownames = FALSE,
-            colnames = strtrim(newnames4, 24),
+            colnames = strtrim(newnames, 24),
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = 'cluster_Up_file4',
+            caption = paste0(reactive_values$clustergroups, "4"),
             options = list(
               pageLength = 15,
               scrollX = TRUE,
@@ -1797,7 +1843,7 @@ server <- function(input, output, session) {
         DT::renderDataTable(
           datatable(LIST_DATA$gene_file[[1]]$empty, 
                     rownames = FALSE,
-                    colnames = strtrim(newnames4, 24),
+                    colnames = strtrim(newnames, 24),
                     options = list(searching = FALSE)))
     }
     show("cluster1table")
@@ -2324,7 +2370,7 @@ ui <- dashboardPage(
                                   selectInput(
                                     inputId = "selectclusternumber",
                                     label = "Select number of clusters",
-                                    choices = c(1:4),
+                                    choices = c(4:1),
                                     selected = 4,
                                     width = "99%"
                                   )

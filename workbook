@@ -18,7 +18,8 @@ gene tools ...
 
 cluster ...
  
- create function and hookup ... need LIST_DATA$clust?
+ add plot box
+ add plot cluster/group overview resluts
  test
  add usage
 
