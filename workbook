@@ -18,7 +18,8 @@ gene tools ...
 
 cluster ...
  
- add plot box
+ make cluster reactive elements needed for ggplot
+ make reactive PlotCluster_controller trigger when $use changes
  add plot cluster/group overview resluts
  test
  add usage

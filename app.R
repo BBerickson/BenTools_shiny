@@ -694,6 +694,11 @@ server <- function(input, output, session) {
     reactive_values$Plot_controler
   })
   
+  # renders cluster plot ----
+  output$plotcluster <- renderPlot({
+    reactive_values$PlotCluster_controler
+  })
+  
   # updates applymath ----
   observeEvent(
     c(
@@ -1201,16 +1206,6 @@ server <- function(input, output, session) {
       updateNumericInput(session, "numericratio", value = 2)
       }
     })
-  
-  # keep ration bins from overlaping ----
-  observeEvent(c(input$sliderbinratio1, input$sliderbinratio2), ignoreInit = TRUE, {
-    print("ration bin")
-    if(sum(input$sliderbinratio2)>0){
-      if(input$sliderbinratio1[2] > input$sliderbinratio2[1]){
-        updateSliderInput(session, "sliderbinratio2", value = input$sliderbinratio1[2])
-      }
-    }
-  })
   
   # ratio tool gene lists $use ----
   observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, {
@@ -2389,7 +2384,11 @@ ui <- dashboardPage(
                               actionButton("actionclustertool", "Get clusters"),
                               actionButton("actiongroupstool", "Get groups")
                               
+                              
                             ),
+                            box(title = "Cluster Plot", status = "primary", solidHeader = TRUE,
+                                width = 12, collapsible = TRUE, collapsed = TRUE,
+                                withSpinner(plotOutput("plotcluster"), type = 4)),
                             div(
                               id = "hideclustertable",
                               box(
