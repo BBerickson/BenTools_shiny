@@ -1210,7 +1210,7 @@ server <- function(input, output, session) {
   # ratio tool gene lists $use ----
   observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, {
     newname <- paste("Ratio_Up_file1\nn =", length(input$ratio1table_rows_all))
-    oldname <- grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info))
+    oldname <- grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info), value = TRUE)
     if(newname != oldname){
     print("ratio1 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1241,7 +1241,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$ratio2table_rows_all, ignoreInit = TRUE, {
     newname <- paste("Ratio_Up_file2\nn =", length(input$ratio1table_rows_all))
-    oldname <- grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))
+    oldname <- grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info), value = TRUE)
     if(newname != oldname){
     print("ratio2 filter $use")
     
@@ -1272,7 +1272,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$ratio3table_rows_all, ignoreInit = TRUE, {
     newname <-  paste("Ratio_No_Diff\nn =", length(input$ratio3table_rows_all))
-    oldname <- grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info))
+    oldname <- grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info), value = TRUE)
     if(newname != oldname){
     print("no ratio filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1488,7 +1488,7 @@ server <- function(input, output, session) {
   # cluster tool gene lists $use ----
   observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "1\nn = ", length(input$cluster1table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info))
+    oldname <- grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info), value = TRUE)
     if(newname != oldname){
     print("cluster1 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1513,13 +1513,47 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-     
+    LD <- LIST_DATA$gene_info
+    
+    sapply(names(LD), function(i)
+      sapply(names(LD[[i]]), function(j)
+        if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
+          LD[[i]][[j]][5] <<- input$pickerclusterfile
+        } else{
+          LD[[i]][[j]][5] <<- 0
+        })
+    )
+    LIST_DATA$gene_info <- LD
+    reactive_values$Apply_Cluster_Math <- ApplyMath(
+      LIST_DATA,
+      input$myMath,
+      input$checkboxrgf,
+      input$checkboxrf,
+      input$numericnormbin
+    )
+    if (!is.null(reactive_values$Apply_Cluster_Math)) {
+      reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
+      Y_Axis_Cluster_numbers <-
+        MyXSetValues(reactive_values$Apply_Cluster_Math,
+                     input$sliderplotBinRange)
+      reactive_values$PlotCluster_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Cluster_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Cluster_Options,
+          Y_Axis_Cluster_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
+        )
     }
+    }
+    
   })
   
   observeEvent(input$cluster2table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "2\nn = ", length(input$cluster2table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info))
+    oldname <- grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info), value = TRUE)
     if(newname != oldname){
     print("cluster2 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1544,13 +1578,47 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    LD <- LIST_DATA$gene_info
+    
+    sapply(names(LD), function(i)
+      sapply(names(LD[[i]]), function(j)
+        if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
+          LD[[i]][[j]][5] <<- input$pickerclusterfile
+        } else{
+          LD[[i]][[j]][5] <<- 0
+        })
+    )
+    LIST_DATA$gene_info <- LD
+    reactive_values$Apply_Cluster_Math <- ApplyMath(
+      LIST_DATA,
+      input$myMath,
+      input$checkboxrgf,
+      input$checkboxrf,
+      input$numericnormbin
+    )
+    if (!is.null(reactive_values$Apply_Cluster_Math)) {
+      reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
+      Y_Axis_Cluster_numbers <-
+        MyXSetValues(reactive_values$Apply_Cluster_Math,
+                     input$sliderplotBinRange)
+      reactive_values$PlotCluster_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Cluster_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Cluster_Options,
+          Y_Axis_Cluster_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
+        )
+    }
      
     }
   })
   
   observeEvent(input$cluster3table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "3\nn = ", length(input$cluster3table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info))
+    oldname <- grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info), value = TRUE)
     if(newname != oldname){
     print("cluster3 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1575,13 +1643,47 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    LD <- LIST_DATA$gene_info
+    
+    sapply(names(LD), function(i)
+      sapply(names(LD[[i]]), function(j)
+        if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
+          LD[[i]][[j]][5] <<- input$pickerclusterfile
+        } else{
+          LD[[i]][[j]][5] <<- 0
+        })
+    )
+    LIST_DATA$gene_info <- LD
+    reactive_values$Apply_Cluster_Math <- ApplyMath(
+      LIST_DATA,
+      input$myMath,
+      input$checkboxrgf,
+      input$checkboxrf,
+      input$numericnormbin
+    )
+    if (!is.null(reactive_values$Apply_Cluster_Math)) {
+      reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
+      Y_Axis_Cluster_numbers <-
+        MyXSetValues(reactive_values$Apply_Cluster_Math,
+                     input$sliderplotBinRange)
+      reactive_values$PlotCluster_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Cluster_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Cluster_Options,
+          Y_Axis_Cluster_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
+        )
+    }
      
     }
   })
   
   observeEvent(input$cluster4table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "4\nn = ", length(input$cluster4table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info))
+    oldname <- grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info), value = TRUE)
     if(newname != oldname){
     print("cluster4 filter $use")
     LIST_DATA$STATE[2] <<- newname
@@ -1606,6 +1708,40 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    LD <- LIST_DATA$gene_info
+    
+    sapply(names(LD), function(i)
+      sapply(names(LD[[i]]), function(j)
+        if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
+          LD[[i]][[j]][5] <<- input$pickerclusterfile
+        } else{
+          LD[[i]][[j]][5] <<- 0
+        })
+    )
+    LIST_DATA$gene_info <- LD
+    reactive_values$Apply_Cluster_Math <- ApplyMath(
+      LIST_DATA,
+      input$myMath,
+      input$checkboxrgf,
+      input$checkboxrf,
+      input$numericnormbin
+    )
+    if (!is.null(reactive_values$Apply_Cluster_Math)) {
+      reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
+      Y_Axis_Cluster_numbers <-
+        MyXSetValues(reactive_values$Apply_Cluster_Math,
+                     input$sliderplotBinRange)
+      reactive_values$PlotCluster_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Cluster_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Cluster_Options,
+          Y_Axis_Cluster_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
+        )
+    }
      
     }
   })
@@ -1840,6 +1976,40 @@ server <- function(input, output, session) {
                     rownames = FALSE,
                     colnames = strtrim(newnames, 24),
                     options = list(searching = FALSE)))
+    }
+    LD <- LIST_DATA$gene_info
+    
+    sapply(names(LD), function(i)
+      sapply(names(LD[[i]]), function(j)
+        if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
+          LD[[i]][[j]][5] <<- input$pickerclusterfile
+        } else{
+          LD[[i]][[j]][5] <<- 0
+        })
+    )
+    LIST_DATA$gene_info <- LD
+    reactive_values$Apply_Cluster_Math <- ApplyMath(
+        LIST_DATA,
+        input$myMath,
+        input$checkboxrgf,
+        input$checkboxrf,
+        input$numericnormbin
+      )
+    if (!is.null(reactive_values$Apply_Cluster_Math)) {
+      reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
+      Y_Axis_Cluster_numbers <-
+        MyXSetValues(reactive_values$Apply_Cluster_Math,
+                     input$sliderplotBinRange)
+      reactive_values$PlotCluster_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Cluster_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Cluster_Options,
+          Y_Axis_Cluster_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
+        )
     }
     show("cluster1table")
     show("cluster2table")
@@ -2365,7 +2535,7 @@ ui <- dashboardPage(
                                   selectInput(
                                     inputId = "selectclusternumber",
                                     label = "Select number of clusters",
-                                    choices = c(4:1),
+                                    choices = c(4:2),
                                     selected = 4,
                                     width = "99%"
                                   )

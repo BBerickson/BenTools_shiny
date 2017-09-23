@@ -16,11 +16,10 @@ https://rstudio.github.io/DT/
 
 gene tools ... 
 
+review reactive print out (add missing) find error
+
 cluster ...
  
- make cluster reactive elements needed for ggplot
- make reactive PlotCluster_controller trigger when $use changes
- add plot cluster/group overview resluts
  test
  add usage
 
