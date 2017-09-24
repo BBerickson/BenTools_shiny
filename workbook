@@ -16,11 +16,13 @@ https://rstudio.github.io/DT/
 
 gene tools ... 
 
-review reactive print out (add missing) find error
+collaps DT box and don't fill out unless showen/action button
+same for plots
+...https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
+
 
 cluster ...
  
- test
  add usage
 
 cdp

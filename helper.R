@@ -570,7 +570,7 @@ SortTop <-
       list_data$gene_info[[old_name]] <- NULL
     }
     setProgress(lc + 2, detail = "building list")
-    nick_name <- strtrim(gsub("(.{30})", "\\1... ", paste0("Sort\nn = ", n_distinct(outlist$gene))),33)
+    nick_name <- strtrim(gsub("(.{30})", "\\1... ", paste0("Sort\nn = ", n_distinct(outlist$gene), "-", list_name)),33)
     list_data$gene_file[[nick_name]]$full <- outlist
     list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
     list_data$gene_file[[nick_name]]$info <-
@@ -843,8 +843,7 @@ FindClusters <- function(list_data,
                          list_name,
                          clusterfile,
                          start_bin,
-                         end_bin,
-                         num) {
+                         end_bin) {
   if (clusterfile == "") {
     return(NULL)
   }

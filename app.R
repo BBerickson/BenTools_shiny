@@ -21,6 +21,7 @@ server <- function(input, output, session) {
   # Globals and reacive values ----
   
   reactive_values <- reactiveValues(
+    pickerfile_controler = "",
     Y_Axis_Lable = NULL,
     Y_Axis_numbers = NULL,
     Lines_Lables_List = NULL,
@@ -576,12 +577,12 @@ server <- function(input, output, session) {
   })
   
   # reactive picker watcher (watches everything) ----
-  observeEvent(reactiveValuesToList(input)[gsub("\nn = ", "-bensspace-", names(LIST_DATA$gene_info))],
+  observeEvent(reactiveValuesToList(input)[gsub(" ", "-bensspace2-", gsub("\n", "-bensspace1-", names(LIST_DATA$gene_info)))],
                ignoreNULL = FALSE,
                ignoreInit = TRUE,
                {
                  reactive_values$picker <-
-                   reactiveValuesToList(input)[gsub("\nn = ", "-bensspace-", names(LIST_DATA$gene_info))]
+                   reactiveValuesToList(input)[gsub(" ", "-bensspace2-", gsub("\n", "-bensspace1-", names(LIST_DATA$gene_info)))]
                  
                  
                })
@@ -603,7 +604,7 @@ server <- function(input, output, session) {
                    checkboxonoff <- list()
                    for (i in names(ttt)) {
                      for (tt in ttt[i]) {
-                       selectgenelistonoff <- gsub("-bensspace-", "\nn = ", i)
+                       selectgenelistonoff <- gsub("-bensspace2-", " ",gsub("-bensspace1-", "\n", i))
                        checkboxonoff[[selectgenelistonoff]] <-
                          c(checkboxonoff[[selectgenelistonoff]], tt)
                      }
@@ -919,19 +920,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # sort tool picker control ----
-  observeEvent(input$selectsortfile, ignoreInit = TRUE, {
-    print("sort picker update")
-    updatePickerInput(
-      session,
-      "pickersortfile",
-      choices = names(LIST_DATA$table_file),
-      choicesOpt = list(style = paste("color", c(
-        sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
-      ), sep = ":"))
-    )
-  })
-  
   # update plot picker ----
   observeEvent(reactive_values$Picker_controler, ignoreNULL = FALSE, ignoreInit = TRUE,{
     print("plot pickers update")
@@ -941,7 +929,7 @@ server <- function(input, output, session) {
         pickerlist[[i]] <-
           list(
             pickerInput(
-              inputId = gsub("\nn = ", "-bensspace-", i),
+              inputId = gsub(" ", "-bensspace2-", gsub("\n", "-bensspace1-", i)),
               label = i,
               width = "99%",
               choices = names(LIST_DATA$table_file),
@@ -993,10 +981,24 @@ server <- function(input, output, session) {
      
   })
   
+  # sort tool picker control ----
+  observeEvent(input$selectsortfile, ignoreInit = TRUE, {
+    print("sort picker update")
+    updatePickerInput(
+      session,
+      "pickersortfile",
+      choices = names(LIST_DATA$table_file),
+      selected = reactive_values$pickerfile_controler,
+      choicesOpt = list(style = paste("color", c(
+        sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
+      ), sep = ":"))
+    )
+    reactive_values$pickerfile_controler <- ""
+  })
+  
   # sort tool picker enable/disable ----
   observeEvent(input$pickersortfile, ignoreNULL = FALSE, ignoreInit = TRUE,{
-    if (!is.null(input$pickersortfile)) {
-    } else {
+    if (input$pickersortfile != "") {
       hide('sorttable')
     }
   })
@@ -1120,35 +1122,40 @@ server <- function(input, output, session) {
                     colnames = strtrim(newnames, 24),
                     options = list(searching = FALSE))
     }
-    
     output$sorttable <- DT::renderDataTable(dt)
     show('sorttable')
   })
   
   # sort tool gene list $use ----
   observeEvent(input$sorttable_rows_all, ignoreInit = TRUE, {
-    ol <- input$selectsortfile
-    newname <- strtrim(gsub("(.{30})", "\\1... ", paste0(sub("([0-9]+)", length(input$sorttable_rows_all), LIST_DATA$STATE[2]), "-", ol)), 33)
-    print(newname)
-    print(LIST_DATA$STATE[2])
-    if(newname != LIST_DATA$STATE[2]){
+    newname <- strtrim(gsub("(.{30})", "\\1... ", paste0(sub("([0-9]+)", length(input$sorttable_rows_all), LIST_DATA$STATE[2]))), 33)
+    oldname <- grep("Sort\nn =", names(LIST_DATA$gene_file))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("sort filter $use")
-    oldname <- grep("Sort\nn =", names(LIST_DATA$gene_info))
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$sorttable_rows_all])
+    }
+    print("sort $use picker")
     glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
     updateSelectInput(
       session,
       "selectgenelistoptions",
-      choices = names(LIST_DATA$gene_info),
+      choices = names(LIST_DATA$gene_file),
       selected = glo
     )
+    ol <- input$selectsortfile
     if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
+      ol <- newname
+      reactive_values$pickerfile_controler <- input$pickersortfile
+    }else {
+      reactive_values$pickerfile_controler <- ""
     }
     updateSelectInput(
       session,
@@ -1156,18 +1163,19 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-     
-    }
   })
   
   # ratio tool picker control ----
   observeEvent(input$selectratiofile, ignoreInit = TRUE, {
     print("ratio picker update")
+    if(reactive_values$pickerfile_controler[1] == ""){
+      reactive_values$pickerfile_controler <- c("", "")
+    }
     updatePickerInput(
       session,
       "pickerratio1file",
       choices = names(LIST_DATA$table_file),
-      selected = "",
+      selected = reactive_values$pickerfile_controler[1],
       choicesOpt = list(style = paste("color", c(
         sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
       ), sep = ":"))
@@ -1176,11 +1184,12 @@ server <- function(input, output, session) {
       session,
       "pickerratio2file",
       choices = names(LIST_DATA$table_file),
-      selected = "",
+      selected = reactive_values$pickerfile_controler[2],
       choicesOpt = list(style = paste("color", c(
         sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
       ), sep = ":"))
     )
+    reactive_values$pickerfile_controler <- ""
   })
   
   # ratio tool picker enable/disable ----
@@ -1210,15 +1219,19 @@ server <- function(input, output, session) {
   # ratio tool gene lists $use ----
   observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, {
     newname <- paste("Ratio_Up_file1\nn =", length(input$ratio1table_rows_all))
-    oldname <- grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info), value = TRUE)
-    if(newname != oldname){
+    oldname <- grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("ratio1 filter $use")
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio1table_rows_all])
+    }
     glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
     updateSelectInput(
       session,
       "selectgenelistoptions",
@@ -1227,7 +1240,10 @@ server <- function(input, output, session) {
     )
     ol <- input$selectratiofile
     if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
+      ol <- newname
+      reactive_values$pickerfile_controler <- c(input$pickerratio1file, input$pickerratio2file)
+    }else {
+      reactive_values$pickerfile_controler <- ""
     }
     updateSelectInput(
       session,
@@ -1235,22 +1251,23 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-     
-    }
   })
   
   observeEvent(input$ratio2table_rows_all, ignoreInit = TRUE, {
-    newname <- paste("Ratio_Up_file2\nn =", length(input$ratio1table_rows_all))
-    oldname <- grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info), value = TRUE)
-    if(newname != oldname){
+    newname <- paste("Ratio_Up_file2\nn =", length(input$ratio2table_rows_all))
+    oldname <- grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("ratio2 filter $use")
-    
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio2table_rows_all])
+    }
     glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
     updateSelectInput(
       session,
       "selectgenelistoptions",
@@ -1258,7 +1275,10 @@ server <- function(input, output, session) {
       selected = glo)
     ol <- input$selectratiofile
     if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
+      ol <- newname
+      reactive_values$pickerfile_controler <- c(input$pickerratio1file, input$pickerratio2file)
+    }else {
+      reactive_values$pickerfile_controler <- ""
     }
     updateSelectInput(
       session,
@@ -1266,21 +1286,23 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-     
-    }
   })
   
   observeEvent(input$ratio3table_rows_all, ignoreInit = TRUE, {
     newname <-  paste("Ratio_No_Diff\nn =", length(input$ratio3table_rows_all))
-    oldname <- grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info), value = TRUE)
-    if(newname != oldname){
+    oldname <- grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("no ratio filter $use")
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio3table_rows_all])
+    }
     glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
     updateSelectInput(
       session,
       "selectgenelistoptions",
@@ -1288,7 +1310,10 @@ server <- function(input, output, session) {
       selected = glo)
     ol <- input$selectratiofile
     if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
+      ol <- newname
+      reactive_values$pickerfile_controler <- c(input$pickerratio1file, input$pickerratio2file)
+    }else {
+      reactive_values$pickerfile_controler <- ""
     }
     updateSelectInput(
       session,
@@ -1296,8 +1321,6 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
-     
-    }
   })
   
   # Ratio tool action ----
@@ -1466,53 +1489,39 @@ server <- function(input, output, session) {
       session,
       "pickerclusterfile",
       choices = names(LIST_DATA$table_file),
+      selected = reactive_values$pickerfile_controler,
       choicesOpt = list(style = paste("color", c(
         sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
       ), sep = ":"))
     )
+    reactive_values$pickerfile_controler <- ""
   })
   
   # cluster tool picker enable/disable ----
   observeEvent(input$pickerclusterfile, ignoreInit = TRUE,
                ignoreNULL = FALSE,
                {
-                 if (!is.null(input$pickerclusterfile)) {
+                 if (input$pickerclusterfile != "") {
                  } else {
                    hide("cluster1table")
                    hide("cluster2table")
                    hide("cluster3table")
                    hide("cluster4table")
+                   reactive_values$clustergroups <- NULL
                  }
                })
   
   # cluster tool gene lists $use ----
   observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "1\nn = ", length(input$cluster1table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info), value = TRUE)
-    if(newname != oldname){
+    oldname <- grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("cluster1 filter $use")
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster1table_rows_all])
-    glo <- input$selectgenelistoptions
-    updateSelectInput(
-      session,
-      "selectgenelistoptions",
-      choices = names(LIST_DATA$gene_info),
-      selected = glo
-      )
-    ol <- input$selectclusterfile
-    if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
-    }
-    updateSelectInput(
-      session,
-      "selectclusterfile",
-      choices = names(LIST_DATA$gene_file),
-      selected = ol
-    )
     LD <- LIST_DATA$gene_info
     
     sapply(names(LD), function(i)
@@ -1548,38 +1557,42 @@ server <- function(input, output, session) {
         )
     }
     }
-    
+    glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = glo
+    )
+    ol <- input$selectclusterfile
+    if(!ol %in% names(LIST_DATA$gene_file)){
+      ol <- newname
+      reactive_values$pickerfile_controler <- input$pickerclusterfile
+    }else {
+      reactive_values$pickerfile_controler <- ""
+    }
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
   })
   
   observeEvent(input$cluster2table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "2\nn = ", length(input$cluster2table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info), value = TRUE)
-    if(newname != oldname){
+    oldname <- grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("cluster2 filter $use")
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster2table_rows_all])
-    glo <- input$selectgenelistoptions
-    updateSelectInput(
-      session,
-      "selectgenelistoptions",
-      choices = names(LIST_DATA$gene_info),
-      selected = glo
-    )
-    ol <- input$selectclusterfile
-    if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
-    }
-    updateSelectInput(
-      session,
-      "selectclusterfile",
-      choices = names(LIST_DATA$gene_file),
-      selected = ol
-    )
     LD <- LIST_DATA$gene_info
-    
     sapply(names(LD), function(i)
       sapply(names(LD[[i]]), function(j)
         if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
@@ -1612,39 +1625,43 @@ server <- function(input, output, session) {
           reactive_values$Y_Axis_Lable
         )
     }
-     
     }
+    glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = glo
+    )
+    ol <- input$selectclusterfile
+    if(!ol %in% names(LIST_DATA$gene_file)){
+      ol <- newname
+      reactive_values$pickerfile_controler <- input$pickerclusterfile
+    }else {
+      reactive_values$pickerfile_controler <- ""
+    }
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
   })
   
   observeEvent(input$cluster3table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "3\nn = ", length(input$cluster3table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info), value = TRUE)
-    if(newname != oldname){
+    oldname <- grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("cluster3 filter $use")
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster3table_rows_all])
-    glo <- input$selectgenelistoptions
-    updateSelectInput(
-      session,
-      "selectgenelistoptions",
-      choices = names(LIST_DATA$gene_info),
-      selected = glo
-    )
-    ol <- input$selectclusterfile
-    if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
-    }
-    updateSelectInput(
-      session,
-      "selectclusterfile",
-      choices = names(LIST_DATA$gene_file),
-      selected = ol
-    )
     LD <- LIST_DATA$gene_info
-    
     sapply(names(LD), function(i)
       sapply(names(LD[[i]]), function(j)
         if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
@@ -1677,37 +1694,42 @@ server <- function(input, output, session) {
           reactive_values$Y_Axis_Lable
         )
     }
-     
     }
+    glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = glo
+    )
+    ol <- input$selectclusterfile
+    if(!ol %in% names(LIST_DATA$gene_file)){
+      ol <- newname
+      reactive_values$pickerfile_controler <- input$pickerclusterfile
+    }else {
+      reactive_values$pickerfile_controler <- ""
+    }
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
   })
   
   observeEvent(input$cluster4table_rows_all, ignoreInit = TRUE, {
     newname <-  paste0(reactive_values$clustergroups, "4\nn = ", length(input$cluster4table_rows_all))
-    oldname <- grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info), value = TRUE)
-    if(newname != oldname){
+    oldname <- grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
     print("cluster4 filter $use")
     LIST_DATA$STATE[2] <<- newname
     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster4table_rows_all])
-    glo <- input$selectgenelistoptions
-    updateSelectInput(
-      session,
-      "selectgenelistoptions",
-      choices = names(LIST_DATA$gene_info),
-      selected = glo
-    )
-    ol <- input$selectclusterfile
-    if(!ol %in% names(LIST_DATA$gene_file)){
-      ol <- names(LIST_DATA$gene_file)[1]
-    }
-    updateSelectInput(
-      session,
-      "selectclusterfile",
-      choices = names(LIST_DATA$gene_file),
-      selected = ol
-    )
     LD <- LIST_DATA$gene_info
     
     sapply(names(LD), function(i)
@@ -1742,13 +1764,39 @@ server <- function(input, output, session) {
           reactive_values$Y_Axis_Lable
         )
     }
-     
     }
+    glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = glo
+    )
+    ol <- input$selectclusterfile
+    if(!ol %in% names(LIST_DATA$gene_file)){
+      ol <- newname
+      reactive_values$pickerfile_controler <- input$pickerclusterfile
+    }else {
+      reactive_values$pickerfile_controler <- ""
+    }
+    updateSelectInput(
+      session,
+      "selectclusterfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
   })
   
   # Cluster tool action ----
   observeEvent(input$actionclustertool, ignoreInit = TRUE, {
     print("cluster tool action")
+    reactive_values$clustergroups <- NULL
+    if(n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4){
+      return()
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0, {
@@ -1758,8 +1806,7 @@ server <- function(input, output, session) {
                        input$selectclusterfile,
                        input$pickerclusterfile,
                        input$sliderbincluster[1],
-                       input$sliderbincluster[2],
-                       input$selectclusternumber
+                       input$sliderbincluster[2]
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -1773,6 +1820,10 @@ server <- function(input, output, session) {
   # Group tool action ----
   observeEvent(input$actiongroupstool, ignoreInit = TRUE, {
     print("group tool action")
+    reactive_values$clustergroups <- NULL
+    if(n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4){
+      return()
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0, {
@@ -1797,6 +1848,9 @@ server <- function(input, output, session) {
   # Cluster tool numbers ----
   observeEvent(c(input$selectclusternumber, reactive_values$clustergroups), ignoreInit = TRUE, {
     print("cluster tool number")
+    if(is.null(reactive_values$clustergroups)){
+      return()
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0, {
@@ -1978,16 +2032,16 @@ server <- function(input, output, session) {
                     options = list(searching = FALSE)))
     }
     LD <- LIST_DATA$gene_info
-    
-    sapply(names(LD), function(i)
-      sapply(names(LD[[i]]), function(j)
-        if(i %in% grep(reactive_values$clustergroups, names(LD),value = T) & j == input$pickerclusterfile){
-          LD[[i]][[j]][5] <<- input$pickerclusterfile
+
+    sapply(names(LIST_DATA$gene_info), function(i)
+      sapply(names(LIST_DATA$gene_info[[i]]), function(j)
+        if(i %in% grep(reactive_values$clustergroups, names(LIST_DATA$gene_info),value = T) & j == input$pickerclusterfile){
+          LIST_DATA$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
         } else{
-          LD[[i]][[j]][5] <<- 0
+          LIST_DATA$gene_info[[i]][[j]][5] <<- 0
         })
     )
-    LIST_DATA$gene_info <- LD
+    
     reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
         input$myMath,
@@ -2011,6 +2065,7 @@ server <- function(input, output, session) {
           reactive_values$Y_Axis_Lable
         )
     }
+    LIST_DATA$gene_info <<- LD
     show("cluster1table")
     show("cluster2table")
     show("cluster3table")
