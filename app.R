@@ -998,7 +998,9 @@ server <- function(input, output, session) {
   
   # sort tool picker enable/disable ----
   observeEvent(input$pickersortfile, ignoreNULL = FALSE, ignoreInit = TRUE,{
-    if (input$pickersortfile != "") {
+    if(is.null(input$pickersortfile)){
+      hide('sorttable')
+    } else if (input$pickersortfile[1] == "") {
       hide('sorttable')
     }
   })

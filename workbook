@@ -13,13 +13,12 @@ shinyWidgetsGallery()
 https://rstudio.github.io/DT/options.html
 https://rstudio.github.io/DT/
 
+https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
 gene tools ... 
 
-collaps DT box and don't fill out unless showen/action button
-same for plots
-...https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
-
+collaps DT box and don't fill out unless action button (hide and show)
+same for plots?
 
 cluster ...
  
