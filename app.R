@@ -85,6 +85,7 @@ server <- function(input, output, session) {
           max = LIST_DATA$x_plot_range[2],
           value = LIST_DATA$x_plot_range
         )
+        hide('actionsortdatatable')
       }
     }
     
@@ -134,6 +135,7 @@ server <- function(input, output, session) {
           max = LIST_DATA$x_plot_range[2],
           value = c(0,0)
         )
+        hide('actionratiodatatable')
       }
     }
     
@@ -167,6 +169,8 @@ server <- function(input, output, session) {
           max = LIST_DATA$x_plot_range[2],
           value = LIST_DATA$x_plot_range
         )
+        hide('actionclusterplot')
+        hide('actionclusterdatatable')
       }
     }
     
@@ -999,8 +1003,10 @@ server <- function(input, output, session) {
   # sort tool picker enable/disable ----
   observeEvent(input$pickersortfile, ignoreNULL = FALSE, ignoreInit = TRUE,{
     if(is.null(input$pickersortfile)){
+      show('actionsortdatatable')
       hide('sorttable')
     } else if (input$pickersortfile[1] == "") {
+      show('actionsortdatatable')
       hide('sorttable')
     }
   })
@@ -1008,6 +1014,7 @@ server <- function(input, output, session) {
   # sort tool action ----
   observeEvent(input$actionsorttool, ignoreInit = TRUE, {
     print("sort tool")
+    hide('actionsortdatatable')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -1024,9 +1031,40 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
+      show('actionsortdatatable')
     } else {
       return()
     }
+  })
+  
+  # sort quick tool action ----
+  observeEvent(input$actionsortquick, ignoreInit = TRUE, {
+    print("quick sort")
+    hide('actionsortdatatable')
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {
+                   LD <- SortTop(
+                     LIST_DATA,
+                     input$selectsortfile,
+                     input$pickersortfile,
+                     input$slidersortbinrange[1],
+                     input$slidersortbinrange[2],
+                     input$slidersortpercent,
+                     "Quick%"
+                   )
+                 })
+    if (!is_empty(LD$table_file)) {
+      LIST_DATA <<- LD
+      show('actionsortdatatable')
+    } else {
+      return()
+    }
+  })
+  
+  # generate gene list ----
+  observeEvent(input$actionsortdatatable, ignoreInit = TRUE,{
     newnames <-
       gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full))
     if(any(grep("Sort", names(LIST_DATA$gene_info)) > 0)){
@@ -1063,68 +1101,7 @@ server <- function(input, output, session) {
                       options = list(searching = FALSE))
     }
     output$sorttable <- DT::renderDataTable(dt)
-    show('sorttable')
-  })
-  
-  # sort quick tool action ----
-  observeEvent(input$actionsortquick, ignoreInit = TRUE, {
-    print("quick sort")
-    withProgress(message = 'Calculation in progress',
-                 detail = 'This may take a while...',
-                 value = 0,
-                 {
-                   LD <- SortTop(
-                     LIST_DATA,
-                     input$selectsortfile,
-                     input$pickersortfile,
-                     input$slidersortbinrange[1],
-                     input$slidersortbinrange[2],
-                     input$slidersortpercent,
-                     "Quick%"
-                   )
-                 })
-    if (!is_empty(LD$table_file)) {
-      LIST_DATA <<- LD
-    } else {
-      return()
-    }
-    
-    newnames <-
-      gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full))
-    if(any(grep("Sort", names(LIST_DATA$gene_info)) > 0)){
-    dt <- datatable(
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
-      rownames = FALSE,
-      colnames = strtrim(newnames, 24),
-      class = 'cell-border stripe compact',
-      filter = 'top',
-      caption = 'rank percent',
-      options = list(
-        pageLength = 15,
-        scrollX = TRUE,
-        scrollY = TRUE,
-        autoWidth = TRUE,
-        columnDefs = list(
-          list(className = 'dt-center ', targets = "_all"),
-          list(
-            targets = 0,
-            render = JS(
-              "function(data, type, row, meta) {",
-              "return type === 'display' && data.length > 24 ?",
-              "'<span title=\"' + data + '\">' + data.substr(0, 19) + '...</span>' : data;",
-              "}"
-            )
-          )
-        )
-      )
-    ) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
-    } else {
-      dt <- datatable(LIST_DATA$gene_file[[1]]$empty, 
-                    rownames = FALSE,
-                    colnames = strtrim(newnames, 24),
-                    options = list(searching = FALSE))
-    }
-    output$sorttable <- DT::renderDataTable(dt)
+    hide('actionsortdatatable')
     show('sorttable')
   })
   
@@ -1200,6 +1177,7 @@ server <- function(input, output, session) {
                {
                  if (input$pickerratio1file != "" | input$pickerratio2file != "") {
                  } else {
+                   show('actionratiodatatable')
                    hide('ratio1table')
                    hide('ratio2table')
                    hide('ratio3table')
@@ -1328,6 +1306,9 @@ server <- function(input, output, session) {
   # Ratio tool action ----
   observeEvent(input$actionratiotool, ignoreInit = TRUE, {
     print("ratio tool action")
+    hide('ratio1table')
+    hide('ratio2table')
+    hide('ratio3table')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -1347,9 +1328,14 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
+      show('actionratiodatatable')
     } else {
       return()
     }
+  })
+  
+  observeEvent(input$actionratiodatatable, ignoreInit = TRUE,{
+    hide('actionratiodatatable')
     newnames1 <- gsub("(.{20})", "\\1... ", input$pickerratio1file)
     if(any(grep("Ratio_Up_file1\nn =",names(LIST_DATA$gene_info))>0)){
       mytab <- "Up Fold Change file 1"
@@ -1383,6 +1369,7 @@ server <- function(input, output, session) {
           )
         )
       )
+    show('ratio1table')
     } else {
       output$ratio1table <-
         DT::renderDataTable(
@@ -1424,6 +1411,7 @@ server <- function(input, output, session) {
           )
         )
       )
+    show('ratio2table')
     } else {
       output$ratio2table <-
         DT::renderDataTable(
@@ -1467,6 +1455,7 @@ server <- function(input, output, session) {
           )
         )
       )
+    show('ratio3table')
   } else {
     output$ratio3table <-
       DT::renderDataTable(
@@ -1478,9 +1467,6 @@ server <- function(input, output, session) {
       mytab <- "Up Fold Change file 1"
     }
   }
-    show('ratio1table')
-    show('ratio2table')
-    show('ratio3table')
     updateTabItems(session, "ratiotooltab", mytab)
   })
   
@@ -1509,6 +1495,8 @@ server <- function(input, output, session) {
                    hide("cluster2table")
                    hide("cluster3table")
                    hide("cluster4table")
+                   show('actionclusterdatatable')
+                   show('actionclusterplot')
                    reactive_values$clustergroups <- NULL
                  }
                })
@@ -1795,6 +1783,11 @@ server <- function(input, output, session) {
   # Cluster tool action ----
   observeEvent(input$actionclustertool, ignoreInit = TRUE, {
     print("cluster tool action")
+    hide('plotcluster')
+    hide("cluster1table")
+    hide("cluster2table")
+    hide("cluster3table")
+    hide("cluster4table")
     reactive_values$clustergroups <- NULL
     if(n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4){
       return()
@@ -1822,6 +1815,11 @@ server <- function(input, output, session) {
   # Group tool action ----
   observeEvent(input$actiongroupstool, ignoreInit = TRUE, {
     print("group tool action")
+    hide('plotcluster')
+    hide("cluster1table")
+    hide("cluster2table")
+    hide("cluster3table")
+    hide("cluster4table")
     reactive_values$clustergroups <- NULL
     if(n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4){
       return()
@@ -1853,6 +1851,8 @@ server <- function(input, output, session) {
     if(is.null(reactive_values$clustergroups)){
       return()
     }
+    hide('actionclusterdatatable')
+    hide('actionclusterplot')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0, {
@@ -1869,9 +1869,15 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
+      show('actionclusterdatatable')
+      show('actionclusterplot')
     } else {
       return()
     }
+  })
+  
+  # Create and Show cluster data table ---
+  observeEvent(input$actionclusterdatatable, ignoreInit = TRUE, {
     updateTabItems(session, "clustertooltab", "Cluster 1")
     newnames <- gsub("(.{20})", "\\1... ", input$pickerclusterfile)
     if(any(grep(paste0(reactive_values$clustergroups, "1\nn ="),names(LIST_DATA$gene_info))>0)){
@@ -1905,6 +1911,7 @@ server <- function(input, output, session) {
             )
           )
         )
+      show("cluster1table")
     } else {
       output$cluster1table <-
         DT::renderDataTable(
@@ -1945,6 +1952,7 @@ server <- function(input, output, session) {
             )
           )
         )
+      show("cluster2table")
     } else {
       output$cluster2table <-
         DT::renderDataTable(
@@ -1985,6 +1993,7 @@ server <- function(input, output, session) {
             )
           )
         )
+      show("cluster3table")
     } else {
       output$cluster3table <-
         DT::renderDataTable(
@@ -2025,6 +2034,7 @@ server <- function(input, output, session) {
             )
           )
         )
+      show("cluster4table")
     } else {
       output$cluster4table <-
         DT::renderDataTable(
@@ -2033,8 +2043,13 @@ server <- function(input, output, session) {
                     colnames = strtrim(newnames, 24),
                     options = list(searching = FALSE)))
     }
+    hide('actionclusterdatatable')
+  })
+  
+  # creat and show cluster plot
+  observeEvent(input$actionclusterplot, ignoreInit = TRUE,{
+    show('plotcluster')
     LD <- LIST_DATA$gene_info
-
     sapply(names(LIST_DATA$gene_info), function(i)
       sapply(names(LIST_DATA$gene_info[[i]]), function(j)
         if(i %in% grep(reactive_values$clustergroups, names(LIST_DATA$gene_info),value = T) & j == input$pickerclusterfile){
@@ -2068,10 +2083,7 @@ server <- function(input, output, session) {
         )
     }
     LIST_DATA$gene_info <<- LD
-    show("cluster1table")
-    show("cluster2table")
-    show("cluster3table")
-    show("cluster4table")
+    hide('actionclusterplot')
   })
   
   # hides sidebar on start up
@@ -2507,6 +2519,7 @@ ui <- dashboardPage(
                                 status = "primary",
                                 solidHeader = T,
                                 width = 12,
+                                actionButton("actionsortdatatable", "Show gene list"),
                                 DT::dataTableOutput('sorttable')
                               )
                             )
@@ -2564,6 +2577,7 @@ ui <- dashboardPage(
                                 status = "primary",
                                 solidHeader = T,
                                 width = 12,
+                                actionButton("actionratiodatatable", "Show gene list(s)"),
                                 tabBox(
                                   id = "ratiotooltab",
                                   width = 12,
@@ -2615,6 +2629,7 @@ ui <- dashboardPage(
                             ),
                             box(title = "Cluster Plot", status = "primary", solidHeader = TRUE,
                                 width = 12, collapsible = TRUE, collapsed = TRUE,
+                                actionButton("actionclusterplot", "plot"),
                                 withSpinner(plotOutput("plotcluster"), type = 4)),
                             div(
                               id = "hideclustertable",
@@ -2623,6 +2638,7 @@ ui <- dashboardPage(
                                 status = "primary",
                                 solidHeader = T,
                                 width = 12,
+                                actionButton("actionclusterdatatable", "Show gene list(s)"),
                                 tabBox(
                                   id = "clustertooltab",
                                   width = 12,

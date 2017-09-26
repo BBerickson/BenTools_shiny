@@ -66,7 +66,8 @@ Sort tool
     search data table
     sort on each file
     additional filter on rank % (0 results don't update)
-    table results are added to gene lists
+    results are added to gene lists
+    action button builds datatable and shows
     
 Ratio tool
   
@@ -78,21 +79,25 @@ Ratio tool
   returns 3 data tables with fold cut off for each file and non fold cut off 
     search and sort data table
     additional filter on fold cut off (0 results don't update)
-    table results are added to gene lists
+    results are added to gene lists
+    
+  action button builds datatable and shows
   
 cluster tool
   
-  select gene list and  1 file for that list
+  select gene list and 1 file for that list (must have at least 4 genes)
   select bin range(s) to work on
-  select fold number of clusters/groups 1-4
+  select fold number of clusters/groups 1-4 
   
   preforms hierarchical clustering using ward method
     search and sort data table
     additional filter on fold cut off (0 results don't update)
-    table results are added to gene lists 
+    results are added to gene lists 
   
   preforms grouping ...
     search and sort data table
     additional filter on fold cut off (0 results don't update)
-    table results are added to gene lists 
-     
+    results are added to gene lists 
+    
+    action button builds datatable and shows
+    action button shows plot results for selected file

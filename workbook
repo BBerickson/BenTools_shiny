@@ -17,12 +17,7 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 gene tools ... 
 
-collaps DT box and don't fill out unless action button (hide and show)
-same for plots?
-
 cluster ...
- 
- add usage
 
 cdp
   add tab and 
