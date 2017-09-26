@@ -957,6 +957,7 @@ server <- function(input, output, session) {
   observeEvent(input$actionremovefile, ignoreInit = TRUE,{
     print("remove file")
     LIST_DATA <<- RemoveFile(LIST_DATA, input$radiodataoption) 
+    if (LIST_DATA$STATE[1] > 0) {
     ff <- names(LIST_DATA$table_file)
     updateAwesomeRadio(session,
                        "radiodataoption",
@@ -968,6 +969,17 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_info),
       selected = LIST_DATA$STATE[2]
     )
+    } else{
+      # updateAwesomeRadio(session,
+      #                    "radiodataoption",
+      #                    choices = 'common')
+      # updateSelectInput(
+      #   session,
+      #   "selectgenelistoptions",
+      #   choices = 'Load Data File'
+      # )
+      shinyjs::addClass(selector = "body", class = "sidebar-collapse")
+    }
     
     reactive_values$Picker_controler <- names(LIST_DATA$table_file)
   })

@@ -159,7 +159,6 @@ LoadTableFile <-
         count_fields(
           file_path[x],
           n_max = 1,
-          skip = 1,
           tokenizer = tokenizer_tsv()
         )
       
@@ -172,7 +171,20 @@ LoadTableFile <-
             cols(gene = col_character())
           ))
       } else {
-        if (num_bins == 6) {
+        if (num_bins > 6){
+          tablefile <- suppressMessages(read_tsv (file_path[x], comment = "#",
+                                                  col_names = c("gene", 1:(num_bins - 1)),
+                                                  skip = 1) %>% 
+                                          gather(., bin, score, 2:(num_bins))) %>% 
+            select(gene, bin, score) %>%
+            mutate(set = legend_nickname, 
+                   bin = as.numeric(bin), 
+                   score = as.numeric(score)) %>%
+            na_if(Inf)%>%
+            replace_na(list(score = 0))
+          
+        } else {
+          if (num_bins == 6) {
           col_names <- c("chr", "start", "end", "gene", "bin", "score")
         } else if (num_bins == 3) {
           col_names <- c("gene", "bin", "score")
@@ -195,7 +207,19 @@ LoadTableFile <-
           select(gene, bin, score) %>%
           mutate(set = legend_nickname) %>% na_if(Inf) %>%
           replace_na(list(score = 0))
+        }
         num_bins <- n_distinct(tablefile$bin)
+        all_empty_bin <- group_by(tablefile, bin) %>% summarise(mytest = sum(score) == 0) %>% pull(mytest)
+        if(any(all_empty_bin)){
+          showModal(
+            modalDialog(
+              title = "Information message",
+              "!!!! All scores for at least one bin are empty !!!!",
+              size = "s",
+              easyClose = TRUE
+            )
+          )
+        }
         if (file_count > 0 & num_bins != list_data$x_plot_range[2]) {
           showModal(
             modalDialog(
@@ -488,12 +512,9 @@ RemoveFile <- function(list_data, file_name){
     })
     list_data$table_file[[file_name]] <- NULL
     list_data$gene_file[[1]]$use <- distinct(list_data$table_file[[1]], gene)
-  }
-  if (length(names(list_data$table_file)) > 1) {
     sapply(list_data$table_file[-1], function(i) {
       list_data$gene_file[[1]]$use <<- semi_join(list_data$gene_file[[1]]$use, i, by="gene")
       })
-  }
   my_name <- paste("common\nn =", n_distinct(list_data$gene_file[[1]]$use$gene))
   names(list_data$gene_file)[1] <- my_name
   names(list_data$gene_info)[1] <- my_name
@@ -510,6 +531,16 @@ RemoveFile <- function(list_data, file_name){
     list_data$STATE[2] <- names(list_data$gene_file)[1]
   } else{
     list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
+  }
+  } else {
+    list_data <- list(
+      table_file = list(),
+      gene_file = list(),
+      gene_info = list(),
+      clust = list(),
+      x_plot_range = c(0, 0),
+      STATE = c(0, "common", 0, 0) 
+      )
   }
   list_data
 }
@@ -1125,45 +1156,13 @@ LinesLablesList <- function(body1bin = 20,
       use_plot_breaks <-
         seq(1,
             by = everybin,
-            length.out = (totbins / everybin))
+            length.out = (totbins / everybin)+1)
       use_plot_breaks_labels <-
-        c(1, rev(seq(
-          totbins,
-          by = -everybin,
-          length.out = (totbins / everybin)
-        )))
-      use_virtical_line <- c(NA, NA, NA, NA) + .5
-    } else{
-      LOC1 <-
-        rev(seq(
-          tssbin + 1,
-          by = -everybin,
-          length.out = (tssbin / everybin) + 1
-        ))
-      LOC1[near(LOC1, tssbin, tol = everybin - 1)] <- tssbin + .5
-      LOC2 <-
-        seq(tesbin,
+        seq(1,
             by = everybin,
-            length.out = (tesbin / everybin) + 1)
-      LOC2[near(LOC2, tesbin, tol = everybin - 1)] <- tesbin + .5
-      LOCname1 <-
-        rev(seq(
-          binbp,
-          by = -everybp,
-          length.out = (tssbin / everybin) + 1
-        ))
-      LOCname1[near(LOC1, tssbin, tol = everybin - 1)] <- "TSS"
-      LOCname2 <-
-        abs(seq(
-          -binbp,
-          by = everybp,
-          length.out = (tesbin / everybin) + 1
-        ))
-      LOCname2[near(LOC2, tesbin, tol = everybin - 1)] <- "TES"
-      use_plot_breaks <- c(LOC1, LOC2)
-      use_plot_breaks_labels <- c(LOCname1, LOCname2)
-      use_virtical_line <- c(tssbin, tesbin, NA, NA) + .5
-    }
+            length.out = (totbins / everybin)+1)
+      use_virtical_line <- c(NA, NA, NA, NA) + .5
+    } 
   } else {
     if (mytype == "543") {
       use_plot_breaks <- c(tssbin, tesbin, body1bin, body2bin) + .5
@@ -1182,11 +1181,7 @@ LinesLablesList <- function(body1bin = 20,
       use_plot_breaks <- .5
       use_plot_breaks_labels <- "none"
       use_virtical_line <- c(NA, NA, NA, NA) + .5
-    } else{
-      use_plot_breaks <- c(tssbin, tesbin) + .5
-      use_plot_breaks_labels <- c("TSS", "TES")
-      use_virtical_line <- c(tssbin, tesbin, NA, NA) + .5
-    }
+    } 
   }
   
   use_virtical_line_color <- c("green", "red", "black", "black")
@@ -1204,7 +1199,6 @@ LinesLablesList <- function(body1bin = 20,
   use_virtical_line_color <-
     use_virtical_line_color[!is.na(use_virtical_line)]
   use_virtical_line <- use_virtical_line[!is.na(use_virtical_line)]
-  
   list(
     myline = virtical_line_data_frame <- data.frame(
       use_virtical_line,
@@ -1215,7 +1209,6 @@ LinesLablesList <- function(body1bin = 20,
     mybrakes = use_plot_breaks,
     mylables = use_plot_breaks_labels
   )
-  
 }
 
 # lines and labels preset helper
