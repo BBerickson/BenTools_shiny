@@ -20,12 +20,7 @@ gene tools ...
 cluster ...
 
 cdp
-  add tab and 
-  add  2 selector and 2 picker(multi) to sidebar
-  set up tab selector controls
-  add bin sliders 1-max and 1-max, cdf button
-  set up tab selector controls
-  add 2 tab DT and plot area
+  
   set up reactives ... filter updates genelist and plot
   create function and hookup
   test
