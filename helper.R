@@ -180,8 +180,7 @@ LoadTableFile <-
             mutate(set = legend_nickname, 
                    bin = as.numeric(bin), 
                    score = as.numeric(score)) %>%
-            na_if(Inf)%>%
-            replace_na(list(score = 0))
+            na_if(Inf)
           
         } else {
           if (num_bins == 6) {
@@ -520,6 +519,11 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
     if (color_safe == 0) {
       color_safe <- 1
     }
+    gene_names <- semi_join(list_data$gene_file[[1]]$use, new_gene_list, by = "gene")
+    my_name <- paste("common\nn =", n_distinct(gene_names$gene))
+    list_data$STATE[2] <- my_name
+    names(list_data$gene_file)[1] <- my_name
+    names(list_data$gene_info)[1] <- my_name
     color_select <- kListColorSet[color_safe]
   list_data$table_file[[legend_nickname]] <-
     transmute(
@@ -528,9 +532,9 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
       bin = bin,
       set = legend_nickname,
       score = score.x / score.y
-    )
-  # list_data$gene_file[[1]]$use
-  list_data$gene_info[[1]][[legend_nickname]] <-
+    ) %>% na_if(Inf) %>% replace_na(list(score = 0))
+  list_data$gene_file[[my_name]]$use
+  list_data$gene_info[[my_name]][[legend_nickname]] <-
     # don't change the order of postions
     tibble(
       set = legend_nickname,
@@ -741,16 +745,25 @@ CompareRatios <-
         list_data$gene_file[[list_name]]$use
       df <-
         semi_join(list_data$table_file[[j]], enesg, by = 'gene')
-      # find min value /2 to replace 0s
-      new_min_for_na <-
-        min(na_if(df$score, 0), na.rm = TRUE) / 2
-      # replace 0's with min/2
-      df <-
-        group_by(df, gene) %>%
-        summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                  sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
-        na_if(0) %>%
-        replace_na(list(sum1 = new_min_for_na, sum2 = new_min_for_na))
+      
+      if(nodivzero){
+        # find min value /2 to replace 0s
+        new_min_for_na <-
+          min(na_if(df$score, 0), na.rm = TRUE) / 2
+        df <-
+          group_by(df, gene) %>%
+          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+          na_if(0) %>%
+          replace_na(list(sum1 = new_min_for_na, sum2 = new_min_for_na))
+      } else {
+        df <-
+          group_by(df, gene) %>%
+          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T))
+          
+      }
+      
       
       lc <<- lc + 1
       if (start2_bin == 0 | end2_bin == 0) {
@@ -758,7 +771,8 @@ CompareRatios <-
         
       } else {
         outlist[[lc]] <<-
-          transmute(df, gene = gene, sum1 = sum1 / sum2)
+          transmute(df, gene = gene, sum1 = sum1 / sum2) %>%
+          na_if(Inf)
       }
       
       if (lc > 1) {
