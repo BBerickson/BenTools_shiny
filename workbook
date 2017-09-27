@@ -16,11 +16,6 @@ https://rstudio.github.io/DT/
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
 
-
-remove last file ... clean reset
-
-Norm file (gene by gene or mean/mean) remove genes bin == 0 or min/2
-
 gene tools ... 
 
 cluster ...

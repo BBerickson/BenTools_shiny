@@ -52,7 +52,20 @@ server <- function(input, output, session) {
       condition = (input$tabs == "clustertool" &
                      LIST_DATA$STATE[1] != 0)
     )
-    
+    if(input$tabs == "filenorm" & LIST_DATA$STATE[1] != 0){
+      updatePickerInput(
+        session,
+        "pickernumerator", choices = names(LIST_DATA$table_file),
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[1]], "[[", 4)
+        ), sep = ":")))
+      updatePickerInput(
+        session,
+        "pickerdenominator", choices = names(LIST_DATA$table_file),
+        choicesOpt = list(style = paste("color", c(
+          sapply(LIST_DATA$gene_info[[1]], "[[", 4)
+        ), sep = ":")))
+    }
     if (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectsortfile
       og <- input$pickersortfile
@@ -341,6 +354,9 @@ server <- function(input, output, session) {
   observeEvent(c(input$radiodataoption, input$selectgenelistoptions),
                ignoreInit = TRUE,
                {
+                 if(LIST_DATA$STATE[1] == 0){
+                   return()
+                 }
                  my_sel <- input$radiodataoption
                  my_list <- input$selectgenelistoptions
                  print("options update")
@@ -970,14 +986,14 @@ server <- function(input, output, session) {
       selected = LIST_DATA$STATE[2]
     )
     } else{
-      # updateAwesomeRadio(session,
-      #                    "radiodataoption",
-      #                    choices = 'common')
-      # updateSelectInput(
-      #   session,
-      #   "selectgenelistoptions",
-      #   choices = 'Load Data File'
-      # )
+      updateAwesomeRadio(session,
+                         "radiodataoption",
+                         choices = '')
+      updateSelectInput(
+        session,
+        "selectgenelistoptions",
+        choices = 'Load Data File'
+      )
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
     }
     
@@ -995,6 +1011,30 @@ server <- function(input, output, session) {
       selected = LIST_DATA$STATE[2]
     )
      
+  })
+  
+  # create norm file ----
+  observeEvent(input$actionnorm, ignoreInit = TRUE, {
+    LIST_DATA <<- MakeNormFile(LIST_DATA, input$pickernumerator, 
+                               input$pickerdenominator, input$checkboxnormmean,
+                               input$checkboxnormzero)
+    updatePickerInput(
+      session,
+      "pickernumerator", selected = "")
+    updatePickerInput(
+      session,
+      "pickerdenominator", selected = "")
+    ff <- names(LIST_DATA$table_file)
+    updateAwesomeRadio(session,
+                       "radiodataoption",
+                       choices = ff,
+                       selected = last(ff))
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = LIST_DATA$STATE[2]
+    )
   })
   
   # sort tool picker control ----
@@ -2109,6 +2149,7 @@ ui <- dashboardPage(
     sidebarMenu(
       id = "tabs",
       menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
+      menuItem("Norm data", tabName = "filenorm", icon = icon("files-o")),
       menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
       hidden(div(
         style = "padding-left: 15%;",
@@ -2212,7 +2253,7 @@ ui <- dashboardPage(
   ),
   dashboardBody(useShinyjs(),
                 tabItems(
-                  # load data tab
+                  # load data tab ----
                   tabItem(tabName = "loaddata",
                           fluidRow(
                             tags$style(
@@ -2324,8 +2365,34 @@ ui <- dashboardPage(
                               )
                             ))
                           )),
+                  # Norm file tab ----
+                  tabItem(tabName = "filenorm",
+                          
+                          box(title = "Select files for normalization",
+                            width = 12, status = "primary",
+                               solidHeader = T,
+                            div(
+                              style = "padding-left: 15%;",
+                              fluidRow(
+                            pickerInput("pickernumerator", label = "numerator",
+                                        width = "90%", choices = "Load data file",
+                                        multiple = F,
+                                        options = list(title = "Select first file")))),
+                            div(
+                              style = "padding-left: 15%;",
+                              fluidRow(
+                              pickerInput("pickerdenominator", label = "denominator",
+                                          width = "90%", choices = "Load data file",
+                                          multiple = F,
+                                          options = list(title = "Select second file")))),
+                            actionButton("actionnorm",label = "create norm file"),
+                            checkboxInput("checkboxnormmean", label = "gene by gene", value = TRUE),
+                            checkboxInput("checkboxnormzero", label = "denom 0 -> min/2", value = TRUE),
+                            helpText("if 0 in denominator is not converted gene will be removed from all gene lists")
+                            
+                          )),
                   
-                  # main plot tab
+                  # main plot tab ----
                   tabItem(tabName = "mainplot",
                           fluidRow(box(
                             width = 12, withSpinner(plotOutput("plot"), type = 4),
@@ -2480,7 +2547,7 @@ ui <- dashboardPage(
                               )
                             )
                           ))),
-                  # main sort tab
+                  # main sort tab ----
                   tabItem(tabName = "sorttool",
                           div(
                             id = "enablemainsort",
@@ -2537,7 +2604,7 @@ ui <- dashboardPage(
                             )
                           )
                           ),
-                  # main ratio tab
+                  # main ratio tab ----
                   tabItem(tabName = "ratiotool",
                           div(
                             id = "enablemainratio",
@@ -2603,7 +2670,7 @@ ui <- dashboardPage(
                               )
                             )
                           )),
-                  # main cluster tool tab
+                  # main cluster tool tab ----
                   tabItem(tabName = "clustertool",
                           div(
                             id = "enablemaincluster",

@@ -488,6 +488,91 @@ CheckBoxOnOff <- function(check_box, list_data) {
   list_data
 }
 
+# make normalized file ... devide one by the other
+MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
+  if (nom != "" && dnom != "") {
+    mynom <- list_data$table_file[[nom]]
+    mydom <- list_data$table_file[[dnom]]
+    myname <- "gene_by_gene"
+    
+    if(!gbyg){
+      myname <- "mean_norm"
+      mynom <- group_by(mynom, bin, set) %>% mutate(score=mean(score, na.rm = TRUE)) %>% ungroup()
+      mydom <- group_by(mydom, bin, set) %>% mutate(score=mean(score, na.rm = TRUE)) %>% ungroup()
+    }
+    if(nodivzero){
+      myname <- paste0(myname, "-0_min/2")
+    new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) %>%
+      na_if(0)
+    # find min value /2 to replace 0s
+    new_min_for_na <-
+      min(c(new_gene_list$score.x, new_gene_list$score.y), na.rm = TRUE) / 2
+    # replace 0's with min/2
+    new_gene_list <- replace_na(new_gene_list, list(score.y = new_min_for_na))
+    } else {
+      new_gene_list <-
+        inner_join(mynom, mydom,
+                   by = c("gene", "bin"))
+    }
+    legend_nickname <- paste0(nom, "/\n", dnom,":\n", myname)
+    color_safe <-
+      (length(list_data$table_file) + 1) %% length(kListColorSet)
+    if (color_safe == 0) {
+      color_safe <- 1
+    }
+    color_select <- kListColorSet[color_safe]
+  list_data$table_file[[legend_nickname]] <-
+    transmute(
+      new_gene_list,
+      gene = gene,
+      bin = bin,
+      set = legend_nickname,
+      score = score.x / score.y
+    )
+  # list_data$gene_file[[1]]$use
+  list_data$gene_info[[1]][[legend_nickname]] <-
+    # don't change the order of postions
+    tibble(
+      set = legend_nickname,
+      mydot = kDotOptions[1],
+      myline = kLineOptions[1],
+      mycol = color_select,
+      onoff = 0,
+      rnorm = "1"
+    )
+
+  # generate info for new file for loaded gene list(s)
+  sapply(seq_along(list_data$gene_file)[-1], function(g) {
+    enesg <- inner_join(list_data$gene_file[[g]]$full, list_data$gene_file[[1]]$use, by = "gene")
+    if (n_distinct(enesg$gene) < 1) {
+      showModal(
+        modalDialog(
+          title = "Information message",
+          " No genes in common, need to remove gene file",
+          size = "s",
+          easyClose = TRUE
+        )
+      )
+    }
+    list_data$gene_file[[g]]$use <<- select(enesg, gene)
+    my_name_g <- sub("([0-9]+)", n_distinct(list_data$gene_file[[g]]$full$gene), names(list_data$gene_file)[g])
+    names(list_data$gene_file)[g] <<- my_name_g
+    names(list_data$gene_info)[g] <<- my_name_g
+    
+    list_data$gene_info[[g]][[legend_nickname]] <<-
+      tibble(
+        set = legend_nickname,
+        mydot = kDotOptions[1],
+        myline = kLineOptions[1],
+        mycol = RgbToHex(my_hex = color_select, tint = g * 0.08),
+        onoff = 0,
+        rnorm = "1"
+      )
+  })
+  }
+  list_data
+}
+
 # removes gene list
 RemoveGeneList <-
   function(list_data, list_name) {

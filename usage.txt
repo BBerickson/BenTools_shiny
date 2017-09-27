@@ -44,6 +44,14 @@ Load Data tab
       can split location from name(s)
     when color tab selected color pallet for selected gene list is saved for loaded genes
     remove all but main "common" gene list
+
+Norm tab
+
+  select a file and one to noromalize by
+    select divide gene by gene or mean by mean
+    select replacing 0's (and NA's) in denominator by min/2
+    
+    adds new "data file"
     
 Plot tab
 
