@@ -15,9 +15,6 @@ https://rstudio.github.io/DT/
 
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
-
-no 0 to min/2 remove genes with na search na_if(Inf)
-
 gene tools ... 
 
 cluster ...
@@ -45,7 +42,7 @@ intersect
   test
   add usage
 
-# ADD back loading hm table files
+
 ... testing and using ...
 
 # file size restriction the set correctly?

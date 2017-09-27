@@ -1375,17 +1375,41 @@ server <- function(input, output, session) {
                        input$sliderbinratio1[2],
                        input$sliderbinratio2[1],
                        input$sliderbinratio2[2],
-                       input$numericratio
+                       input$numericratio,
+                       input$checkboxnodivzero
                      )
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
       show('actionratiodatatable')
+      glo <- input$selectgenelistoptions
+      if(!glo %in% names(LIST_DATA$gene_file)){
+        glo <- names(LIST_DATA$gene_file)[1]
+      }
+      updateSelectInput(
+        session,
+        "selectgenelistoptions",
+        choices = names(LIST_DATA$gene_info),
+        selected = glo)
+      ol <- input$selectratiofile
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- newname
+        reactive_values$pickerfile_controler <- c(input$pickerratio1file, input$pickerratio2file)
+      }else {
+        reactive_values$pickerfile_controler <- ""
+      }
+      updateSelectInput(
+        session,
+        "selectratiofile",
+        choices = names(LIST_DATA$gene_file),
+        selected = ol
+      )
     } else {
       return()
     }
   })
   
+  # show gene list
   observeEvent(input$actionratiodatatable, ignoreInit = TRUE,{
     hide('actionratiodatatable')
     newnames1 <- gsub("(.{20})", "\\1... ", input$pickerratio1file)
@@ -2388,7 +2412,7 @@ ui <- dashboardPage(
                             actionButton("actionnorm",label = "create norm file"),
                             checkboxInput("checkboxnormmean", label = "gene by gene", value = TRUE),
                             checkboxInput("checkboxnormzero", label = "denom 0 -> min/2", value = TRUE),
-                            helpText("if 0 in denominator is not converted gene will be removed from all gene lists")
+                            helpText("if 0's are not converted genes containing will be removed from all gene lists")
                             
                           )),
                   
@@ -2646,8 +2670,9 @@ ui <- dashboardPage(
                                   )
                                 )
                               ),
-                              actionButton("actionratiotool", "Get fold changes")
-                              
+                              actionButton("actionratiotool", "Get fold changes"),
+                              checkboxInput("checkboxnodivzero", label = "0 to min/2", value = TRUE),
+                              helpText("if 0's are not converted gene's containing will be removed from results")
                             ),
                             div(
                               id = "hideratiotable",
