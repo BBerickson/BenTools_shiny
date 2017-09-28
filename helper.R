@@ -1037,7 +1037,7 @@ CumulativeDistribution <-
            bottom_per,
            top_per,
            nodivzero) {
-    if (cdffile == "") {
+    if (is.null(cdffile)) {
       return()
     }
     setProgress(1, detail = paste("dividing one by the other"))
@@ -1065,12 +1065,15 @@ CumulativeDistribution <-
             semi_join(df, ., by = "gene") %>%
             ungroup()
       }
-        outlist[[j]] <<-
-          transmute(df, gene = gene, value = sum1 / sum2) %>%
+          df <- transmute(df, gene = gene, value = sum1 / sum2) %>%
           na_if(Inf) %>%
-          replace_na(list(score = 0)) %>%
-      arrange(desc(value)) %>% mutate(bin = 1:n())
-      
+          replace_na(list(value = 0)) %>%
+          rename(!!j := value)
+      if(is.null(outlist)){
+        outlist <<- df
+      } else{
+        outlist <<- inner_join(outlist, df, by = "gene")
+      }
     })
     
     for(rr in grep("CDF\nn", names(LIST_DATA$gene_file), value = T)){
@@ -1081,11 +1084,11 @@ CumulativeDistribution <-
     }
     
     setProgress(2, detail = paste("building list"))
-    if(n_distinct(outlist[[1]]$gene) > 0){
+    if(n_distinct(outlist$gene) > 0){
       nick_name1 <-
-        paste("CDF\nn =", n_distinct(outlist[[1]]$gene))
+        paste("CDF\nn =", n_distinct(outlist$gene))
       list_data$gene_file[[nick_name1]]$full <- outlist
-      list_data$gene_file[[nick_name1]]$use <- select(outlist[[1]], gene) %>%
+      list_data$gene_file[[nick_name1]]$use <- select(outlist, gene) %>%
         slice(num[1]:num[2])
       list_data$gene_file[[nick_name1]]$info <-
         paste(

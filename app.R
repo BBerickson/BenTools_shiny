@@ -214,7 +214,10 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectcdffile1]], "[[", 4)
         ), sep = ":"))
       )
-      if (sum(grepl("CDF_", names(LIST_DATA$gene_file))) == 0) {
+      if (sum(grepl("CDF\nn", names(LIST_DATA$gene_file))) == 0) {
+        output$plotcdf <- renderPlot({
+          NULL
+        })
         hide('plotcdf')
         updateSliderInput(
           session,
@@ -226,11 +229,12 @@ server <- function(input, output, session) {
         updateSliderInput(
           session,
           "sliderbincdf2",
-          min = 0,
+          min = LIST_DATA$x_plot_range[1],
           max = LIST_DATA$x_plot_range[2],
-          value = c(0,0)
+          value = LIST_DATA$x_plot_range
         )
-        hide('actionratiodatatable')
+        
+        hide('actioncdfdatatable')
       }
     }
     
@@ -1160,13 +1164,13 @@ server <- function(input, output, session) {
     }
   })
   
-  # generate gene list ----
+  # Sort generate gene list ----
   observeEvent(input$actionsortdatatable, ignoreInit = TRUE,{
-    newnames <-
-      gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full))
-    if(any(grep("Sort", names(LIST_DATA$gene_info)) > 0)){
+    if(any(grep("Sort\nn", names(LIST_DATA$gene_info)) > 0)){
+      newnames <-
+        gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$full))
       dt <- datatable(
-        LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full,
+        LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$full,
         rownames = FALSE,
         colnames = strtrim(newnames, 24),
         class = 'cell-border stripe compact',
@@ -1190,7 +1194,7 @@ server <- function(input, output, session) {
             )
           )
         )
-      ) %>% formatPercentage(names(LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full)[-1])
+      ) %>% formatPercentage(names(LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$full)[-1])
     } else {
       dt <- datatable(LIST_DATA$gene_file[[1]]$empty, 
                       rownames = FALSE,
@@ -1453,11 +1457,12 @@ server <- function(input, output, session) {
     }
   })
   
-  # show gene list ----
+  # Ratio show gene list ----
   observeEvent(input$actionratiodatatable, ignoreInit = TRUE,{
+    print("generiate ratio table")
     hide('actionratiodatatable')
-    newnames1 <- gsub("(.{20})", "\\1... ", input$pickerratio1file)
     if(any(grep("Ratio_Up_file1\nn =",names(LIST_DATA$gene_info))>0)){
+      newnames1 <- gsub("\n", " ", grep("Ratio_Up_file1\nn =",names(LIST_DATA$gene_info), value = TRUE))
       mytab <- "Up Fold Change file 1"
     output$ratio1table <-
       DT::renderDataTable(
@@ -1465,7 +1470,7 @@ server <- function(input, output, session) {
           LIST_DATA$gene_file[[grep("Ratio_Up_file1\nn =",
                                     names(LIST_DATA$gene_info))]]$full,
           rownames = FALSE,
-          colnames = strtrim(newnames1, 24),
+          colnames = newnames1,
           class = 'cell-border stripe compact',
           filter = 'top',
           caption = 'Ratio_Up_file1',
@@ -1499,15 +1504,15 @@ server <- function(input, output, session) {
                     options = list(searching = FALSE)))
       mytab <- "Up Fold Change file 2"
     }
-    newnames2 <- gsub("(.{20})", "\\1... ", input$pickerratio2file)
     if(any(grep("Ratio_Up_file2\nn =",names(LIST_DATA$gene_info))>0)){
+      newnames2 <- gsub("\n", " ", grep("Ratio_Up_file2\nn =",names(LIST_DATA$gene_info), value = TRUE))
     output$ratio2table <-
       DT::renderDataTable(
         datatable(
           LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn =",
                                     names(LIST_DATA$gene_info))]]$full,
           rownames = FALSE,
-          colnames = strtrim(newnames2, 24),
+          colnames = newnames2,
           class = 'cell-border stripe compact',
           filter = 'top',
           caption = 'Ratio_Up_file2',
@@ -2231,6 +2236,45 @@ server <- function(input, output, session) {
                    hide('plotcdf')
                  }
                })
+  
+  # CDF generate gene list ----
+  observeEvent(input$actioncdfdatatable, ignoreInit = TRUE,{
+    if(any(grep("CDF\nn", names(LIST_DATA$gene_info)) > 0)){
+      dt <- datatable(
+        LIST_DATA$gene_file[[grep("CDF\nn", names(LIST_DATA$gene_info))]]$use,
+        rownames = FALSE,
+        class = 'cell-border stripe compact',
+        filter = 'top',
+        options = list(
+          pageLength = 15,
+          scrollX = TRUE,
+          scrollY = TRUE,
+          autoWidth = TRUE,
+          columnDefs = list(
+            list(className = 'dt-center ', targets = "_all"),
+            list(
+              targets = 0,
+              render = JS(
+                "function(data, type, row, meta) {",
+                "return type === 'display' && data.length > 24 ?",
+                "'<span title=\"' + data + '\">' + data.substr(0, 19) + '...</span>' : data;",
+                "}"
+              )
+            )
+          )
+        )
+      )
+    } else {
+      dt <- datatable(LIST_DATA$gene_file[[1]]$empty, 
+                      rownames = FALSE,
+                      colnames = strtrim(newnames, 24),
+                      options = list(searching = FALSE))
+    }
+    output$cdftable <- DT::renderDataTable(dt)
+    hide('actioncdfdatatable')
+    show('cdftable')
+  })
+  
 
   # cdf tool gene lists $use ----
   observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, {
@@ -2270,15 +2314,15 @@ server <- function(input, output, session) {
   })
 
   # CDF tool action ----
-  observeEvent(input$actionratiotool, ignoreInit = TRUE, {
-    print("ratio tool action")
+  observeEvent(input$actioncdftool, ignoreInit = TRUE, {
+    print("CDF tool action")
     hide('cdftable')
     show('plotcdf')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
                  {
-                   LD <-
+                   LD <<-
                      CumulativeDistribution(
                        LIST_DATA,
                        input$selectcdffile1,
@@ -2981,7 +3025,7 @@ ui <- dashboardPage(
                                   value = c(0, 100)
                                 )
                               ),
-                              actionButton("actioncdftool", "Get fold changes"),
+                              actionButton("actioncdftool", "Plot CDF"),
                               checkboxInput("checkboxnodivzerocdf", label = "0 to min/2", value = TRUE),
                               helpText("if 0's are not converted gene's containing region with sum(0) will be removed from results")
                             ),
@@ -2995,7 +3039,7 @@ ui <- dashboardPage(
                                 status = "primary",
                                 solidHeader = T,
                                 width = 12,
-                                actionButton("actioncdftatable", "Show gene list(s)"),
+                                actionButton("actioncdfdatatable", "Show gene list(s)"),
                                 DT::dataTableOutput('cdftable')
                               )
                             )
