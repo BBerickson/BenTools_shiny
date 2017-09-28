@@ -1068,7 +1068,9 @@ CumulativeDistribution <-
           df <- transmute(df, gene = gene, value = sum1 / sum2) %>%
           na_if(Inf) %>%
           replace_na(list(value = 0)) %>%
-          rename(!!j := value)
+            arrange(desc(value)) %>%
+          mutate(!!j := row_number()) %>%
+            select(-value)
       if(is.null(outlist)){
         outlist <<- df
       } else{
@@ -1088,8 +1090,9 @@ CumulativeDistribution <-
       nick_name1 <-
         paste("CDF\nn =", n_distinct(outlist$gene))
       list_data$gene_file[[nick_name1]]$full <- outlist
-      list_data$gene_file[[nick_name1]]$use <- select(outlist, gene) %>%
-        slice(num[1]:num[2])
+      list_data$gene_file[[nick_name1]]$use <-  filter_at(outlist, vars(one_of(names(outlist)[-1])),all_vars(between(.,num[1],num[2]))) %>% 
+        select(gene)
+       
       list_data$gene_file[[nick_name1]]$info <-
         paste(
           "CDF",

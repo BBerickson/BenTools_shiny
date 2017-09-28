@@ -224,14 +224,14 @@ server <- function(input, output, session) {
           "sliderbincdf1",
           min = LIST_DATA$x_plot_range[1],
           max = LIST_DATA$x_plot_range[2],
-          value = LIST_DATA$x_plot_range
+          value = c(LIST_DATA$x_plot_range[1],floor(LIST_DATA$x_plot_range[2]/3))
         )
         updateSliderInput(
           session,
           "sliderbincdf2",
           min = LIST_DATA$x_plot_range[1],
           max = LIST_DATA$x_plot_range[2],
-          value = LIST_DATA$x_plot_range
+          value = c(ceiling(LIST_DATA$x_plot_range[2]/3),LIST_DATA$x_plot_range[2])
         )
         
         hide('actioncdfdatatable')
@@ -1133,6 +1133,28 @@ server <- function(input, output, session) {
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
       show('actionsortdatatable')
+      glo <- input$selectgenelistoptions
+      if(!glo %in% names(LIST_DATA$gene_file)){
+        glo <- names(LIST_DATA$gene_file)[1]
+      }
+      updateSelectInput(
+        session,
+        "selectgenelistoptions",
+        choices = names(LIST_DATA$gene_info),
+        selected = glo)
+      ol <- input$selectsortfile
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- grep("Sort\nn", names(LIST_DATA$gene_file), value = TRUE)
+        reactive_values$pickerfile_controler <- input$pickersortfile
+        }else {
+        reactive_values$pickerfile_controler <- ""
+      }
+      updateSelectInput(
+        session,
+        "selectsortfile",
+        choices = names(LIST_DATA$gene_file),
+        selected = ol
+      )
     } else {
       return()
     }
@@ -1441,7 +1463,7 @@ server <- function(input, output, session) {
         selected = glo)
       ol <- input$selectratiofile
       if(!ol %in% names(LIST_DATA$gene_file)){
-        ol <- newname
+        ol <- grep(strsplit(ol, "\nn = ")[[1]][1], names(LIST_DATA$gene_file), value = TRUE)
         reactive_values$pickerfile_controler <- c(input$pickerratio1file, input$pickerratio2file)
       }else {
         reactive_values$pickerfile_controler <- ""
@@ -1994,6 +2016,28 @@ server <- function(input, output, session) {
       LIST_DATA <<- LD
       show('actionclusterdatatable')
       show('actionclusterplot')
+      glo <- input$selectgenelistoptions
+      if(!glo %in% names(LIST_DATA$gene_file)){
+        glo <- names(LIST_DATA$gene_file)[1]
+      }
+      updateSelectInput(
+        session,
+        "selectgenelistoptions",
+        choices = names(LIST_DATA$gene_info),
+        selected = glo)
+      ol <- input$selectclusterfile
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- grep(strsplit(ol, "\nn")[[1]][1], names(LIST_DATA$gene_file), value = TRUE)
+        reactive_values$pickerfile_controler <- input$pickerclusterfile
+      }else {
+        reactive_values$pickerfile_controler <- ""
+      }
+      updateSelectInput(
+        session,
+        "selectclusterfile",
+        choices = names(LIST_DATA$gene_file),
+        selected = ol
+      )
     } else {
       return()
     }
@@ -2248,26 +2292,12 @@ server <- function(input, output, session) {
         options = list(
           pageLength = 15,
           scrollX = TRUE,
-          scrollY = TRUE,
-          autoWidth = TRUE,
-          columnDefs = list(
-            list(className = 'dt-center ', targets = "_all"),
-            list(
-              targets = 0,
-              render = JS(
-                "function(data, type, row, meta) {",
-                "return type === 'display' && data.length > 24 ?",
-                "'<span title=\"' + data + '\">' + data.substr(0, 19) + '...</span>' : data;",
-                "}"
-              )
-            )
-          )
+          scrollY = TRUE
         )
       )
     } else {
       dt <- datatable(LIST_DATA$gene_file[[1]]$empty, 
                       rownames = FALSE,
-                      colnames = strtrim(newnames, 24),
                       options = list(searching = FALSE))
     }
     output$cdftable <- DT::renderDataTable(dt)
@@ -2280,7 +2310,7 @@ server <- function(input, output, session) {
   observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, {
     newname <- paste("CDF\nn =", length(input$cdftable_rows_all))
     oldname <- grep("CDF\nn =", names(LIST_DATA$gene_info))
-    if(newname != names(LIST_DATA$gene_file)[oldname]){
+    if(newname != names(LIST_DATA$gene_info)[oldname]){
       print("cdf filter $use")
       LIST_DATA$STATE[2] <<- newname
       names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
@@ -2349,9 +2379,9 @@ server <- function(input, output, session) {
         "selectgenelistoptions",
         choices = names(LIST_DATA$gene_info),
         selected = glo)
-      ol1 <- input$selectcdffile1
-      if(!ol1 %in% names(LIST_DATA$gene_file)){
-        ol1 <- newname
+      ol <- input$selectcdffile1
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- grep("CDF\nn", names(LIST_DATA$gene_file), value = TRUE)
         reactive_values$pickerfile_controler <- input$pickercdffile1
       }else {
         reactive_values$pickerfile_controler <- ""
@@ -2360,7 +2390,7 @@ server <- function(input, output, session) {
         session,
         "selectcdffile1",
         choices = names(LIST_DATA$gene_file),
-        selected = ol1
+        selected = ol
       )
     } else {
       return()

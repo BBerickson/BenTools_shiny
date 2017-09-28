@@ -21,12 +21,11 @@ cluster ...
 
 cdp
   
+  test show DT flow control ... don't trigger all of $use
   create functions
-    1 build data (filter on $use)
-    2 ggplot
-  
-  % slider observe event
-  test
+    ggplot
+    % slider observe event
+  test (including all tool on tool action)
   add usage
  
 intersect
