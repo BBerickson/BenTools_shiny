@@ -194,29 +194,17 @@ server <- function(input, output, session) {
     
     if (input$tabs == "cdftool" & LIST_DATA$STATE[1] != 0) {
       ol1 <- input$selectcdffile1
-      ol2 <- input$selectcdffile2
       og1 <- input$pickercdffile1
-      og2 <- input$pickercdffile2
       if(!ol1 %in% names(LIST_DATA$gene_file)){
         ol1 <- names(LIST_DATA$gene_file)[1]
       } else if(!all(og1 %in% names(LIST_DATA$table_file)) | 
                 LIST_DATA$STATE[3] == "CDF\nn"){
         og1 <- ""
       }
-      if(!ol2 %in% names(LIST_DATA$gene_file)){
-        ol2 <- names(LIST_DATA$gene_file)[1]
-      } else if(!all(og2 %in% names(LIST_DATA$table_file)) | 
-                LIST_DATA$STATE[3] == "CDF\nn"){
-        og2 <- ""
-      }
       updateSelectInput(session,
                         "selectcdffile1",
                         choices = names(LIST_DATA$gene_file),
                         selected = ol1)
-      updateSelectInput(session,
-                        "selectcdffile2",
-                        choices = names(LIST_DATA$gene_file),
-                        selected = ol2)
       updatePickerInput(
         session,
         "pickercdffile1",
@@ -226,16 +214,8 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectcdffile1]], "[[", 4)
         ), sep = ":"))
       )
-      updatePickerInput(
-        session,
-        "pickercdffile2",
-        choices = names(LIST_DATA$table_file),
-        selected = og2,
-        choicesOpt = list(style = paste("color", c(
-          sapply(LIST_DATA$gene_info[[input$selectcdffile2]], "[[", 4)
-        ), sep = ":"))
-      )
       if (sum(grepl("CDF_", names(LIST_DATA$gene_file))) == 0) {
+        hide('plotcdf')
         updateSliderInput(
           session,
           "sliderbincdf1",
@@ -1122,10 +1102,8 @@ server <- function(input, output, session) {
   # sort tool picker enable/disable ----
   observeEvent(input$pickersortfile, ignoreNULL = FALSE, ignoreInit = TRUE,{
     if(is.null(input$pickersortfile)){
-      show('actionsortdatatable')
       hide('sorttable')
     } else if (input$pickersortfile[1] == "") {
-      show('actionsortdatatable')
       hide('sorttable')
     }
   })
@@ -1296,7 +1274,6 @@ server <- function(input, output, session) {
                {
                  if (input$pickerratio1file != "" | input$pickerratio2file != "") {
                  } else {
-                   show('actionratiodatatable')
                    hide('ratio1table')
                    hide('ratio2table')
                    hide('ratio3table')
@@ -1638,8 +1615,6 @@ server <- function(input, output, session) {
                    hide("cluster2table")
                    hide("cluster3table")
                    hide("cluster4table")
-                   show('actionclusterdatatable')
-                   show('actionclusterplot')
                    reactive_values$clustergroups <- NULL
                  }
                })
@@ -2230,138 +2205,125 @@ server <- function(input, output, session) {
   })
   
   # CDF tool picker control ----
-  observeEvent(c(input$selectcdffile1, input$selectcdffile2), ignoreInit = TRUE, {
+  observeEvent(c(input$selectcdffile1), ignoreInit = TRUE, {
     print("cdf picker update")
-    if(reactive_values$pickerfile_controler[1] == ""){
-      reactive_values$pickerfile_controler <- list(one = "", two = "")
-    }
     updatePickerInput(
       session,
       "pickercdffile1",
       choices = names(LIST_DATA$table_file),
-      selected = reactive_values$pickerfile_controler[[1]],
+      selected = reactive_values$pickerfile_controler,
       choicesOpt = list(style = paste("color", c(
         sapply(LIST_DATA$gene_info[[input$selectcdffile1]], "[[", 4)
-      ), sep = ":"))
-    )
-    updatePickerInput(
-      session,
-      "pickercdffile2",
-      choices = names(LIST_DATA$table_file),
-      selected = reactive_values$pickerfile_controler[[2]],
-      choicesOpt = list(style = paste("color", c(
-        sapply(LIST_DATA$gene_info[[input$selectcdffile2]], "[[", 4)
       ), sep = ":"))
     )
     reactive_values$pickerfile_controler <- ""
   })
   
   
-  # # CDF tool picker enable/disable ----
-  # observeEvent(c(input$pickerratio1file, input$pickerratio2file), ignoreInit = TRUE,
-  #              ignoreNULL = FALSE,
-  #              {
-  #                if (input$pickerratio1file != "" | input$pickerratio2file != "") {
-  #                } else {
-  #                  show('actionratiodatatable')
-  #                  hide('ratio1table')
-  #                  hide('ratio2table')
-  #                  hide('ratio3table')
-  #                }
-  #              })
-  # 
-  # # cdf tool gene lists $use ----
-  # observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, {
-  #   newname <- paste("Ratio_Up_file1\nn =", length(input$ratio1table_rows_all))
-  #   oldname <- grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info))
-  #   if(newname != names(LIST_DATA$gene_file)[oldname]){
-  #     print("ratio1 filter $use")
-  #     LIST_DATA$STATE[2] <<- newname
-  #     names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-  #     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-  #     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-  #       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio1table_rows_all])
-  #   }
-  #   glo <- input$selectgenelistoptions
-  #   if(!glo %in% names(LIST_DATA$gene_file)){
-  #     glo <- names(LIST_DATA$gene_file)[1]
-  #   }
-  #   updateSelectInput(
-  #     session,
-  #     "selectgenelistoptions",
-  #     choices = names(LIST_DATA$gene_info),
-  #     selected = glo
-  #   )
-  #   ol <- input$selectratiofile
-  #   if(!ol %in% names(LIST_DATA$gene_file)){
-  #     ol <- newname
-  #     reactive_values$pickerfile_controler <- c(input$pickerratio1file, input$pickerratio2file)
-  #   }else {
-  #     reactive_values$pickerfile_controler <- ""
-  #   }
-  #   updateSelectInput(
-  #     session,
-  #     "selectratiofile",
-  #     choices = names(LIST_DATA$gene_file),
-  #     selected = ol
-  #   )
-  # })
-  # 
-  # # CDF tool action ----
-  # observeEvent(input$actionratiotool, ignoreInit = TRUE, {
-  #   print("ratio tool action")
-  #   hide('ratio1table')
-  #   hide('ratio2table')
-  #   hide('ratio3table')
-  #   withProgress(message = 'Calculation in progress',
-  #                detail = 'This may take a while...',
-  #                value = 0,
-  #                {
-  #                  LD <-
-  #                    CompareRatios(
-  #                      LIST_DATA,
-  #                      input$selectratiofile,
-  #                      input$pickerratio1file,
-  #                      input$pickerratio2file,
-  #                      input$sliderbinratio1[1],
-  #                      input$sliderbinratio1[2],
-  #                      input$sliderbinratio2[1],
-  #                      input$sliderbinratio2[2],
-  #                      input$numericratio,
-  #                      input$checkboxnodivzero
-  #                    )
-  #                })
-  #   if (!is_empty(LD$table_file)) {
-  #     LIST_DATA <<- LD
-  #     show('actionratiodatatable')
-  #     glo <- input$selectgenelistoptions
-  #     if(!glo %in% names(LIST_DATA$gene_file)){
-  #       glo <- names(LIST_DATA$gene_file)[1]
-  #     }
-  #     updateSelectInput(
-  #       session,
-  #       "selectgenelistoptions",
-  #       choices = names(LIST_DATA$gene_info),
-  #       selected = glo)
-  #     ol <- input$selectratiofile
-  #     if(!ol %in% names(LIST_DATA$gene_file)){
-  #       ol <- newname
-  #       reactive_values$pickerfile_controler <- c(input$pickerratio1file, input$pickerratio2file)
-  #     }else {
-  #       reactive_values$pickerfile_controler <- ""
-  #     }
-  #     updateSelectInput(
-  #       session,
-  #       "selectratiofile",
-  #       choices = names(LIST_DATA$gene_file),
-  #       selected = ol
-  #     )
-  #   } else {
-  #     return()
-  #   }
-  # })
-  # 
-  # 
+  # CDF tool picker enable/disable ----
+  observeEvent(c(input$pickercdffile1), ignoreInit = TRUE,
+               ignoreNULL = FALSE, {
+                 if(is.null(input$pickercdffile1)){
+                   hide('cdftable')
+                   hide('plotcdf')
+                 } else if (input$pickercdffile1[1] == "") {
+                   hide('cdftable')
+                   hide('plotcdf')
+                 }
+               })
+
+  # cdf tool gene lists $use ----
+  observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, {
+    newname <- paste("CDF\nn =", length(input$cdftable_rows_all))
+    oldname <- grep("CDF\nn =", names(LIST_DATA$gene_info))
+    if(newname != names(LIST_DATA$gene_file)[oldname]){
+      print("cdf filter $use")
+      LIST_DATA$STATE[2] <<- newname
+      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
+      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
+      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cdftable_rows_all])
+    }
+    glo <- input$selectgenelistoptions
+    if(!glo %in% names(LIST_DATA$gene_file)){
+      glo <- names(LIST_DATA$gene_file)[1]
+    }
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_info),
+      selected = glo
+    )
+    ol1 <- input$selectcdffile1
+    if(!ol1 %in% names(LIST_DATA$gene_file)){
+      ol1 <- newname
+      reactive_values$pickerfile_controler <- input$pickercdffile1
+    }else {
+      reactive_values$pickerfile_controler <- ""
+    }
+    updateSelectInput(
+      session,
+      "selectcdffile1",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol1
+    )
+  })
+
+  # CDF tool action ----
+  observeEvent(input$actionratiotool, ignoreInit = TRUE, {
+    print("ratio tool action")
+    hide('cdftable')
+    show('plotcdf')
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {
+                   LD <-
+                     CumulativeDistribution(
+                       LIST_DATA,
+                       input$selectcdffile1,
+                       input$pickercdffile1,
+                       input$sliderbincdf1[1],
+                       input$sliderbincdf1[2],
+                       input$sliderbincdf2[1],
+                       input$sliderbincdf2[2],
+                       input$slidercdfper[1],
+                       input$slidercdfper[2],
+                       input$checkboxnodivzero
+                     )
+                 })
+    if (!is_empty(LD$table_file)) {
+      LIST_DATA <<- LD
+      show('actioncdfdatatable')
+      
+      glo <- input$selectgenelistoptions
+      if(!glo %in% names(LIST_DATA$gene_file)){
+        glo <- names(LIST_DATA$gene_file)[1]
+      }
+      updateSelectInput(
+        session,
+        "selectgenelistoptions",
+        choices = names(LIST_DATA$gene_info),
+        selected = glo)
+      ol1 <- input$selectcdffile1
+      if(!ol1 %in% names(LIST_DATA$gene_file)){
+        ol1 <- newname
+        reactive_values$pickerfile_controler <- input$pickercdffile1
+      }else {
+        reactive_values$pickerfile_controler <- ""
+      }
+      updateSelectInput(
+        session,
+        "selectcdffile1",
+        choices = names(LIST_DATA$gene_file),
+        selected = ol1
+      )
+    } else {
+      return()
+    }
+  })
+
+
   # hides sidebar on start up ----
   shinyjs::addClass(selector = "body", class = "sidebar-collapse")
 }
@@ -2465,20 +2427,6 @@ ui <- dashboardPage(
           ),
           pickerInput(
             inputId = "pickercdffile1",
-            width = "99%",
-            label = "Select file(s)",
-            choices = "Load data file",
-            multiple = T,
-            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1")
-          ),
-          selectInput(
-            inputId = "selectcdffile2",
-            label = "(Optional) Select 2ed gene list",
-            choices = "Load data file",
-            width = "99%"
-          ),
-          pickerInput(
-            inputId = "pickercdffile2",
             width = "99%",
             label = "Select file(s)",
             choices = "Load data file",
@@ -3047,8 +2995,8 @@ ui <- dashboardPage(
                                 status = "primary",
                                 solidHeader = T,
                                 width = 12,
-                                actionButton("actionratiodatatable", "Show gene list(s)"),
-                                DT::dataTableOutput('ratio1table')
+                                actionButton("actioncdftatable", "Show gene list(s)"),
+                                DT::dataTableOutput('cdftable')
                               )
                             )
                           ))

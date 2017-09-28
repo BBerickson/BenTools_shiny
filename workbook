@@ -21,8 +21,11 @@ cluster ...
 
 cdp
   
-  set up reactives ... filter updates genelist and plot
-  create function and hookup
+  create functions
+    1 build data (filter on $use)
+    2 ggplot
+  
+  % slider observe event
   test
   add usage
  

@@ -787,7 +787,6 @@ CompareRatios <-
           na_if(Inf) %>%
           replace_na(list(score = 0))
       }
-      print(outlist)
       if (lc > 1) {
         outlist[[1]] <<-
           inner_join(outlist[[1]], outlist[[lc]], by = 'gene') %>%
@@ -1025,6 +1024,115 @@ FindGroups <- function(list_data,
   list_data$clust$use <- distinct(df, gene)
   list_data
 }
+
+# Cumulative Distribution data prep 
+CumulativeDistribution <-
+  function(list_data,
+           list_name,
+           cdffile,
+           start1_bin,
+           end1_bin,
+           start2_bin,
+           end2_bin,
+           bottom_per,
+           top_per,
+           nodivzero) {
+    if (cdffile == "") {
+      return()
+    }
+    setProgress(1, detail = paste("dividing one by the other"))
+    gene_count <- n_distinct(list_data$gene_file[[list_name]]$use$gene)
+    num <- c(ceiling(gene_count * bottom_per/100), ceiling(gene_count * top_per/100))
+    outlist <- NULL
+    lapply(cdffile, function(j) {
+      df <- semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>%
+        group_by(gene) %>%
+        summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                  sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+        na_if(0) %>% ungroup()
+      if(nodivzero){
+        # find min value /2 to replace 0s
+        new_min_for_na <-
+          min(c(df$sum1, df$sum2), na.rm = TRUE) / 2
+        df <-
+          group_by(df, gene) %>%
+          replace_na(list(sum1 = new_min_for_na, sum2 = new_min_for_na)) %>%
+          ungroup()
+      } else {
+        df <- group_by(df, gene) %>%
+            summarise(test = sum(sum1, sum2)) %>% 
+            filter(!is.na(test)) %>% 
+            semi_join(df, ., by = "gene") %>%
+            ungroup()
+      }
+        outlist[[j]] <<-
+          transmute(df, gene = gene, value = sum1 / sum2) %>%
+          na_if(Inf) %>%
+          replace_na(list(score = 0)) %>%
+      arrange(desc(value)) %>% mutate(bin = 1:n())
+      
+    })
+    
+    for(rr in grep("CDF\nn", names(LIST_DATA$gene_file), value = T)){
+      if (length(rr) > 0) {
+        list_data$gene_file[[rr]] <- NULL
+        list_data$gene_info[[rr]] <- NULL
+      }
+    }
+    
+    setProgress(2, detail = paste("building list"))
+    if(n_distinct(outlist[[1]]$gene) > 0){
+      nick_name1 <-
+        paste("CDF\nn =", n_distinct(outlist[[1]]$gene))
+      list_data$gene_file[[nick_name1]]$full <- outlist
+      list_data$gene_file[[nick_name1]]$use <- select(outlist[[1]], gene) %>%
+        slice(num[1]:num[2])
+      list_data$gene_file[[nick_name1]]$info <-
+        paste(
+          "CDF",
+          "bins",
+          start1_bin,
+          "to",
+          end1_bin,
+          "/",
+          start2_bin,
+          "to",
+          end2_bin,
+          "% filter",
+          bottom_per,
+          "to",
+          top_per,
+          "0  to min/2?",
+          nodivzero,
+          "from",
+          list_name,
+          "gene list",
+          paste(cdffile, collapse = " "),
+          Sys.Date()
+        )
+    }
+
+      list_data$gene_info[[nick_name1]] <-
+        lapply(setNames(
+          names(list_data$gene_info[[1]]),
+          names(list_data$gene_info[[1]])
+        ),
+        function(i)
+          tibble(
+            set = i,
+            mydot = kDotOptions[1],
+            myline = kLineOptions[1],
+            mycol = RgbToHex(
+              my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol,
+              tint = length(list_data$gene_file) * 0.08
+            ),
+            onoff = 0,
+            rnorm = "1"
+          ))
+    setProgress(5, detail = "finishing up")
+    list_data$STATE[2] <- nick_name1
+    list_data
+  }
 
 # Applys math to on data in each gene list
 ApplyMath <-
