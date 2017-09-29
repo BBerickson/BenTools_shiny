@@ -2341,6 +2341,16 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol1
     )
+    
+    df_options <- semi_join(bind_rows(LIST_DATA$gene_info[[newname]]), distinct(LIST_DATA$gene_file[[newname]]$full, set), by = "set")
+    df <- inner_join(LIST_DATA$gene_file[[newname]]$full, 
+                     LIST_DATA$gene_file[[newname]]$use, by = "gene") %>% 
+      mutate(set = paste(sub("\n", " ", newname), gsub("(.{17})", "\\1\n", nn), sep = '\n')) %>%
+      select(-nn) # test ggplot without moding options?
+    # use_col <-
+    # use_header <- 
+    # legend_space <- 
+    # GGplotC(df, use_col, use_header, legend_space)
   })
 
   # CDF tool action ----

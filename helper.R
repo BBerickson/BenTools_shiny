@@ -1045,6 +1045,7 @@ CumulativeDistribution <-
     num <- c(ceiling(gene_count * bottom_per/100), ceiling(gene_count * top_per/100))
     outlist <- NULL
     lapply(cdffile, function(j) {
+      nick_name <- list_data$gene_info[[list_name]][[j]]$set
       df <- semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>%
         group_by(gene) %>%
         summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
@@ -1065,19 +1066,14 @@ CumulativeDistribution <-
             semi_join(df, ., by = "gene") %>%
             ungroup()
       }
-          df <- transmute(df, gene = gene, value = sum1 / sum2) %>%
+      outlist[[j]] <<- transmute(df, gene = gene, scale = sum1 / sum2) %>%
           na_if(Inf) %>%
-          replace_na(list(value = 0)) %>%
-            arrange(desc(value)) %>%
-          mutate(!!j := row_number()) %>%
-            select(-value)
-      if(is.null(outlist)){
-        outlist <<- df
-      } else{
-        outlist <<- inner_join(outlist, df, by = "gene")
-      }
+          replace_na(list(scale = 0)) %>%
+            arrange(desc(scale)) %>%
+          mutate(bin = row_number(), set = j, nn = nick_name)
     })
     
+    outlist <- bind_rows(outlist)
     for(rr in grep("CDF\nn", names(LIST_DATA$gene_file), value = T)){
       if (length(rr) > 0) {
         list_data$gene_file[[rr]] <- NULL
@@ -1086,12 +1082,14 @@ CumulativeDistribution <-
     }
     
     setProgress(2, detail = paste("building list"))
-    if(n_distinct(outlist$gene) > 0){
+    gene_list <- group_by(outlist, gene) %>% filter(all(between(bin, num[1], num[2]))) %>% 
+      distinct(gene) %>%
+      ungroup()
+    if(n_distinct(gene_list$gene) > 0){
       nick_name1 <-
-        paste("CDF\nn =", n_distinct(outlist$gene))
-      list_data$gene_file[[nick_name1]]$full <- outlist
-      list_data$gene_file[[nick_name1]]$use <-  filter_at(outlist, vars(one_of(names(outlist)[-1])),all_vars(between(.,num[1],num[2]))) %>% 
-        select(gene)
+        paste("CDF\nn =", n_distinct(gene_list$gene))
+      list_data$gene_file[[nick_name1]]$full <- outlist 
+      list_data$gene_file[[nick_name1]]$use <- gene_list
        
       list_data$gene_file[[nick_name1]]$info <-
         paste(

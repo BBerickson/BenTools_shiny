@@ -21,6 +21,10 @@ cluster ...
 
 cdp
   
+  ggplot(LIST_DATA$gene_file$`CDF
++ n = 8`$full, aes(log2(scale), color = set)) +
+      stat_ecdf(show.legend = TRUE, size = 1.8)
+  
   test show DT flow control ... don't trigger all of $use
   create functions
     ggplot
