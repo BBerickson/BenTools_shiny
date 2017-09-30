@@ -180,6 +180,9 @@ server <- function(input, output, session) {
         ), sep = ":"))
       )
       if (sum(grepl("Cluster_1\nn =", names(LIST_DATA$gene_file))) == 0) {
+        output$plotcluster <- renderPlot({
+          NULL
+        })
         updateSliderInput(
           session,
           "sliderbincluster",
@@ -766,11 +769,6 @@ server <- function(input, output, session) {
     reactive_values$Plot_controler
   })
   
-  # renders cluster plot ----
-  output$plotcluster <- renderPlot({
-    reactive_values$PlotCluster_controler
-  })
-  
   # updates applymath ----
   observeEvent(
     c(
@@ -1240,7 +1238,6 @@ server <- function(input, output, session) {
     
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$sorttable_rows_all])
-    }
     print("sort $use picker")
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
@@ -1265,6 +1262,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   # ratio tool picker control ----
@@ -1329,7 +1327,6 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio1table_rows_all])
-    }
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
       glo <- names(LIST_DATA$gene_file)[1]
@@ -1353,6 +1350,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   observeEvent(input$ratio2table_rows_all, ignoreInit = TRUE, {
@@ -1365,7 +1363,6 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio2table_rows_all])
-    }
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
       glo <- names(LIST_DATA$gene_file)[1]
@@ -1388,6 +1385,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   observeEvent(input$ratio3table_rows_all, ignoreInit = TRUE, {
@@ -1400,7 +1398,6 @@ server <- function(input, output, session) {
     names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
     LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
       tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio3table_rows_all])
-    }
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
       glo <- names(LIST_DATA$gene_file)[1]
@@ -1423,6 +1420,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   # Ratio tool action ----
@@ -1680,7 +1678,7 @@ server <- function(input, output, session) {
       Y_Axis_Cluster_numbers <-
         MyXSetValues(reactive_values$Apply_Cluster_Math,
                      input$sliderplotBinRange)
-      reactive_values$PlotCluster_controler <-
+      output$plotcluster <- renderPlot({
         GGplotLineDot(
           reactive_values$Apply_Cluster_Math,
           input$sliderplotBinRange,
@@ -1690,7 +1688,7 @@ server <- function(input, output, session) {
           input$checkboxsmooth,
           reactive_values$Y_Axis_Lable
         )
-    }
+      })
     }
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
@@ -1715,6 +1713,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   observeEvent(input$cluster2table_rows_all, ignoreInit = TRUE, {
@@ -1749,7 +1748,7 @@ server <- function(input, output, session) {
       Y_Axis_Cluster_numbers <-
         MyXSetValues(reactive_values$Apply_Cluster_Math,
                      input$sliderplotBinRange)
-      reactive_values$PlotCluster_controler <-
+      output$plotcluster <- renderPlot({
         GGplotLineDot(
           reactive_values$Apply_Cluster_Math,
           input$sliderplotBinRange,
@@ -1759,7 +1758,7 @@ server <- function(input, output, session) {
           input$checkboxsmooth,
           reactive_values$Y_Axis_Lable
         )
-    }
+      })
     }
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
@@ -1784,6 +1783,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   observeEvent(input$cluster3table_rows_all, ignoreInit = TRUE, {
@@ -1818,7 +1818,7 @@ server <- function(input, output, session) {
       Y_Axis_Cluster_numbers <-
         MyXSetValues(reactive_values$Apply_Cluster_Math,
                      input$sliderplotBinRange)
-      reactive_values$PlotCluster_controler <-
+      output$plotcluster <- renderPlot({
         GGplotLineDot(
           reactive_values$Apply_Cluster_Math,
           input$sliderplotBinRange,
@@ -1828,7 +1828,7 @@ server <- function(input, output, session) {
           input$checkboxsmooth,
           reactive_values$Y_Axis_Lable
         )
-    }
+      })
     }
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
@@ -1853,6 +1853,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   observeEvent(input$cluster4table_rows_all, ignoreInit = TRUE, {
@@ -1888,7 +1889,7 @@ server <- function(input, output, session) {
       Y_Axis_Cluster_numbers <-
         MyXSetValues(reactive_values$Apply_Cluster_Math,
                      input$sliderplotBinRange)
-      reactive_values$PlotCluster_controler <-
+      output$plotcluster <- renderPlot({
         GGplotLineDot(
           reactive_values$Apply_Cluster_Math,
           input$sliderplotBinRange,
@@ -1898,7 +1899,7 @@ server <- function(input, output, session) {
           input$checkboxsmooth,
           reactive_values$Y_Axis_Lable
         )
-    }
+      })
     }
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
@@ -1923,6 +1924,7 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol
     )
+    }
   })
   
   # Cluster tool action ----
@@ -1998,6 +2000,7 @@ server <- function(input, output, session) {
     }
     hide('actionclusterdatatable')
     hide('actionclusterplot')
+    hide('plotcluster')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0, {
@@ -2214,7 +2217,8 @@ server <- function(input, output, session) {
   })
   
   # creat and show cluster plot ----
-  observeEvent(input$actionclusterplot, ignoreInit = TRUE,{
+  observeEvent(input$actionclusterplot,{
+    print("cluster plot button")
     show('plotcluster')
     LD <- LIST_DATA$gene_info
     sapply(names(LIST_DATA$gene_info), function(i)
@@ -2238,7 +2242,7 @@ server <- function(input, output, session) {
       Y_Axis_Cluster_numbers <-
         MyXSetValues(reactive_values$Apply_Cluster_Math,
                      input$sliderplotBinRange)
-      reactive_values$PlotCluster_controler <-
+      output$plotcluster <- renderPlot({
         GGplotLineDot(
           reactive_values$Apply_Cluster_Math,
           input$sliderplotBinRange,
@@ -2248,6 +2252,7 @@ server <- function(input, output, session) {
           input$checkboxsmooth,
           reactive_values$Y_Axis_Lable
         )
+      })
     }
     LIST_DATA$gene_info <<- LD
     hide('actionclusterplot')
@@ -2280,6 +2285,58 @@ server <- function(input, output, session) {
                    hide('plotcdf')
                  }
                })
+  
+  # CDF percent reactive
+  observeEvent(input$slidercdfper, ignoreInit = TRUE, {
+    oldname <- grep("CDF\nn =", names(LIST_DATA$gene_info))
+    if(is_empty(oldname)){
+      return()
+    }
+    gene_count <- n_distinct(LIST_DATA$gene_file[[oldname]]$full$gene)
+    num <- c(ceiling(gene_count * input$slidercdfper[1]/100), 
+             ceiling(gene_count * input$slidercdfper[2]/100))
+    gene_list <- group_by(LIST_DATA$gene_file[[oldname]]$full, gene) %>% 
+      filter(all(between(bin, num[1], num[2]))) %>% 
+      distinct(gene) %>%
+      ungroup()
+    newname <- paste("CDF\nn =", n_distinct(gene_list$gene))
+    if(newname != names(LIST_DATA$gene_info)[oldname]){
+      hide('cdftable')
+      show('actioncdfdatatable')
+      LIST_DATA$STATE[2] <<- newname
+      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
+      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
+      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<- gene_list
+    df_options <- semi_join(bind_rows(LIST_DATA$gene_info[[newname]]), 
+                            distinct(LIST_DATA$gene_file[[newname]]$full, set), 
+                            by = "set") %>% 
+      mutate(set = paste(sub("\n", " ", newname), 
+                         gsub("(.{17})", "\\1\n", set), sep = '\n'))
+    df <- inner_join(LIST_DATA$gene_file[[newname]]$full, 
+                     LIST_DATA$gene_file[[newname]]$use, by = "gene") %>% 
+      mutate(set = paste(sub("\n", " ", newname), 
+                         gsub("(.{17})", "\\1\n", set), sep = '\n')) 
+    
+    use_header <- pull(distinct(df_options, myheader))
+    if(n_groups(group_by(df_options, set)) == 2 & n_distinct(df$gene) > 1){
+      tt_name <- pull(distinct(df_options, set))
+      tt <- suppressWarnings(ks.test(pull(filter(df, set == tt_name[1]),value),
+                                     pull(filter(df, set == tt_name[2]),value)))
+      if (tt[[2]] == 0) {
+        ttt <- "< 2.2e-16"
+      } else {
+        ttt <- tt[[2]]
+        
+        use_header <-
+          paste(use_header, paste("  p-value = ", format(ttt, scientific = TRUE)))
+      }
+    }
+    output$plotcdf <- renderPlot({
+      GGplotC(df, df_options, use_header)
+    })
+    show('plotcdf')
+    }
+  })
   
   # CDF generate gene list ----
   observeEvent(input$actioncdfdatatable, ignoreInit = TRUE,{
@@ -2317,7 +2374,33 @@ server <- function(input, output, session) {
       names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
       LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cdftable_rows_all])
-    }
+      df_options <- semi_join(bind_rows(LIST_DATA$gene_info[[newname]]), 
+                              distinct(LIST_DATA$gene_file[[newname]]$full, set), 
+                              by = "set") %>% 
+        mutate(set = paste(sub("\n", " ", newname), 
+                           gsub("(.{17})", "\\1\n", set), sep = '\n'))
+      df <- inner_join(LIST_DATA$gene_file[[newname]]$full, 
+                       LIST_DATA$gene_file[[newname]]$use, by = "gene") %>% 
+        mutate(set = paste(sub("\n", " ", newname), 
+                           gsub("(.{17})", "\\1\n", set), sep = '\n')) 
+      
+      use_header <- pull(distinct(df_options, myheader))
+      if(n_groups(group_by(df_options, set)) == 2 & n_distinct(df$gene) > 1){
+        tt_name <- pull(distinct(df_options, set))
+        tt <- suppressWarnings(ks.test(pull(filter(df, set == tt_name[1]),value),
+                                       pull(filter(df, set == tt_name[2]),value)))
+        if (tt[[2]] == 0) {
+          ttt <- "< 2.2e-16"
+        } else {
+          ttt <- tt[[2]]
+          
+          use_header <-
+            paste(use_header, paste("  p-value = ", format(ttt, scientific = TRUE)))
+        }
+      }
+      output$plotcdf <- renderPlot({
+        GGplotC(df, df_options, use_header)
+      })
     glo <- input$selectgenelistoptions
     if(!glo %in% names(LIST_DATA$gene_file)){
       glo <- names(LIST_DATA$gene_file)[1]
@@ -2341,23 +2424,14 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_file),
       selected = ol1
     )
-    
-    df_options <- semi_join(bind_rows(LIST_DATA$gene_info[[newname]]), distinct(LIST_DATA$gene_file[[newname]]$full, set), by = "set")
-    df <- inner_join(LIST_DATA$gene_file[[newname]]$full, 
-                     LIST_DATA$gene_file[[newname]]$use, by = "gene") %>% 
-      mutate(set = paste(sub("\n", " ", newname), gsub("(.{17})", "\\1\n", nn), sep = '\n')) %>%
-      select(-nn) # test ggplot without moding options?
-    # use_col <-
-    # use_header <- 
-    # legend_space <- 
-    # GGplotC(df, use_col, use_header, legend_space)
+    }
   })
 
   # CDF tool action ----
   observeEvent(input$actioncdftool, ignoreInit = TRUE, {
     print("CDF tool action")
     hide('cdftable')
-    show('plotcdf')
+    hide('plotcdf')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -2379,7 +2453,35 @@ server <- function(input, output, session) {
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
       show('actioncdfdatatable')
+      show('plotcdf')
+      newname <- grep("CDF\nn =", names(LIST_DATA$gene_info), value = TRUE)
+      df_options <- semi_join(bind_rows(LIST_DATA$gene_info[[newname]]), 
+                              distinct(LIST_DATA$gene_file[[newname]]$full, set), 
+                              by = "set") %>% 
+        mutate(set = paste(sub("\n", " ", newname), 
+                           gsub("(.{17})", "\\1\n", set), sep = '\n'))
+      df <- inner_join(LIST_DATA$gene_file[[newname]]$full, 
+                       LIST_DATA$gene_file[[newname]]$use, by = "gene") %>% 
+        mutate(set = paste(sub("\n", " ", newname), 
+                           gsub("(.{17})", "\\1\n", set), sep = '\n')) 
       
+      use_header <- pull(distinct(df_options, myheader))
+      if(n_groups(group_by(df_options, set)) == 2 & n_distinct(df$gene) > 1){
+        tt_name <- pull(distinct(df_options, set))
+        tt <- suppressWarnings(ks.test(pull(filter(df, set == tt_name[1]),value),
+                                       pull(filter(df, set == tt_name[2]),value)))
+        if (tt[[2]] == 0) {
+          ttt <- "< 2.2e-16"
+        } else {
+          ttt <- tt[[2]]
+
+          use_header <-
+            paste(use_header, paste("  p-value = ", format(ttt, scientific = TRUE)))
+        }
+      }
+      output$plotcdf <- renderPlot({
+        GGplotC(df, df_options, use_header)
+      })
       glo <- input$selectgenelistoptions
       if(!glo %in% names(LIST_DATA$gene_file)){
         glo <- names(LIST_DATA$gene_file)[1]

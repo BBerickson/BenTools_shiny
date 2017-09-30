@@ -1045,7 +1045,6 @@ CumulativeDistribution <-
     num <- c(ceiling(gene_count * bottom_per/100), ceiling(gene_count * top_per/100))
     outlist <- NULL
     lapply(cdffile, function(j) {
-      nick_name <- list_data$gene_info[[list_name]][[j]]$set
       df <- semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>%
         group_by(gene) %>%
         summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
@@ -1066,11 +1065,11 @@ CumulativeDistribution <-
             semi_join(df, ., by = "gene") %>%
             ungroup()
       }
-      outlist[[j]] <<- transmute(df, gene = gene, scale = sum1 / sum2) %>%
+      outlist[[j]] <<- transmute(df, gene = gene, value = sum1 / sum2) %>%
           na_if(Inf) %>%
-          replace_na(list(scale = 0)) %>%
-            arrange(desc(scale)) %>%
-          mutate(bin = row_number(), set = j, nn = nick_name)
+          replace_na(list(value = 0)) %>%
+            arrange(desc(value)) %>%
+          mutate(bin = row_number(), set = j)
     })
     
     outlist <- bind_rows(outlist)
@@ -1090,7 +1089,6 @@ CumulativeDistribution <-
         paste("CDF\nn =", n_distinct(gene_list$gene))
       list_data$gene_file[[nick_name1]]$full <- outlist 
       list_data$gene_file[[nick_name1]]$use <- gene_list
-       
       list_data$gene_file[[nick_name1]]$info <-
         paste(
           "CDF",
@@ -1115,7 +1113,11 @@ CumulativeDistribution <-
           Sys.Date()
         )
     }
-
+    if (sum(start1_bin, end1_bin) > sum(start2_bin, end2_bin)) {
+      use_header <- "Log2 EI Cumulative plot"
+    } else {
+    use_header <- "Log2 PI Cumulative plot"
+    }
       list_data$gene_info[[nick_name1]] <-
         lapply(setNames(
           names(list_data$gene_info[[1]]),
@@ -1131,7 +1133,8 @@ CumulativeDistribution <-
               tint = length(list_data$gene_file) * 0.08
             ),
             onoff = 0,
-            rnorm = "1"
+            rnorm = "1",
+            myheader = use_header
           ))
     setProgress(5, detail = "finishing up")
     list_data$STATE[2] <- nick_name1
@@ -1547,6 +1550,45 @@ GGplotLineDot <-
         legend.text = element_text(size = 12)
       )  +
       coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
+    suppressMessages(print(gp))
+    return(suppressMessages(gp))
+  }
+
+# main ggplot function
+GGplotC <-
+  function(df2,
+           plot_options,
+           use_header) {
+    print("ggplot CDF")
+    
+    use_col <- plot_options$mycol
+    names(use_col) <- plot_options$set
+    
+    legend_space <- max(1, (lengths(strsplit(
+      plot_options$set, "\n"
+    ))))
+    gp <- ggplot(df2, aes(log2(value), color = set)) +
+      stat_ecdf(show.legend = TRUE, size = 1.8) +
+      scale_color_manual(name = "Sample", values = use_col) +
+      ylab("Fraction of genes") +
+      ggtitle(use_header) +
+      theme_bw() +
+      theme(legend.title = element_blank()) +
+      theme(axis.title.y = element_text(size =  15)) +
+      theme(axis.title.x = element_text(size =  13, vjust = .5)) +
+      theme(axis.text.x = element_text(
+        size = 12,
+        angle = -45,
+        hjust = .1,
+        vjust = .9,
+        face = 'bold'
+      )) +
+      theme(
+        legend.title = element_blank(),
+        legend.key = element_rect(size = 5, color = 'white'),
+        legend.key.height = unit(legend_space, "line"),
+        legend.text = element_text(size = 10)
+      )
     suppressMessages(print(gp))
     return(suppressMessages(gp))
   }

@@ -93,7 +93,7 @@ Ratio tool
   
 cluster tool
   
-  select gene list and 1 file for that list (must have at least 4 genes)
+  select gene list and 1 file form that list (must have at least 4 genes)
   select bin range(s) to work on
   select fold number of clusters/groups 1-4 
   
@@ -109,3 +109,19 @@ cluster tool
     
     action button builds datatable and shows
     action button shows plot results for selected file
+    
+Cumulative Distribution Function (CDF) tool
+  
+  select gene list and files form that list
+  select bin 5' and 3' ranges
+  select upper and lower percentages to exclude
+  
+  plots results
+    if 2 files are use a ks test p value is returned
+    reactive to upper and lower percentages and updates gene list
+    
+  action button builds datatable and shows
+    search and sort data table
+    results are added to gene list and updates plot
+    
+  
