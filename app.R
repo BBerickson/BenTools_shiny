@@ -786,7 +786,7 @@ server <- function(input, output, session) {
     reactive_values$Plot_controler
   })
   
-  # updates applymath ----
+  # updates norm applymath ----
   observeEvent(
     c(
       input$myMath,
@@ -796,43 +796,58 @@ server <- function(input, output, session) {
     ),
     ignoreInit = TRUE,
     {
+      if(LIST_DATA$STATE[5] == 1){
+        LIST_DATA$STATE[5] <<- 0 
+      }
       if (is.na(input$numericnormbin)) {
         updateNumericInput(session, "numericnormbin", value = 0)
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$numericnormbin < 0) {
         updateNumericInput(session, "numericnormbin", value = 0)
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$numericnormbin > LIST_DATA$x_plot_range[2]) {
         updateNumericInput(session, "numericnormbin", value = LIST_DATA$x_plot_range[2])
+        LIST_DATA$STATE[5] <<- 1
       } else {
         updateNumericInput(session,
                            "numericnormbin",
                            value = round(input$numericnormbin))
+        LIST_DATA$STATE[5] <<- 1
       }
       
       if (input$checkboxrgf &
           reactive_values$mynorm == "checkboxrf") {
         updateCheckboxInput(session, "checkboxrf", value = FALSE)
         reactive_values$mynorm <- "checkboxrgf"
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$checkboxrf &
                  reactive_values$mynorm == "checkboxrgf") {
         updateCheckboxInput(session, "checkboxrgf", value = FALSE)
         updateNumericInput(session, "numericnormbin", value = 0)
         reactive_values$mynorm <- "checkboxrf"
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$checkboxrf &
                  reactive_values$mynorm == "numericnormbin") {
         updateNumericInput(session, "numericnormbin", value = 0)
         reactive_values$mynorm <- "checkboxrf"
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$numericnormbin > 0 &
                  reactive_values$mynorm == "checkboxrf") {
         updateCheckboxInput(session, "checkboxrf", value = FALSE)
         reactive_values$mynorm <- "numericnormbin"
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$checkboxrgf) {
         reactive_values$mynorm <- "checkboxrgf"
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$checkboxrf) {
         reactive_values$mynorm <- "checkboxrf"
+        LIST_DATA$STATE[5] <<- 1
       } else if (input$numericnormbin > 0) {
         reactive_values$mynorm <- "numericnormbin"
+        LIST_DATA$STATE[5] <<- 1
       } else {
         reactive_values$mynorm <- "none"
+        LIST_DATA$STATE[5] <<- 1
       }
       reactive_values$Y_Axis_Lable <-
         YAxisLable(

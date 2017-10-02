@@ -41,7 +41,7 @@ LIST_DATA <- list(
   clust = list(),
   # Cluster holder
   x_plot_range = c(0, 0),
-  STATE = c(0, "common", 0, 0) # flow control,
+  STATE = c(0, "common", 0, 0, 0) # flow control,
   # [1] 1 = at least on file has been loadded and lets reactives fill in info
   #     2 = lets reactive change tab toggle plot button
   # [2] name of most recent loaded gene list, for setting options select,
@@ -49,6 +49,7 @@ LIST_DATA <- list(
   # [4] 1 = first time switching tab auto ploting
   #     2 = on/off reactive can deactivate plot options until plot button is pressed
   #     3 = picker(s) have been remade keeps on/off reactive from running
+  # [5] 1 = plot norm applymath has been run dont retrigger
 )
 
 # types of dots to be used in plotting

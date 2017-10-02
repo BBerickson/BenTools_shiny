@@ -18,7 +18,6 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 add remove all checkbox, remove all hide like at start and switch to load file tab
 add loadfile function check if load gene list that data is laoded 
 loading gene list from url ask if want to laod all?
-norm switching runs function 2x? ... norm bin looping ... add timer? diffrent gui?
 more info on loading files progress bar
 don't auto plot? keep options avalible at first and quick line lable at all times
 picker name overflow
