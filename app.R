@@ -1138,23 +1138,160 @@ server <- function(input, output, session) {
         "selectgenelistoptions",
         choices = names(LIST_DATA$gene_info),
         selected = glo)
-      # ol <- input$selectsortfile
-      # if(!ol %in% names(LIST_DATA$gene_file)){
-      #   ol <- grep("Sort\nn", names(LIST_DATA$gene_file), value = TRUE)
-      #   reactive_values$pickerfile_controler <- input$pickersortfile
-      # }else {
-      #   reactive_values$pickerfile_controler <- ""
-      # }
-      # updateSelectInput(
-      #   session,
-      #   "selectsortfile",
-      #   choices = names(LIST_DATA$gene_file),
-      #   selected = ol
-      # )
+      ol <- input$pickergenelists
+      if(!ol %in% names(LIST_DATA$gene_file)){
+        ol <- grep("Gene_List_", names(LIST_DATA$gene_file), value = TRUE)
+      }else {
+      }
+      updateSelectInput(
+        session,
+        "selectsortfile",
+        choices = names(LIST_DATA$gene_file),
+        selected = ol
+      )
     } else {
       return()
     }
   })
+  
+  # Gene lists show gene list ----
+  observeEvent(input$actiongenelistsdatatable, ignoreInit = TRUE,{
+    print("generiate gene lists table")
+    hide('actiongenelistsdatatable')
+    if(any(grep("Gene_List_intersect\nn =",names(LIST_DATA$gene_info))>0)){
+      newnames1 <- gsub("\n", " ", grep("Gene_List_intersect\nn =",names(LIST_DATA$gene_info), value = TRUE))
+      mytab <- "Intersected Gene Lists"
+      output$genelists1table <-
+        DT::renderDataTable(
+          datatable(
+            LIST_DATA$gene_file[[grep("Gene_List_intersect\nn =",
+                                      names(LIST_DATA$gene_info))]]$full,
+            rownames = FALSE,
+            colnames = newnames1,
+            class = 'cell-border stripe compact',
+            filter = 'top',
+            caption = 'Gene_List_intersect',
+            options = list(
+              pageLength = 15,
+              scrollX = TRUE,
+              scrollY = TRUE,
+              autoWidth = TRUE,
+              columnDefs = list(
+                list(className = 'dt-center ', targets = "_all"),
+                list(
+                  targets = 0,
+                  render = JS(
+                    "function(data, type, row, meta) {",
+                    "return type === 'display' && data.length > 44 ?",
+                    "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+                    "}"
+                  )
+                )
+              )
+            )
+          )
+        )
+      show('genelists1table')
+    } else {
+      output$genelists1table <-
+        DT::renderDataTable(
+          datatable(LIST_DATA$gene_file[[1]]$empty, 
+                    rownames = FALSE,
+                    colnames = strtrim(newnames1, 24),
+                    options = list(searching = FALSE)))
+      mytab <- "Inclusive Gene Lists"
+    }
+    if(any(grep("Gene_List_inclusive\nn =",names(LIST_DATA$gene_info))>0)){
+      newnames2 <- gsub("\n", " ", grep("Gene_List_inclusive\nn =",names(LIST_DATA$gene_info), value = TRUE))
+      output$genelists2table <-
+        DT::renderDataTable(
+          datatable(
+            LIST_DATA$gene_file[[grep("Gene_List_inclusive\nn =",
+                                      names(LIST_DATA$gene_info))]]$full,
+            rownames = FALSE,
+            colnames = newnames2,
+            class = 'cell-border stripe compact',
+            filter = 'top',
+            caption = 'Gene_List_inclusive',
+            options = list(
+              pageLength = 15,
+              scrollX = TRUE,
+              scrollY = TRUE,
+              autoWidth = TRUE,
+              columnDefs = list(
+                list(className = 'dt-center ', targets = "_all"),
+                list(
+                  targets = 0,
+                  render = JS(
+                    "function(data, type, row, meta) {",
+                    "return type === 'display' && data.length > 44 ?",
+                    "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+                    "}"
+                  )
+                )
+              )
+            )
+          )
+        )
+      show('genelists2table')
+    } else {
+      output$genelists2table <-
+        DT::renderDataTable(
+          datatable(LIST_DATA$gene_file[[1]]$empty, 
+                    rownames = FALSE,
+                    colnames = strtrim(newnames2, 24),
+                    options = list(searching = FALSE)))
+      if(mytab == "Inclusive Gene Lists"){
+        mytab <- "Exclusive Gene Lists"
+      }
+    }
+    if(any(grep("Gene_List_exclusive\nn =",names(LIST_DATA$gene_info))>0)){
+      newnames3 <- gsub("\n", " ", grep("Gene_List_exclusive\nn =", names(LIST_DATA$gene_info), value = T))
+      output$genelists3table <-
+        DT::renderDataTable(
+          datatable(
+            LIST_DATA$gene_file[[grep("Gene_List_exclusive\nn =",
+                                      names(LIST_DATA$gene_info))]]$full,
+            rownames = FALSE,
+            colnames = newnames3,
+            class = 'cell-border stripe compact',
+            filter = 'top',
+            caption = 'Gene_List_exclusive',
+            options = list(
+              pageLength = 15,
+              scrollX = TRUE,
+              scrollY = TRUE,
+              autoWidth = TRUE,
+              columnDefs = list(
+                list(className = 'dt-center ', targets = "_all"),
+                list(
+                  targets = 0,
+                  render = JS(
+                    "function(data, type, row, meta) {",
+                    "return type === 'display' && data.length > 44 ?",
+                    "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+                    "}"
+                  )
+                )
+              )
+            )
+          )
+        )
+      show('genelists3table')
+    } else {
+      output$genelists3table <-
+        DT::renderDataTable(
+          datatable(LIST_DATA$gene_file[[1]]$empty, 
+                    rownames = FALSE,
+                    colnames = "Gene_List_exclusive n = 0",
+                    options = list(searching = FALSE)))
+      if(mytab == "Exclusive Gene Lists"){
+        mytab <- "Inclusive Gene Lists"
+      }
+    }
+    updateTabItems(session, "geneliststooltab", mytab)
+  })
+  
   
   # sort tool picker control ----
   observeEvent(input$selectsortfile, ignoreInit = TRUE, {
@@ -3050,9 +3187,9 @@ ui <- dashboardPage(
                                   width = 12,
                                   tabPanel("Intersected Gene Lists",
                                            DT::dataTableOutput('genelists1table')),
-                                  tabPanel("Exclusive Gene Lists",
-                                           DT::dataTableOutput('genelists2table')),
                                   tabPanel("Inclusive Gene Lists",
+                                           DT::dataTableOutput('genelists2table')),
+                                  tabPanel("Exclusive Gene Lists",
                                            DT::dataTableOutput('genelists3table'))
                                 )
                               )

@@ -15,13 +15,21 @@ https://rstudio.github.io/DT/
 
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
+add remove all checkbox, remove all hide like at start and switch to load file tab
+add loadfile function check if load gene list that data is laoded 
+loading gene list from url ask if want to laod all?
+norm switching runs function 2x? ... norm bin looping ... add timer? diffrent gui?
+more info on loading files progress bar
+don't auto plot? keep options avalible at first and quick line lable at all times
+picker name overflow
+y plot hight rounding problem change to % +/- hight
+
+
 gene tools ... 
 
 intersect ...
   
   create functions and hookup
-    update gene list picker (tool on tool)
-    show gene list function
     datatable$use
   test
   add usage
@@ -30,27 +38,19 @@ intersect ...
 
 add show gene lists based on what tab is showing and not all of them to save time.
 
-clean up code 
+clean up code
   removing all unused ID's
   
 # file size restriction the set correctly?
 
-loading gene lists stores info if avalible 
+loading gene lists stores info if avalible? 
 more $info work and updating on loading/deleting files
 
 better handleing of loading 0 gene lists?
 
-work on slider math ... rescale?
-
-remove tool gene lists on file removel? 
-
-overflow handling of gene names and column names
 add icons to buttons
 
-# if y slider gets too cumbersum the switch to numiricInputs
-numericInput("inNumber", "Number input:",
-                   min = 1, max = 20, value = 5, step = 0.5),
-      numericInput("inNumber2", "Number input 2:",
-                   min = 1, max = 20, value = 5, step = 0.5),
-                   
 search TODO
+
+combide one file and remove print statements
+add box plot bins and a way to split ... meadian of bins clustering?
