@@ -17,25 +17,22 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 gene tools ... 
 
-cluster ...
-
-cdp ...
-
-intersect
-  add tab and 
-  add  picker(multi of gene lists) to sidebar
-  set up tab selector controls
-  set up tab selector controls
-  add 3 tab DT
-  set up reactives
-  create function and hookup
+intersect ...
+  
+  create functions and hookup
+    update gene list picker (tool on tool)
+    show gene list function
+    datatable$use
   test
   add usage
 
-max peak tool ...
-
 ... testing and using ...
 
+add show gene lists based on what tab is showing and not all of them to save time.
+
+clean up code 
+  removing all unused ID's
+  
 # file size restriction the set correctly?
 
 loading gene lists stores info if avalible 

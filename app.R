@@ -57,6 +57,11 @@ server <- function(input, output, session) {
       condition = (input$tabs == "cdftool" &
                      LIST_DATA$STATE[1] != 0)
     )
+    toggle(
+      "showgenelistspicker",
+      condition = (input$tabs == "genelists" &
+                     LIST_DATA$STATE[1] != 0)
+    )
     if(input$tabs == "filenorm" & LIST_DATA$STATE[1] != 0){
       updatePickerInput(
         session,
@@ -70,6 +75,18 @@ server <- function(input, output, session) {
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[1]], "[[", 4)
         ), sep = ":")))
+    }
+    if(input$tabs == "genelists" & LIST_DATA$STATE[1] != 0){
+      og <- input$pickergenelists
+      if(!all(NULL %in% names(LIST_DATA$gene_file))){
+        hide('actiongenelistsdatatable')
+        og <- NULL
+      }
+      updatePickerInput(
+        session,
+        "pickergenelists", choices = names(LIST_DATA$gene_file),
+        selected = og
+        )
     }
     if (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectsortfile
@@ -1086,6 +1103,59 @@ server <- function(input, output, session) {
     )
   })
   
+  # Gene lists picker enable/disable ----
+  observeEvent(input$actiongenelists, ignoreNULL = FALSE, ignoreInit = TRUE,{
+    if(is.null(input$actiongenelists)){
+      hide('genelists1table')
+      hide('genelists2table')
+      hide('genelists3table')
+    } 
+  })
+  
+  
+  # Gene action ----
+  observeEvent(input$actiongenelists,{
+    print("gene lists action")
+    hide('actiongenelistsdatatable')
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {
+                   LD <- IntersectGeneLists(
+                     LIST_DATA,
+                     input$pickergenelists
+                   )
+                 })
+    if (!is_empty(LD$table_file)) {
+      LIST_DATA <<- LD
+      show('actiongenelistsdatatable')
+      glo <- input$selectgenelistoptions
+      if(!glo %in% names(LIST_DATA$gene_file)){
+        glo <- names(LIST_DATA$gene_file)[1]
+      }
+      updateSelectInput(
+        session,
+        "selectgenelistoptions",
+        choices = names(LIST_DATA$gene_info),
+        selected = glo)
+      # ol <- input$selectsortfile
+      # if(!ol %in% names(LIST_DATA$gene_file)){
+      #   ol <- grep("Sort\nn", names(LIST_DATA$gene_file), value = TRUE)
+      #   reactive_values$pickerfile_controler <- input$pickersortfile
+      # }else {
+      #   reactive_values$pickerfile_controler <- ""
+      # }
+      # updateSelectInput(
+      #   session,
+      #   "selectsortfile",
+      #   choices = names(LIST_DATA$gene_file),
+      #   selected = ol
+      # )
+    } else {
+      return()
+    }
+  })
+  
   # sort tool picker control ----
   observeEvent(input$selectsortfile, ignoreInit = TRUE, {
     print("sort picker update")
@@ -1111,7 +1181,7 @@ server <- function(input, output, session) {
   })
   
   # sort tool action ----
-  observeEvent(input$actionsorttool, ignoreInit = TRUE, {
+  observeEvent(input$actionsorttool, {
     print("sort tool")
     hide('actionsortdatatable')
     withProgress(message = 'Calculation in progress',
@@ -2528,6 +2598,21 @@ ui <- dashboardPage(
         id = "showpicker",
         uiOutput("DynamicGenePicker")
       )),
+      menuItem("Gene Lists", tabName = "genelists", icon = icon("gears")),
+      hidden(
+        div(
+          style = "padding-left: 15%;",
+          id = "showgenelistspicker",
+          pickerInput(
+            inputId = "pickergenelists",
+            width = "99%",
+            label = "Select Gene lists",
+            choices = "Load data file",
+            multiple = T,
+            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1")
+          )
+        )
+      ),
       menuItem("Sort Tool", tabName = "sorttool", icon = icon("gears")),
       hidden(
         div(
@@ -2940,6 +3025,38 @@ ui <- dashboardPage(
                               )
                             )
                           ))),
+                  # main gene lists tab ----
+                  tabItem(tabName = "genelists",
+                          div(
+                            id = "enablemaingenelists",
+                            box(
+                              title = "Gene Lists",
+                              status = "primary",
+                              solidHeader = T,
+                              width = 12,
+                              actionButton("actiongenelists", "Get fold changes"),
+                              helpText("Shows intersected, exlusive, and inclusive gene lists")
+                            ),
+                              box(
+                                title = "Gene List Tables",
+                                status = "primary",
+                                solidHeader = T,
+                                width = 12,
+                                hidden(div(
+                                    actionButton("actiongenelistsdatatable", "Show gene list")
+                                )),
+                                tabBox(
+                                  id = "geneliststooltab",
+                                  width = 12,
+                                  tabPanel("Intersected Gene Lists",
+                                           DT::dataTableOutput('genelists1table')),
+                                  tabPanel("Exclusive Gene Lists",
+                                           DT::dataTableOutput('genelists2table')),
+                                  tabPanel("Inclusive Gene Lists",
+                                           DT::dataTableOutput('genelists3table'))
+                                )
+                              )
+                          )),
                   # main sort tab ----
                   tabItem(tabName = "sorttool",
                           div(id = "enablemainsort",

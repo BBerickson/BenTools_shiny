@@ -638,6 +638,97 @@ RemoveFile <- function(list_data, file_name){
   list_data
 }
 
+# inclusive, exclusive and intersected gene lists
+IntersectGeneLists <- function(list_data, list_name){
+  if(is.null(list_name)){
+    return(NULL)
+  } 
+  setProgress(1, detail = paste("building list"))
+  outlist <- NULL
+  lapply(list_name, function(j){
+    outlist[[j]] <<- list_data$gene_file[[j]]$use
+    })
+  outlist <- bind_rows(outlist)
+  for(rr in grep("Gene_List_", names(LIST_DATA$gene_file), value = T)){
+    if (length(rr) > 0) {
+      list_data$gene_file[[rr]] <- NULL
+      list_data$gene_info[[rr]] <- NULL
+    }
+  }
+  
+  nick_name <- NULL
+  setProgress(2, detail = paste("building inclusive list"))
+  inclusive <- distinct(outlist)
+  if(n_distinct(inclusive$gene) > 0){
+    nick_name1 <-
+      paste("Gene_List_inclusive\nn =", n_distinct(inclusive$gene))
+    nick_name <- c(nick_name, nick_name1)
+    list_data$gene_file[[nick_name1]]$full <- inclusive
+    list_data$gene_file[[nick_name1]]$use <- select(inclusive, gene)
+    list_data$gene_file[[nick_name1]]$info <-
+      paste(
+        "Gene_List_inclusive",
+        "from",
+        list_name,
+        Sys.Date()
+      )
+  }
+  setProgress(3, detail = paste("building intersect list"))
+  intersect <- filter(outlist, duplicated(gene))
+  if(n_distinct(intersect$gene) > 0){
+    nick_name1 <-
+      paste("Gene_List_intersect\nn =", n_distinct(intersect$gene))
+    nick_name <- c(nick_name, nick_name1)
+    list_data$gene_file[[nick_name1]]$full <- intersect
+    list_data$gene_file[[nick_name1]]$use <- select(intersect, gene)
+    list_data$gene_file[[nick_name1]]$info <-
+      paste(
+        "Gene_List_intersect",
+        "from",
+        list_name,
+        Sys.Date()
+      )
+
+  setProgress(4, detail = paste("building exclusive list"))
+  exclusive <- anti_join(inclusive, intersect, by="gene")
+  if(n_distinct(exclusive$gene) > 0){
+    nick_name1 <-
+      paste("Gene_List_exclusive\nn =", n_distinct(exclusive$gene))
+    nick_name <- c(nick_name, nick_name1)
+    list_data$gene_file[[nick_name1]]$full <- exclusive
+    list_data$gene_file[[nick_name1]]$use <- select(exclusive, gene)
+    list_data$gene_file[[nick_name1]]$info <-
+      paste(
+        "Gene_List_exclusive",
+        "from",
+        list_name,
+        Sys.Date()
+      )
+  }
+  }
+  setProgress(5, detail = "finishing up")
+  for (nn in nick_name) {
+    list_data$gene_info[[nn]] <-
+      lapply(setNames(
+        names(list_data$gene_info[[1]]),
+        names(list_data$gene_info[[1]])
+      ),
+      function(i)
+        tibble(
+          set = i,
+          mydot = kDotOptions[1],
+          myline = kLineOptions[1],
+          mycol = RgbToHex(
+            my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
+            tint = length(list_data$gene_file) * 0.08
+          ),
+          onoff = 0,
+          rnorm = "1"
+        ))
+  }
+  list_data
+}
+
 # sorts active gene list contain top % signal based on selected bins and file
 SortTop <-
   function(list_data,
