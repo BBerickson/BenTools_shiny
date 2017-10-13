@@ -29,8 +29,7 @@ server <- function(input, output, session) {
     Plot_Options = NULL,
     Plot_controler = NULL,
     Picker_controler = NULL,
-    Y_Axis_plot = NULL,
-    mynorm = "none"
+    Y_Axis_plot = NULL
   )
   
   # change tab controls ----
@@ -271,9 +270,8 @@ server <- function(input, output, session) {
         ApplyMath(
           LIST_DATA,
           input$myMath,
-          input$checkboxrgf,
-          input$checkboxrf,
-          input$numericnormbin
+          input$radioplotnrom,
+          as.numeric(input$sliderplotBinNorm)
         )
       if (!is.null(reactive_values$Apply_Math)) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
@@ -336,6 +334,13 @@ server <- function(input, output, session) {
         min = LIST_DATA$x_plot_range[1],
         max = LIST_DATA$x_plot_range[2],
         value = LIST_DATA$x_plot_range
+      )
+      updateSliderInput(
+        session,
+        "sliderplotBinNorm",
+        min = 0,
+        max = LIST_DATA$x_plot_range[2],
+        value = 0
       )
       shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
       num_bins <-
@@ -519,9 +524,8 @@ server <- function(input, output, session) {
           ApplyMath(
             LIST_DATA,
             input$myMath,
-            input$checkboxrgf,
-            input$checkboxrf,
-            input$numericnormbin
+            input$radioplotnrom,
+            as.numeric(input$sliderplotBinNorm)
           )
       }
     } else if (!is.na(input$normfactor)) {
@@ -727,9 +731,8 @@ server <- function(input, output, session) {
       ApplyMath(
         LIST_DATA,
         input$myMath,
-        input$checkboxrgf,
-        input$checkboxrf,
-        input$numericnormbin
+        input$radioplotnrom,
+        as.numeric(input$sliderplotBinNorm)
       )
     if (!is.null(reactive_values$Apply_Math)) {
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
@@ -788,73 +791,18 @@ server <- function(input, output, session) {
   
   # updates norm applymath ----
   observeEvent(
-    c(
-      input$myMath,
-      input$checkboxrgf,
-      input$numericnormbin,
-      input$checkboxrf
+    c(input$myMath,
+      input$sliderplotBinNorm,
+      input$radioplotnrom
     ),
     ignoreInit = TRUE,
     {
-      if(LIST_DATA$STATE[5] == 1){
-        LIST_DATA$STATE[5] <<- 0 
-      }
-      if (is.na(input$numericnormbin)) {
-        updateNumericInput(session, "numericnormbin", value = 0)
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$numericnormbin < 0) {
-        updateNumericInput(session, "numericnormbin", value = 0)
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$numericnormbin > LIST_DATA$x_plot_range[2]) {
-        updateNumericInput(session, "numericnormbin", value = LIST_DATA$x_plot_range[2])
-        LIST_DATA$STATE[5] <<- 1
-      } else {
-        updateNumericInput(session,
-                           "numericnormbin",
-                           value = round(input$numericnormbin))
-        LIST_DATA$STATE[5] <<- 1
-      }
       
-      if (input$checkboxrgf &
-          reactive_values$mynorm == "checkboxrf") {
-        updateCheckboxInput(session, "checkboxrf", value = FALSE)
-        reactive_values$mynorm <- "checkboxrgf"
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$checkboxrf &
-                 reactive_values$mynorm == "checkboxrgf") {
-        updateCheckboxInput(session, "checkboxrgf", value = FALSE)
-        updateNumericInput(session, "numericnormbin", value = 0)
-        reactive_values$mynorm <- "checkboxrf"
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$checkboxrf &
-                 reactive_values$mynorm == "numericnormbin") {
-        updateNumericInput(session, "numericnormbin", value = 0)
-        reactive_values$mynorm <- "checkboxrf"
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$numericnormbin > 0 &
-                 reactive_values$mynorm == "checkboxrf") {
-        updateCheckboxInput(session, "checkboxrf", value = FALSE)
-        reactive_values$mynorm <- "numericnormbin"
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$checkboxrgf) {
-        reactive_values$mynorm <- "checkboxrgf"
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$checkboxrf) {
-        reactive_values$mynorm <- "checkboxrf"
-        LIST_DATA$STATE[5] <<- 1
-      } else if (input$numericnormbin > 0) {
-        reactive_values$mynorm <- "numericnormbin"
-        LIST_DATA$STATE[5] <<- 1
-      } else {
-        reactive_values$mynorm <- "none"
-        LIST_DATA$STATE[5] <<- 1
-      }
       reactive_values$Y_Axis_Lable <-
         YAxisLable(
           input$myMath,
-          input$checkboxrf,
-          input$checkboxrgf,
-          input$numericnormbin,
+          input$radioplotnrom,
+          as.numeric(input$sliderplotBinNorm),
           input$checkboxsmooth
         )
       if (LIST_DATA$STATE[1] == 1) {
@@ -863,9 +811,8 @@ server <- function(input, output, session) {
           ApplyMath(
             LIST_DATA,
             input$myMath,
-            input$checkboxrgf,
-            input$checkboxrf,
-            input$numericnormbin
+            input$radioplotnrom,
+            as.numeric(input$sliderplotBinNorm)
           )
       }
     }
@@ -964,9 +911,8 @@ server <- function(input, output, session) {
     reactive_values$Y_Axis_Lable <-
       YAxisLable(
         input$myMath,
-        input$checkboxrf,
-        input$checkboxrgf,
-        input$numericnormbin,
+        input$radioplotnrom,
+        as.numeric(input$sliderplotBinNorm),
         input$checkboxsmooth
       )
     reactive_values$Plot_controler <-
@@ -1891,9 +1837,8 @@ server <- function(input, output, session) {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
       LIST_DATA,
       input$myMath,
-      input$checkboxrgf,
-      input$checkboxrf,
-      input$numericnormbin
+      input$radioplotnrom,
+      as.numeric(input$sliderplotBinNorm)
     )
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
       reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
@@ -1961,9 +1906,8 @@ server <- function(input, output, session) {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
       LIST_DATA,
       input$myMath,
-      input$checkboxrgf,
-      input$checkboxrf,
-      input$numericnormbin
+      input$radioplotnrom,
+      as.numeric(input$sliderplotBinNorm)
     )
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
       reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
@@ -2031,9 +1975,8 @@ server <- function(input, output, session) {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
       LIST_DATA,
       input$myMath,
-      input$checkboxrgf,
-      input$checkboxrf,
-      input$numericnormbin
+      input$radioplotnrom,
+      as.numeric(input$sliderplotBinNorm)
     )
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
       reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
@@ -2102,9 +2045,8 @@ server <- function(input, output, session) {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
       LIST_DATA,
       input$myMath,
-      input$checkboxrgf,
-      input$checkboxrf,
-      input$numericnormbin
+      input$radioplotnrom,
+      as.numeric(input$sliderplotBinNorm)
     )
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
       reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
@@ -2455,9 +2397,8 @@ server <- function(input, output, session) {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
         input$myMath,
-        input$checkboxrgf,
-        input$checkboxrf,
-        input$numericnormbin
+        input$radioplotnrom,
+        as.numeric(input$sliderplotBinNorm)
       )
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
       reactive_values$Plot_Cluster_Options <- MakePlotOptionFrame(LIST_DATA)
@@ -3060,6 +3001,13 @@ ui <- dashboardPage(
                                   min = 0,
                                   max = 1,
                                   value = c(0, 1)
+                                ),
+                                sliderInput(
+                                  "sliderplotBinNorm",
+                                  label = "Bin Norm:",
+                                  min = 0,
+                                  max = 80,
+                                  value = 0,
                                 )
                               ),
                               
@@ -3080,15 +3028,16 @@ ui <- dashboardPage(
                                 )
                               ),
                               box(
+                                style = 'padding:2px;',
                                 title = "Normalization",
                                 status = "primary",
                                 solidHeader = T,
                                 width = 3,
                                 collapsible = TRUE,
-                                checkboxInput("checkboxrf", label = "relative frequency"),
-                                checkboxInput("checkboxrgf", label = "relative gene frequency"),
-                                checkboxInput("checkboxsmooth", label = "smooth"),
-                                numericInput("numericnormbin", "Norm to bin", value = 0)
+                                awesomeRadio("radioplotnrom", label = "Set Y Normalization", 
+                                             choices = c("none", "relative frequency","rel gene frequency"),
+                                             selected = "none"),
+                                checkboxInput("checkboxsmooth", label = "smooth")
                               ),
                               box(
                                 title = "Lines and Labels",

@@ -15,6 +15,9 @@ https://rstudio.github.io/DT/
 
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
+norm to bin slider to own box 50% with other slider box and reorgonize other boxes
+concider cangeing all numericInput 's to sliders or text boxes 
+norm file still needs work ... crashed and not gene by gene needs to get mean from gene list not all???
 add remove all checkbox, remove all hide like at start and switch to load file tab
 add loadfile function check if load gene list that data is laoded 
 loading gene list from url ask if want to laod all?
@@ -36,6 +39,8 @@ intersect ...
 ... testing and using ...
 
 add show gene lists based on what tab is showing and not all of them to save time.
+
+sort option to remove both high and low outlyers
 
 clean up code
   removing all unused ID's

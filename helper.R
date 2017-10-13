@@ -1237,8 +1237,7 @@ CumulativeDistribution <-
 ApplyMath <-
   function(list_data,
            use_math,
-           gene_relative_frequency,
-           checkboxrf,
+           relative_frequency,
            normbin,
            sel_list = NULL) {
     print("apply math fun")
@@ -1277,7 +1276,7 @@ ApplyMath <-
         return(NULL)
       }
       # applys math to pared down data file
-      if (gene_relative_frequency) {
+      if (relative_frequency == "rel gene frequency") {
         list_long_data_frame[[i]] <- bind_rows(list_data_frame) %>%
           group_by(set, gene) %>%
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
@@ -1307,7 +1306,7 @@ ApplyMath <-
           group_by(list_long_data_frame[[i]], set) %>%
           mutate(value = value / nth(value, normbin)) %>%
           ungroup()
-      } else if (checkboxrf) {
+      } else if (relative_frequency == "relative frequency") {
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
           mutate(value = value / sum(value)) %>%
@@ -1361,19 +1360,18 @@ MakePlotOptionFrame <- function(list_data) {
 # Sets y lable fix
 YAxisLable <-
   function(use_math = "mean",
-           relative_frequency = F,
-           gene_relative_frequency = F,
+           relative_frequency = "none",
            norm_bin = 0,
            smoothed = F) {
     use_y_label <- paste(use_math, "of bin counts")
-    if (gene_relative_frequency) {
+    if (relative_frequency == "rel gene frequency") {
       use_y_label <- paste("RF per gene :", use_y_label)
-    } else if (relative_frequency) {
+    } else if (relative_frequency == "relative frequency") {
       use_y_label <- paste(strsplit(use_y_label, split = " ")[[1]][1],
                            "bins : RF")
     }
     if (norm_bin > 0) {
-      if (gene_relative_frequency) {
+      if (relative_frequency== "rel gene frequency") {
         use_y_label <- paste(use_y_label, " : Norm bin ", norm_bin)
       } else {
         use_y_label <- paste(strsplit(use_y_label, split = " ")[[1]][1],
