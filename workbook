@@ -15,8 +15,8 @@ https://rstudio.github.io/DT/
 
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
-norm to bin slider to own box 50% with other slider box and reorgonize other boxes
-concider cangeing all numericInput 's to sliders or text boxes 
+don't trigger plot button on just new gene list creation
+data table gene lists header has cration info
 norm file still needs work ... crashed and not gene by gene needs to get mean from gene list not all???
 add remove all checkbox, remove all hide like at start and switch to load file tab
 add loadfile function check if load gene list that data is laoded 
@@ -25,14 +25,14 @@ more info on loading files progress bar
 don't auto plot? keep options avalible at first and quick line lable at all times
 picker name overflow
 y plot hight rounding problem change to % +/- hight
-
+4' line and lables function add condition 
+add option header to plot
+more indication that tool is running and finished ... popup?
 
 gene tools ... 
 
 intersect ...
   
-  create functions and hookup
-    datatable$use
   test
   add usage
 

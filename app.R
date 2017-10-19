@@ -59,7 +59,7 @@ server <- function(input, output, session) {
     toggle(
       "showgenelistspicker",
       condition = (input$tabs == "genelists" &
-                     LIST_DATA$STATE[1] != 0)
+                     length(LIST_DATA$gene_file) > 1)
     )
     if(input$tabs == "filenorm" & LIST_DATA$STATE[1] != 0){
       updatePickerInput(
@@ -75,17 +75,20 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[1]], "[[", 4)
         ), sep = ":")))
     }
-    if(input$tabs == "genelists" & LIST_DATA$STATE[1] != 0){
+    if(input$tabs == "genelists" & length(LIST_DATA$gene_file) != 0){
+      hide('actiongenelistsdatatable')
+      if(length(LIST_DATA$gene_file) > 1){
       og <- input$pickergenelists
       if(!all(NULL %in% names(LIST_DATA$gene_file))){
-        hide('actiongenelistsdatatable')
         og <- NULL
       }
       updatePickerInput(
         session,
         "pickergenelists", choices = names(LIST_DATA$gene_file),
-        selected = og
-        )
+        selected = og,
+        choicesOpt = list(style = rep("color:black", length(names(LIST_DATA$gene_file))))
+      )
+      }
     }
     if (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectsortfile
@@ -1089,7 +1092,6 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
-      show('actiongenelistsdatatable')
       glo <- input$selectgenelistoptions
       if(!glo %in% names(LIST_DATA$gene_file)){
         glo <- names(LIST_DATA$gene_file)[1]
@@ -1100,7 +1102,7 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_info),
         selected = glo)
       ol <- input$pickergenelists
-      if(!ol %in% names(LIST_DATA$gene_file)){
+      if(!any(ol %in% names(LIST_DATA$gene_file))){
         ol <- grep("Gene_List_", names(LIST_DATA$gene_file), value = TRUE)
       }else {
       }
@@ -1110,6 +1112,7 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      show('actiongenelistsdatatable')
     } else {
       return()
     }
@@ -1472,18 +1475,6 @@ server <- function(input, output, session) {
                  }
                })
   
-  # keep ratio number above 0 ----
-  observeEvent(input$numericratio, ignoreInit = TRUE, {
-    print("ratio num")
-    if(is.numeric(input$numericratio)){
-      if(input$numericratio < 0){
-        updateNumericInput(session, "numericratio", value = 2)
-      }
-    } else {
-      updateNumericInput(session, "numericratio", value = 2)
-      }
-    })
-  
   # ratio tool gene lists $use ----
   observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, {
     newname <- paste("Ratio_Up_file1\nn =", length(input$ratio1table_rows_all))
@@ -1597,6 +1588,13 @@ server <- function(input, output, session) {
     hide('ratio1table')
     hide('ratio2table')
     hide('ratio3table')
+    if(is.numeric(input$numericratio)){
+      if(input$numericratio < 0){
+        updateNumericInput(session, "numericratio", value = 2)
+      }
+    } else {
+      updateNumericInput(session, "numericratio", value = 2)
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -2933,6 +2931,18 @@ ui <- dashboardPage(
                                 checkboxInput("checkboxsavesplit", "split location and name"),
                                 helpText("Switch to Color tab to save Color list"),
                                 actionButton("actionremovegene", "Remove Gene list")
+                              ),
+                              box(
+                                title = "Quick Color Change",
+                                width = 4,
+                                status = "primary",
+                                solidHeader = T,
+                                selectInput(
+                                  "kbrewer",
+                                  "color brewer",
+                                  choices = kBrewerList,
+                                  selected = kBrewerList[6]
+                                )
                               )
                             ))
                           )),
@@ -2986,7 +2996,7 @@ ui <- dashboardPage(
                                 title = "Sliders",
                                 status = "primary",
                                 solidHeader = T,
-                                width = 7,
+                                width = 6,
                                 collapsible = TRUE,
                                 sliderInput(
                                   "sliderplotBinRange",
@@ -3001,16 +3011,22 @@ ui <- dashboardPage(
                                   min = 0,
                                   max = 1,
                                   value = c(0, 1)
-                                ),
+                                )
+                              ),
+                              box(
+                                title = "Sliders",
+                                status = "primary",
+                                solidHeader = T,
+                                width = 6,
+                                collapsible = TRUE,
                                 sliderInput(
                                   "sliderplotBinNorm",
                                   label = "Bin Norm:",
                                   min = 0,
                                   max = 80,
-                                  value = 0,
+                                  value = 0
                                 )
                               ),
-                              
                               box(
                                 style = 'padding:2px;',
                                 title = "math",
@@ -3041,7 +3057,7 @@ ui <- dashboardPage(
                               ),
                               box(
                                 title = "Lines and Labels",
-                                width = 9,
+                                width = 12,
                                 status = "primary",
                                 solidHeader = T,
                                 collapsible = TRUE,
@@ -3111,18 +3127,6 @@ ui <- dashboardPage(
                                   style = "padding-left:33%;",
                                   actionButton("actionlineslabels", "Update Lines and Lables")
                                 )
-                              ),
-                              box(
-                                title = "Quick Color Change",
-                                width = 3,
-                                status = "primary",
-                                solidHeader = T,
-                                selectInput(
-                                  "kbrewer",
-                                  "color brewer",
-                                  choices = kBrewerList,
-                                  selected = kBrewerList[6]
-                                )
                               )
                             )
                           ))),
@@ -3143,9 +3147,7 @@ ui <- dashboardPage(
                                 status = "primary",
                                 solidHeader = T,
                                 width = 12,
-                                hidden(div(
-                                    actionButton("actiongenelistsdatatable", "Show gene list")
-                                )),
+                                actionButton("actiongenelistsdatatable", "Show gene list"),
                                 tabBox(
                                   id = "geneliststooltab",
                                   width = 12,
