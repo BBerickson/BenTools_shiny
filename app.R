@@ -1081,6 +1081,9 @@ server <- function(input, output, session) {
   observeEvent(input$actiongenelists,{
     print("gene lists action")
     hide('actiongenelistsdatatable')
+    hide('genelists1table')
+    hide('genelists2table')
+    hide('genelists3table')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -1134,12 +1137,13 @@ server <- function(input, output, session) {
             colnames = newnames1,
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = 'Gene_List_intersect',
+            caption = LIST_DATA$gene_file[[grep("Gene_List_intersect\nn =",
+                                                names(LIST_DATA$gene_info))]]$info,
             options = list(
               pageLength = 15,
               scrollX = TRUE,
               scrollY = TRUE,
-              autoWidth = TRUE,
+              autoWidth = FALSE,
               columnDefs = list(
                 list(className = 'dt-center ', targets = "_all"),
                 list(
@@ -1161,7 +1165,7 @@ server <- function(input, output, session) {
         DT::renderDataTable(
           datatable(LIST_DATA$gene_file[[1]]$empty, 
                     rownames = FALSE,
-                    colnames = strtrim(newnames1, 24),
+                    colnames = "Gene_List_exclusive n = 0",
                     options = list(searching = FALSE)))
       mytab <- "Inclusive Gene Lists"
     }
@@ -1176,12 +1180,13 @@ server <- function(input, output, session) {
             colnames = newnames2,
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = 'Gene_List_inclusive',
+            caption = LIST_DATA$gene_file[[grep("Gene_List_inclusive\nn =",
+                                                               names(LIST_DATA$gene_info))]]$info,
             options = list(
               pageLength = 15,
               scrollX = TRUE,
               scrollY = TRUE,
-              autoWidth = TRUE,
+              autoWidth = FALSE,
               columnDefs = list(
                 list(className = 'dt-center ', targets = "_all"),
                 list(
@@ -1203,7 +1208,7 @@ server <- function(input, output, session) {
         DT::renderDataTable(
           datatable(LIST_DATA$gene_file[[1]]$empty, 
                     rownames = FALSE,
-                    colnames = strtrim(newnames2, 24),
+                    colnames = "Gene_List_exclusive n = 0",
                     options = list(searching = FALSE)))
       if(mytab == "Inclusive Gene Lists"){
         mytab <- "Exclusive Gene Lists"
@@ -1220,12 +1225,13 @@ server <- function(input, output, session) {
             colnames = newnames3,
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = 'Gene_List_exclusive',
+            caption = LIST_DATA$gene_file[[grep("Gene_List_exclusive\nn =",
+                                                               names(LIST_DATA$gene_info))]]$info,
             options = list(
               pageLength = 15,
               scrollX = TRUE,
               scrollY = TRUE,
-              autoWidth = TRUE,
+              autoWidth = FALSE,
               columnDefs = list(
                 list(className = 'dt-center ', targets = "_all"),
                 list(
@@ -1366,12 +1372,12 @@ server <- function(input, output, session) {
         colnames = strtrim(newnames, 24),
         class = 'cell-border stripe compact',
         filter = 'top',
-        caption = 'rank percent',
+        caption = LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$info,
         options = list(
           pageLength = 15,
           scrollX = TRUE,
           scrollY = TRUE,
-          autoWidth = TRUE,
+          autoWidth = FALSE,
           columnDefs = list(
             list(className = 'dt-center ', targets = "_all"),
             list(
@@ -1389,7 +1395,7 @@ server <- function(input, output, session) {
     } else {
       dt <- datatable(LIST_DATA$gene_file[[1]]$empty, 
                       rownames = FALSE,
-                      colnames = strtrim(newnames, 24),
+                      colnames = "none",
                       options = list(searching = FALSE))
     }
     output$sorttable <- DT::renderDataTable(dt)
@@ -1659,12 +1665,12 @@ server <- function(input, output, session) {
           colnames = newnames1,
           class = 'cell-border stripe compact',
           filter = 'top',
-          caption = 'Ratio_Up_file1',
+          caption = LIST_DATA$gene_file[[grep("Ratio_Up_file1\nn", names(LIST_DATA$gene_info))]]$info,
           options = list(
             pageLength = 15,
             scrollX = TRUE,
             scrollY = TRUE,
-            autoWidth = TRUE,
+            autoWidth = FALSE,
             columnDefs = list(
               list(className = 'dt-center ', targets = "_all"),
               list(
@@ -1701,12 +1707,12 @@ server <- function(input, output, session) {
           colnames = newnames2,
           class = 'cell-border stripe compact',
           filter = 'top',
-          caption = 'Ratio_Up_file2',
+          caption = LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn", names(LIST_DATA$gene_info))]]$info,
           options = list(
             pageLength = 15,
             scrollX = TRUE,
             scrollY = TRUE,
-            autoWidth = TRUE,
+            autoWidth = FALSE,
             columnDefs = list(
               list(className = 'dt-center ', targets = "_all"),
               list(
@@ -1745,12 +1751,12 @@ server <- function(input, output, session) {
           colnames = newnames3,
           class = 'cell-border stripe compact',
           filter = 'top',
-          caption = 'Ratio_No_Diff',
+          caption = LIST_DATA$gene_file[[grep("Ratio_No_Diff\nn", names(LIST_DATA$gene_info))]]$info,
           options = list(
             pageLength = 15,
             scrollX = TRUE,
             scrollY = TRUE,
-            autoWidth = TRUE,
+            autoWidth = FALSE,
             columnDefs = list(
               list(className = 'dt-center ', targets = "_all"),
               list(
@@ -2222,12 +2228,13 @@ server <- function(input, output, session) {
             colnames = strtrim(newnames, 24),
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = paste0(reactive_values$clustergroups, "1"),
+            caption = LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "1\nn ="), 
+                                                names(LIST_DATA$gene_info))]]$info,
             options = list(
               pageLength = 15,
               scrollX = TRUE,
               scrollY = TRUE,
-              autoWidth = TRUE,
+              autoWidth = FALSE,
               columnDefs = list(
                 list(className = 'dt-center ', targets = "_all"),
                 list(
@@ -2263,12 +2270,13 @@ server <- function(input, output, session) {
             colnames = strtrim(newnames, 24),
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = paste0(reactive_values$clustergroups, "2"),
+            caption = LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "2\nn ="), 
+                                                names(LIST_DATA$gene_info))]]$info,
             options = list(
               pageLength = 15,
               scrollX = TRUE,
               scrollY = TRUE,
-              autoWidth = TRUE,
+              autoWidth = FALSE,
               columnDefs = list(
                 list(className = 'dt-center ', targets = "_all"),
                 list(
@@ -2304,12 +2312,13 @@ server <- function(input, output, session) {
             colnames = strtrim(newnames, 24),
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = paste0(reactive_values$clustergroups, "3"),
+            caption = LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "3\nn ="), 
+                                                names(LIST_DATA$gene_info))]]$info,
             options = list(
               pageLength = 15,
               scrollX = TRUE,
               scrollY = TRUE,
-              autoWidth = TRUE,
+              autoWidth = FALSE,
               columnDefs = list(
                 list(className = 'dt-center ', targets = "_all"),
                 list(
@@ -2345,12 +2354,13 @@ server <- function(input, output, session) {
             colnames = strtrim(newnames, 24),
             class = 'cell-border stripe compact',
             filter = 'top',
-            caption = paste0(reactive_values$clustergroups, "4"),
+            caption = LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "4\nn ="), 
+                                                names(LIST_DATA$gene_info))]]$info,
             options = list(
               pageLength = 15,
               scrollX = TRUE,
               scrollY = TRUE,
-              autoWidth = TRUE,
+              autoWidth = FALSE,
               columnDefs = list(
                 list(className = 'dt-center ', targets = "_all"),
                 list(

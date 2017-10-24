@@ -48,7 +48,7 @@ LIST_DATA <- list(
   # [3] name of most recent deleted gene list, for resetting tool datatables
   # [4] 1 = first time switching tab auto ploting
   #     2 = on/off reactive can deactivate plot options until plot button is pressed
-  #     3 = picker(s) have been remade keeps on/off reactive from running
+  #     3 = picker(s) have been remade but no reploting is needed so don't show plot button
   # [5] 1 = plot norm applymath has been run dont retrigger
 )
 
@@ -501,16 +501,17 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
       mynom <- group_by(mynom, bin, set) %>% mutate(score=mean(score, na.rm = TRUE)) %>% ungroup()
       mydom <- group_by(mydom, bin, set) %>% mutate(score=mean(score, na.rm = TRUE)) %>% ungroup()
     }
-    new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) %>%
-      na_if(0)
     if(nodivzero){
       myname <- paste0(myname, "-0_min/2")
     # find min value /2 to replace 0s
+      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) %>%
+        na_if(0)
     new_min_for_na <-
       min(c(new_gene_list$score.x, new_gene_list$score.y), na.rm = TRUE) / 2
     # replace 0's with min/2
     new_gene_list <- replace_na(new_gene_list, list(score.y = new_min_for_na, score.x = new_min_for_na))
     } else {
+      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) 
       new_gene_list <-
         group_by(new_gene_list, gene) %>%
         summarise(test = sum(score.x, score.y)) %>% 
@@ -590,9 +591,10 @@ RemoveGeneList <-
       if (list_data$STATE[4] == 0) {
         list_data$STATE[2] <- names(list_data$gene_file)[1]
       } else{
-        list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
+        list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 3)
       }
       list_data$STATE[3] <- strtrim(list_name, 6)
+      
     list_data
   }
 
@@ -670,7 +672,7 @@ IntersectGeneLists <- function(list_data, list_name){
       paste(
         "Gene_List_inclusive",
         "from",
-        list_name,
+        paste(list_name, collapse = " and "),
         Sys.Date()
       )
   }
@@ -686,7 +688,7 @@ IntersectGeneLists <- function(list_data, list_name){
       paste(
         "Gene_List_intersect",
         "from",
-        list_name,
+        paste(list_name, collapse = " and "),
         Sys.Date()
       )
 
@@ -702,7 +704,7 @@ IntersectGeneLists <- function(list_data, list_name){
       paste(
         "Gene_List_exclusive",
         "from",
-        list_name,
+        paste(list_name, collapse = " and "),
         Sys.Date()
       )
   }
@@ -726,6 +728,9 @@ IntersectGeneLists <- function(list_data, list_name){
           onoff = 0,
           rnorm = "1"
         ))
+  }
+  if (list_data$STATE[4] != 0) {
+    list_data$STATE[4] <- 3
   }
   list_data
 }
@@ -816,6 +821,9 @@ SortTop <-
                  rnorm = "1"
                ))
     list_data$STATE[2] <- nick_name
+    if (list_data$STATE[4] != 0) {
+      list_data$STATE[4] <- 3
+    }
     list_data
   }
 
@@ -1008,6 +1016,9 @@ CompareRatios <-
           ))
     }
     setProgress(5, detail = "finishing up")
+    if (list_data$STATE[4] != 0) {
+      list_data$STATE[4] <- 3
+    }
     list_data
   }
 
@@ -1073,6 +1084,9 @@ ClusterNumList <- function(list_data,list_name,
                ))
   }
   list_data$STATE[2] <- grep(paste0(myname, "1"), names(list_data$gene_file), value = T)
+  if (list_data$STATE[4] != 0) {
+    list_data$STATE[4] <- 3
+  }
   list_data
 }
 
@@ -1092,6 +1106,9 @@ FindClusters <- function(list_data,
   list_data$clust <- list()
   list_data$clust$cm <- hclust.vector(as.data.frame(spread(df, bin, score))[, c((start_bin:end_bin) + 2)], method = "ward")
   list_data$clust$use <- distinct(df, gene)
+  if (list_data$STATE[4] != 0) {
+    list_data$STATE[4] <- 3
+  }
   list_data
 }
 
@@ -1114,6 +1131,9 @@ FindGroups <- function(list_data,
     filter(bin %in% start_bin:end_bin) %>%
     summarise(cm = sum(score, na.rm = TRUE))
   list_data$clust$use <- distinct(df, gene)
+  if (list_data$STATE[4] != 0) {
+    list_data$STATE[4] <- 3
+  }
   list_data
 }
 
@@ -1230,6 +1250,9 @@ CumulativeDistribution <-
           ))
     setProgress(5, detail = "finishing up")
     list_data$STATE[2] <- nick_name1
+    if (list_data$STATE[4] != 0) {
+      list_data$STATE[4] <- 3
+    }
     list_data
   }
 
