@@ -279,11 +279,9 @@ server <- function(input, output, session) {
       if (!is.null(reactive_values$Apply_Math)) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         enable("showmainplot")
-        enable("selectlineslablesshow")
         LIST_DATA$STATE[c(1, 4)] <<- 1
       } else{
         disable("showmainplot")
-        disable("selectlineslablesshow")
       }
     } else {
       toggle("actionmyplotshow",
@@ -718,7 +716,7 @@ server <- function(input, output, session) {
                      toggle("actionmyplotshow",
                             condition = (input$tabs == "mainplot"))
                      # reactive_values$Plot_controler <- plot(0,type='n',axes=FALSE,ann=FALSE)
-                     disable("selectlineslablesshow")
+                     reactive_values$Apply_Math <- NULL
                      disable("showmainplot")
                    } else {
                      LIST_DATA$STATE[4] <<- 2
@@ -740,10 +738,8 @@ server <- function(input, output, session) {
     if (!is.null(reactive_values$Apply_Math)) {
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       enable("showmainplot")
-      enable("selectlineslablesshow")
     } else{
       disable("showmainplot")
-      disable("selectlineslablesshow")
       text = paste("Nothing selected to plot.\n")
       reactive_values$Plot_controler <- ggplot() +
         annotate(
@@ -1002,7 +998,7 @@ server <- function(input, output, session) {
   # Remove data file ----
   observeEvent(input$actionremovefile, ignoreInit = TRUE,{
     print("remove file")
-    LIST_DATA <<- RemoveFile(LIST_DATA, input$radiodataoption) 
+    LIST_DATA <<- RemoveFile(LIST_DATA, input$radiodataoption, input$checkboxremovefile) 
     if (LIST_DATA$STATE[1] > 0) {
     ff <- names(LIST_DATA$table_file)
     updateAwesomeRadio(session,
@@ -1024,6 +1020,13 @@ server <- function(input, output, session) {
         "selectgenelistoptions",
         choices = 'Load Data File'
       )
+      hide("filegene1")
+      hide("checkboxconvert")
+      hide("downloadGeneList")
+      hide("checkboxsavesplit")
+      hide("filecolor")
+      hide("showmainplot")
+      hide("startoff")
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
     }
     
@@ -1128,7 +1131,10 @@ server <- function(input, output, session) {
     if(any(grep("Gene_List_intersect\nn =",names(LIST_DATA$gene_info))>0)){
       newnames1 <- gsub("\n", " ", grep("Gene_List_intersect\nn =",names(LIST_DATA$gene_info), value = TRUE))
       mytab <- "Intersected Gene Lists"
-      output$genelists1table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {output$genelists1table <-
         DT::renderDataTable(
           datatable(
             LIST_DATA$gene_file[[grep("Gene_List_intersect\nn =",
@@ -1159,6 +1165,7 @@ server <- function(input, output, session) {
             )
           )
         )
+                   })
       show('genelists1table')
     } else {
       output$genelists1table <-
@@ -1171,7 +1178,10 @@ server <- function(input, output, session) {
     }
     if(any(grep("Gene_List_inclusive\nn =",names(LIST_DATA$gene_info))>0)){
       newnames2 <- gsub("\n", " ", grep("Gene_List_inclusive\nn =",names(LIST_DATA$gene_info), value = TRUE))
-      output$genelists2table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {output$genelists2table <-
         DT::renderDataTable(
           datatable(
             LIST_DATA$gene_file[[grep("Gene_List_inclusive\nn =",
@@ -1202,6 +1212,7 @@ server <- function(input, output, session) {
             )
           )
         )
+                   })
       show('genelists2table')
     } else {
       output$genelists2table <-
@@ -1216,7 +1227,10 @@ server <- function(input, output, session) {
     }
     if(any(grep("Gene_List_exclusive\nn =",names(LIST_DATA$gene_info))>0)){
       newnames3 <- gsub("\n", " ", grep("Gene_List_exclusive\nn =", names(LIST_DATA$gene_info), value = T))
-      output$genelists3table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {output$genelists3table <-
         DT::renderDataTable(
           datatable(
             LIST_DATA$gene_file[[grep("Gene_List_exclusive\nn =",
@@ -1247,6 +1261,7 @@ server <- function(input, output, session) {
             )
           )
         )
+                   })
       show('genelists3table')
     } else {
       output$genelists3table <-
@@ -1398,7 +1413,10 @@ server <- function(input, output, session) {
                       colnames = "none",
                       options = list(searching = FALSE))
     }
-    output$sorttable <- DT::renderDataTable(dt)
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 { output$sorttable <- DT::renderDataTable(dt)})
     hide('actionsortdatatable')
     show('sorttable')
   })
@@ -1656,7 +1674,10 @@ server <- function(input, output, session) {
     if(any(grep("Ratio_Up_file1\nn =",names(LIST_DATA$gene_info))>0)){
       newnames1 <- gsub("\n", " ", grep("Ratio_Up_file1\nn =",names(LIST_DATA$gene_info), value = TRUE))
       mytab <- "Up Fold Change file 1"
-    output$ratio1table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   { output$ratio1table <-
       DT::renderDataTable(
         datatable(
           LIST_DATA$gene_file[[grep("Ratio_Up_file1\nn =",
@@ -1686,6 +1707,7 @@ server <- function(input, output, session) {
           )
         )
       )
+                   })
     show('ratio1table')
     } else {
       output$ratio1table <-
@@ -1698,7 +1720,10 @@ server <- function(input, output, session) {
     }
     if(any(grep("Ratio_Up_file2\nn =",names(LIST_DATA$gene_info))>0)){
       newnames2 <- gsub("\n", " ", grep("Ratio_Up_file2\nn =",names(LIST_DATA$gene_info), value = TRUE))
-    output$ratio2table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   { output$ratio2table <-
       DT::renderDataTable(
         datatable(
           LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn =",
@@ -1728,6 +1753,7 @@ server <- function(input, output, session) {
           )
         )
       )
+                   })
     show('ratio2table')
     } else {
       output$ratio2table <-
@@ -1742,7 +1768,10 @@ server <- function(input, output, session) {
     }
     if(any(grep("Ratio_No_Diff\nn =",names(LIST_DATA$gene_info))>0)){
       newnames3 <- gsub("\n", " ", grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info), value = T))
-    output$ratio3table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   { output$ratio3table <-
       DT::renderDataTable(
         datatable(
           LIST_DATA$gene_file[[grep("Ratio_No_Diff\nn =",
@@ -1772,6 +1801,7 @@ server <- function(input, output, session) {
           )
         )
       )
+                   })
     show('ratio3table')
   } else {
     output$ratio3table <-
@@ -2219,7 +2249,10 @@ server <- function(input, output, session) {
     updateTabItems(session, "clustertooltab", "Cluster 1")
     newnames <- gsub("(.{20})", "\\1... ", input$pickerclusterfile)
     if(any(grep(paste0(reactive_values$clustergroups, "1\nn ="),names(LIST_DATA$gene_info))>0)){
-      output$cluster1table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {output$cluster1table <-
         DT::renderDataTable(
           datatable(
             LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "1\nn ="),
@@ -2250,6 +2283,7 @@ server <- function(input, output, session) {
             )
           )
         )
+                   })
       show("cluster1table")
     } else {
       output$cluster1table <-
@@ -2261,7 +2295,10 @@ server <- function(input, output, session) {
     }
     
     if(any(grep(paste0(reactive_values$clustergroups, "2\nn ="),names(LIST_DATA$gene_info))>0)){
-      output$cluster2table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {output$cluster2table <-
         DT::renderDataTable(
           datatable(
             LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "2\nn ="),
@@ -2292,6 +2329,7 @@ server <- function(input, output, session) {
             )
           )
         )
+                   })
       show("cluster2table")
     } else {
       output$cluster2table <-
@@ -2303,7 +2341,10 @@ server <- function(input, output, session) {
     }
     
     if(any(grep(paste0(reactive_values$clustergroups, "3\nn ="),names(LIST_DATA$gene_info))>0)){
-      output$cluster3table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {output$cluster3table <-
         DT::renderDataTable(
           datatable(
             LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "3\nn ="),
@@ -2334,6 +2375,7 @@ server <- function(input, output, session) {
             )
           )
         )
+                   })
       show("cluster3table")
     } else {
       output$cluster3table <-
@@ -2345,7 +2387,10 @@ server <- function(input, output, session) {
     }
     
     if(any(grep(paste0(reactive_values$clustergroups, "4\nn ="),names(LIST_DATA$gene_info))>0)){
-      output$cluster4table <-
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {output$cluster4table <-
         DT::renderDataTable(
           datatable(
             LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "4\nn ="),
@@ -2376,6 +2421,7 @@ server <- function(input, output, session) {
             )
           )
         )
+                   })
       show("cluster4table")
     } else {
       output$cluster4table <-
@@ -2528,7 +2574,10 @@ server <- function(input, output, session) {
                       rownames = FALSE,
                       options = list(searching = FALSE))
     }
-    output$cdftable <- DT::renderDataTable(dt)
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {output$cdftable <- DT::renderDataTable(dt)})
     hide('actioncdfdatatable')
     show('cdftable')
   })
@@ -2691,6 +2740,17 @@ ui <- dashboardPage(
   dashboardSidebar(
     sidebarMenu(
       id = "tabs",
+      tags$head(
+        tags$style(
+          HTML(".shiny-notification {
+               position:fixed;
+               top: calc(50%);;
+               left: calc(50%);;
+               }
+               "
+          )
+          )
+          ),
       menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
       menuItem("Norm data", tabName = "filenorm", icon = icon("files-o")),
       menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
@@ -2930,7 +2990,9 @@ ui <- dashboardPage(
                                 numericInput("normfactor", "Set norm factor, score/rpm", value = 1),
                                 actionButton("actionoptions", "Set Nickname"),
                                 helpText("Need to update Nickname and/or nrom factor"),
-                                actionButton("actionremovefile", "Remove File")
+                                checkboxInput("checkboxremovefile",
+                                              "remove all files and restart", value = FALSE),
+                                actionButton("actionremovefile", "Remove File(s)")
                               ),
                               box(
                                 title = "Save/Remove gene list",

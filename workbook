@@ -9,6 +9,12 @@ https://rstudio.github.io/shinydashboard/index.html
 https://rdrr.io/cran/shinyWidgets/
 shinyWidgetsGallery()
 
+showNotification(
+        "Files done loading",
+        duration = 2, 
+        closeButton = FALSE
+      )
+
 # data tables
 https://rstudio.github.io/DT/options.html
 https://rstudio.github.io/DT/
@@ -19,16 +25,12 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4]
 ####
 
-add remove all checkbox, remove all hide like at start and switch to load file tab
-add loadfile function check if load gene list that data is laoded 
-loading gene list from url ask if want to laod all?
-more info on loading files progress bar
-don't auto plot? keep options avalible at first and quick line lable at all times
-picker name overflow
+min auto color ?
+color picker quick works even if does not change ...
 y plot hight rounding problem change to % +/- hight
 4' line and lables function add condition 
 add option header to plot
-more indication that tool is running and finished ... popup?
+more indication that tool is running and finished ... statuse boxes?
 
 gene tools ... 
 
@@ -54,8 +56,8 @@ more $info work and updating on loading/deleting files
 better handleing of loading 0 gene lists?
 
 add icons to buttons
-
+test loading multiple gene lists
 search TODO
-
+more remove all files test and controls
 combide one file and remove print statements
 add box plot bins and a way to split ... meadian of bins clustering?
