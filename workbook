@@ -25,7 +25,6 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4]
 ####
 
-min auto color ?
 color picker quick works even if does not change ...
 y plot hight rounding problem change to % +/- hight
 4' line and lables function add condition 

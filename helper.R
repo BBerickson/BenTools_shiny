@@ -137,18 +137,18 @@ LoadTableFile <-
     if (length(file_name) == 1 && length(grep(".url", file_name)) == 1) {
       file_path <- read_lines(file_path)
       file_name <- NULL
+      if(load_gene_list){
+        file_path <- file_path[1]
+        showModal(modalDialog(
+          title = "Information message",
+          paste("only loading first gene list"),
+          size = "s",
+          easyClose = TRUE
+        ))
+      }
       for (i in file_path) {
         file_name <- c(file_name, last(strsplit(i, "/")[[1]]))
       }
-    }
-    if(load_gene_list){
-      file_path <- file_path[1]
-      showModal(modalDialog(
-        title = "Information message",
-        paste("only loading first gene list"),
-        size = "s",
-        easyClose = TRUE
-      ))
     }
     file_count <- length(list_data$table_file)
     for (x in seq_along(file_path)) {
@@ -294,7 +294,11 @@ LoadTableFile <-
         list_data$gene_file[[legend_nickname]]$full <-
           distinct(tablefile, gene)
         list_data$gene_file[[legend_nickname]]$use <- gene_names
-        nn <- length(list_data$gene_file)
+        if(length(list_data$gene_file) > 5){
+          mytint <- 0
+        } else{
+          mytint <- length(list_data$gene_file) * 0.1
+        }
         list_data$gene_info[[legend_nickname]] <-
           lapply(setNames(
             names(list_data$gene_info[[1]]),
@@ -307,7 +311,7 @@ LoadTableFile <-
               myline = kLineOptions[1],
               mycol = RgbToHex(
                 my_hex = list_data$gene_info[[1]][[i]]$mycol,
-                tint = nn * 0.04
+                tint = mytint
               ),
               onoff = 0,
               rnorm = "1"
@@ -389,13 +393,17 @@ LoadTableFile <-
           my_name_g <- sub("([0-9]+)", n_distinct(list_data$gene_file[[g]]$full$gene), names(list_data$gene_file)[g])
           names(list_data$gene_file)[g] <<- my_name_g
           names(list_data$gene_info)[g] <<- my_name_g
-          
+          if(length(list_data$gene_file) > 5){
+            mytint <- 0
+          } else{
+            mytint <- length(list_data$gene_file) * 0.1
+          }
           list_data$gene_info[[g]][[legend_nickname]] <<-
             tibble(
               set = legend_nickname,
               mydot = kDotOptions[1],
               myline = kLineOptions[1],
-              mycol = RgbToHex(my_hex = color_select, tint = g * 0.04),
+              mycol = RgbToHex(my_hex = color_select, tint = mytint),
               onoff = 0,
               rnorm = "1"
             )
@@ -579,13 +587,17 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
     my_name_g <- sub("([0-9]+)", n_distinct(list_data$gene_file[[g]]$full$gene), names(list_data$gene_file)[g])
     names(list_data$gene_file)[g] <<- my_name_g
     names(list_data$gene_info)[g] <<- my_name_g
-    
+    if(length(list_data$gene_file) > 5){
+      mytint <- 0
+    } else{
+      mytint <- length(list_data$gene_file) * 0.1
+    }
     list_data$gene_info[[g]][[legend_nickname]] <<-
       tibble(
         set = legend_nickname,
         mydot = kDotOptions[1],
         myline = kLineOptions[1],
-        mycol = RgbToHex(my_hex = color_select, tint = g * 0.04),
+        mycol = RgbToHex(my_hex = color_select, tint = mytint),
         onoff = 0,
         rnorm = "1"
       )
@@ -722,6 +734,11 @@ IntersectGeneLists <- function(list_data, list_name){
   }
   }
   setProgress(5, detail = "finishing up")
+  if(length(list_data$gene_file) > 5){
+    mytint <- 0
+  } else{
+    mytint <- length(list_data$gene_file) * 0.1
+  }
   for (nn in nick_name) {
     list_data$gene_info[[nn]] <-
       lapply(setNames(
@@ -735,8 +752,7 @@ IntersectGeneLists <- function(list_data, list_name){
           myline = kLineOptions[1],
           mycol = RgbToHex(
             my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
-            tint = length(list_data$gene_file) * 0.04
-          ),
+            tint = mytint),
           onoff = 0,
           rnorm = "1"
         ))
@@ -817,6 +833,11 @@ SortTop <-
             list_name,
             paste(file_names, collapse = " "),
             Sys.Date())
+    if(length(list_data$gene_file) > 5){
+      mytint <- 0
+    } else{
+      mytint <- length(list_data$gene_file) * 0.1
+    }
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
@@ -827,7 +848,7 @@ SortTop <-
                  myline = kLineOptions[1],
                  mycol = RgbToHex(
                    my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
-                   tint = length(list_data$gene_file) * 0.04
+                   tint = mytint
                  ),
                  onoff = 0,
                  rnorm = "1"
@@ -1007,7 +1028,11 @@ CompareRatios <-
         Sys.Date()
       )
     }
-    
+    if(length(list_data$gene_file) > 5){
+      mytint <- 0
+    } else{
+      mytint <- length(list_data$gene_file) * 0.1
+    }
     for (nn in nick_name) {
       list_data$gene_info[[nn]] <-
         lapply(setNames(
@@ -1021,8 +1046,7 @@ CompareRatios <-
             myline = kLineOptions[1],
             mycol = RgbToHex(
               my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
-              tint = length(list_data$gene_file) * 0.04
-            ),
+              tint = mytint),
             onoff = 0,
             rnorm = "1"
           ))
@@ -1079,6 +1103,11 @@ ClusterNumList <- function(list_data,list_name,
             "total",
             Sys.Date())
     setProgress(4, detail = paste("finishing cluster", nn))
+    if(length(list_data$gene_file) > 5){
+      mytint <- 0
+    } else{
+      mytint <- length(list_data$gene_file) * 0.1
+    }
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
@@ -1089,8 +1118,7 @@ ClusterNumList <- function(list_data,list_name,
                  myline = kLineOptions[1],
                  mycol = RgbToHex(
                    my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
-                   tint = length(list_data$gene_file) * 0.04
-                 ),
+                   tint = mytint),
                  onoff = 0,
                  rnorm = "1"
                ))
@@ -1242,6 +1270,11 @@ CumulativeDistribution <-
     } else {
     use_header <- "Log2 PI Cumulative plot"
     }
+    if(length(list_data$gene_file) > 5){
+      mytint <- 0
+    } else{
+      mytint <- length(list_data$gene_file) * 0.1
+    }
       list_data$gene_info[[nick_name1]] <-
         lapply(setNames(
           names(list_data$gene_info[[1]]),
@@ -1254,8 +1287,7 @@ CumulativeDistribution <-
             myline = kLineOptions[1],
             mycol = RgbToHex(
               my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol,
-              tint = length(list_data$gene_file) * 0.04
-            ),
+              tint = mytint),
             onoff = 0,
             rnorm = "1",
             myheader = use_header

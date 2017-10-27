@@ -19,7 +19,6 @@ server <- function(input, output, session) {
   session$onSessionEnded(stopApp)
   
   # Globals and reacive values ----
-  
   reactive_values <- reactiveValues(
     pickerfile_controler = "",
     Y_Axis_Lable = NULL,
@@ -279,7 +278,7 @@ server <- function(input, output, session) {
       if (!is.null(reactive_values$Apply_Math)) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         enable("showmainplot")
-        LIST_DATA$STATE[c(1, 4)] <<- 1
+        LIST_DATA$STATE[c(1, 4)] <<- c(1,3)
       } else{
         disable("showmainplot")
       }
@@ -683,7 +682,7 @@ server <- function(input, output, session) {
                  
                })
   
-  #records check box on/off ----
+  # records check box on/off ----
   observeEvent(reactive_values$picker,
                ignoreNULL = FALSE,
                ignoreInit = TRUE,
@@ -694,9 +693,7 @@ server <- function(input, output, session) {
                      return()
                    }
                    print("checkbox on/off")
-                   
                    ttt <- reactive_values$picker
-                   
                    checkboxonoff <- list()
                    for (i in names(ttt)) {
                      for (tt in ttt[i]) {
@@ -704,17 +701,14 @@ server <- function(input, output, session) {
                        checkboxonoff[[selectgenelistonoff]] <-
                          c(checkboxonoff[[selectgenelistonoff]], tt)
                      }
-                     
                    }
                    LIST_DATA$gene_info <<-
                      CheckBoxOnOff(checkboxonoff,
                                    LIST_DATA$gene_info)
-                   
                    if (LIST_DATA$STATE[4] == 2) {
                      LIST_DATA$STATE[1] <<- 2
                      print("toggle on/off")
-                     toggle("actionmyplotshow",
-                            condition = (input$tabs == "mainplot"))
+                     toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
                      # reactive_values$Plot_controler <- plot(0,type='n',axes=FALSE,ann=FALSE)
                      reactive_values$Apply_Math <- NULL
                      disable("showmainplot")
@@ -722,7 +716,6 @@ server <- function(input, output, session) {
                      LIST_DATA$STATE[4] <<- 2
                    }
                  }
-                 
                })
   
   # plots when action button is pressed ----
@@ -817,7 +810,7 @@ server <- function(input, output, session) {
     }
   )
   
-  #plots when bin slider or y slider is triggered ----
+  # plots when bin slider or y slider is triggered ----
   observeEvent(
     c(
       reactive_values$Lines_Lables_List,
@@ -949,7 +942,8 @@ server <- function(input, output, session) {
           }
         })
       })
-      updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"]))
+      updateColourInput(session, "colourhex", value = 
+                          paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$radiodataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math)) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
