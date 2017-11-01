@@ -3,7 +3,6 @@ BenTools_shiny
 Load Data tab
 
   load file(s)
-  
     
     can read windowed bed/bedgraph files
       col_names = c("chr", "start", "end", "gene", "bin", "score")
@@ -63,6 +62,10 @@ Plot tab
   quick color setting
   cusome set x axis bin lables
   
+
+Gene tool
+
+  compare gene lists and report intercected, unique, and total 
   
 Sort tool
 

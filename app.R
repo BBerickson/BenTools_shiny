@@ -28,7 +28,7 @@ server <- function(input, output, session) {
     Plot_Options = NULL,
     Plot_controler = NULL,
     Picker_controler = NULL,
-    Y_Axis_plot = NULL
+    Y_Axis_plot = 0
   )
   
   # change tab controls ----
@@ -417,7 +417,7 @@ server <- function(input, output, session) {
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
           reactive_values$Plot_Options,
-          input$sliderplotYRange,
+          reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
           input$checkboxsmooth,
           reactive_values$Y_Axis_Lable
@@ -575,7 +575,7 @@ server <- function(input, output, session) {
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Options,
-            input$sliderplotYRange,
+            reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
             input$checkboxsmooth,
             reactive_values$Y_Axis_Lable
@@ -601,7 +601,7 @@ server <- function(input, output, session) {
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
               reactive_values$Plot_Options,
-              input$sliderplotYRange,
+              reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
               input$checkboxsmooth,
               reactive_values$Y_Axis_Lable
@@ -626,7 +626,7 @@ server <- function(input, output, session) {
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
               reactive_values$Plot_Options,
-              input$sliderplotYRange,
+              reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
               input$checkboxsmooth,
               reactive_values$Y_Axis_Lable
@@ -661,7 +661,7 @@ server <- function(input, output, session) {
               reactive_values$Apply_Math,
               input$sliderplotBinRange,
               reactive_values$Plot_Options,
-              input$sliderplotYRange,
+              reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
               input$checkboxsmooth,
               reactive_values$Y_Axis_Lable
@@ -750,30 +750,19 @@ server <- function(input, output, session) {
   })
   
   # updates y axis limits
-  observeEvent(reactive_values$Apply_Math, {
-    print("upate y axix on new math")
-    test <- reactive_values$Y_Axis_numbers
+  observeEvent(reactive_values$Apply_Math, { 
     reactive_values$Y_Axis_numbers <-
       MyXSetValues(reactive_values$Apply_Math,
-                   input$sliderplotBinRange)
-    
+                   input$sliderplotBinRange, input$sliderplotYRange)
     updateSliderInput(
       session,
       "sliderplotYRange",
-      min = reactive_values$Y_Axis_numbers[3],
-      max = reactive_values$Y_Axis_numbers[4],
-      value = reactive_values$Y_Axis_numbers[1:2],
-      step = ((
-        reactive_values$Y_Axis_numbers[4] -
-          reactive_values$Y_Axis_numbers[3]
-      ) / 20
-      )
+      value = c(0, 100)
     )
     # Forces update if y Asis values stay the same
-    if (sum(test) == sum(reactive_values$Y_Axis_numbers)) {
-      reactive_values$Y_Axis_plot <- input$actionmyplot[1]
-    }
-    
+    if (all(c(0, 100) == input$sliderplotYRange)) {
+      reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
+      }
   })
   
   # renders plot ----
@@ -810,13 +799,20 @@ server <- function(input, output, session) {
     }
   )
   
-  # plots when bin slider or y slider is triggered ----
+  # y slider is trigger ----
+  observeEvent(input$sliderplotYRange,ignoreInit = T, { 
+    print("y slider")
+    reactive_values$Y_Axis_numbers <-
+      MyXSetValues(reactive_values$Apply_Math,
+                   input$sliderplotBinRange, input$sliderplotYRange)
+    reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1 
+    })
+  
+  # plots when bin slider or other triggers is triggered ----
   observeEvent(
-    c(
-      reactive_values$Lines_Lables_List,
+    c(reactive_values$Lines_Lables_List,
       input$sliderplotBinRange,
-      reactive_values$Y_Axis_plot,
-      input$sliderplotYRange
+      reactive_values$Y_Axis_plot
     ),
     ignoreInit = TRUE,
     {
@@ -827,7 +823,7 @@ server <- function(input, output, session) {
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Options,
-            input$sliderplotYRange,
+            reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
             input$checkboxsmooth,
             reactive_values$Y_Axis_Lable
@@ -912,7 +908,7 @@ server <- function(input, output, session) {
         reactive_values$Apply_Math,
         input$sliderplotBinRange,
         reactive_values$Plot_Options,
-        input$sliderplotYRange,
+        reactive_values$Y_Axis_numbers,
         reactive_values$Lines_Lables_List,
         input$checkboxsmooth,
         reactive_values$Y_Axis_Lable
@@ -922,9 +918,9 @@ server <- function(input, output, session) {
   # quick color set change ----
   observeEvent(input$kbrewer, ignoreInit = TRUE, {
     print("kbrewer")
-    kListColorSet <<- brewer.pal(8, input$kbrewer)
-    common_name <- names(LIST_DATA$gene_info)[1]
-    if (!is.null(LIST_DATA$gene_info[[1]])) {
+    if (!is.null(LIST_DATA$gene_info[[1]]) & input$kbrewer != "select") {
+      kListColorSet <<- brewer.pal(8, input$kbrewer)
+      common_name <- names(LIST_DATA$gene_info)[1]
       print("kbrewer update")
       lapply(names(LIST_DATA$gene_info), function(i) {
         lapply(seq_along(LIST_DATA$gene_info[[i]]), function(j) {
@@ -951,12 +947,13 @@ server <- function(input, output, session) {
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Options,
-            input$sliderplotYRange,
+            reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
             input$checkboxsmooth,
             reactive_values$Y_Axis_Lable
           )
       }
+      updateSelectInput(session, "kbrewer", selected = "select")
     }
   })
   
@@ -2833,10 +2830,10 @@ ui <- dashboardPage(
           pickerInput(
             inputId = "pickerclusterfile",
             width = "99%",
-            label = "Select first file",
+            label = "Select file",
             choices = "Load data file",
             multiple = F,
-            options = list(title = "Select first file")
+            options = list(title = "Select file")
           )
         )
       ),
@@ -3006,8 +3003,7 @@ ui <- dashboardPage(
                                 selectInput(
                                   "kbrewer",
                                   "color brewer",
-                                  choices = kBrewerList,
-                                  selected = kBrewerList[6]
+                                  c(choices = "select", kBrewerList)
                                 )
                               )
                             ))
@@ -3074,9 +3070,10 @@ ui <- dashboardPage(
                                 sliderInput(
                                   "sliderplotYRange",
                                   label = "Plot Y hight:",
-                                  min = 0,
-                                  max = 1,
-                                  value = c(0, 1)
+                                  min = -20,
+                                  max = 120,
+                                  post = "%",
+                                  value = c(0, 100)
                                 )
                               ),
                               box(
@@ -3205,7 +3202,7 @@ ui <- dashboardPage(
                               status = "primary",
                               solidHeader = T,
                               width = 12,
-                              actionButton("actiongenelists", "Get fold changes"),
+                              actionButton("actiongenelists", "Compare Gene lists"),
                               helpText("Shows intersected, exlusive, and inclusive gene lists")
                             ),
                               box(

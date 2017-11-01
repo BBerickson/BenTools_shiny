@@ -1463,9 +1463,7 @@ LinesLablesList <- function(body1bin = 20,
                             totbins = 80,
                             everybin = 5) {
   print("lines and lables fun")
-  if (tssbin > 0 & tesbin > 0 & (body1bin == 0 | body2bin == 0)) {
-    mytype <- "4'"
-  } else if (tssbin == 0 & tesbin > 0) {
+  if (tssbin == 0 & tesbin > 0) {
     mytype <- "3'"
   } else if (tesbin == 0 & tssbin > 0) {
     mytype <- "5'"
@@ -1619,13 +1617,13 @@ LinesLablesPreSet <- function(mytype) {
 }
 
 # help get min and max from apply math data set
-MyXSetValues <- function(apply_math, xBinRange) {
+MyXSetValues <- function(apply_math, xBinRange, yBinRange) {
   tt <- group_by(apply_math, set) %>%
     filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
     ungroup() %>%
     summarise(min(value, na.rm = T), max(value, na.rm = T)) %>%
     unlist(., use.names = FALSE)
-  tt <- round(c(tt, tt[1] - tt[1] * .1, tt[2] + tt[2] * .1), 4)
+  tt <- c(tt[1] + (tt[1] * (yBinRange[1]/100)), tt[2] + (tt[2] * ((yBinRange[2]-100)/100)))
 }
 
 # main ggplot function
@@ -1658,7 +1656,6 @@ GGplotLineDot <-
           shape = set,
           size = set,
           linetype = set
-          
         )
       )
     if (use_smooth) {

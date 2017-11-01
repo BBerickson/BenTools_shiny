@@ -25,22 +25,6 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4]
 ####
 
-color picker quick works even if does not change ...
-y plot hight rounding problem change to % +/- hight
-4' line and lables function add condition 
-add option header to plot
-more indication that tool is running and finished ... statuse boxes?
-
-gene tools ... 
-
-intersect ...
-  
-  test
-  add usage
-
-... testing and using ...
-
-add show gene lists based on what tab is showing and not all of them to save time.
 
 sort option to remove both high and low outlyers
 
@@ -53,7 +37,7 @@ loading gene lists stores info if avalible?
 more $info work and updating on loading/deleting files
 
 better handleing of loading 0 gene lists?
-
+gene numbers updated when NA gene thrown out?
 add icons to buttons
 test loading multiple gene lists
 search TODO
