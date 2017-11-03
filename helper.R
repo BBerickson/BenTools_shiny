@@ -154,7 +154,7 @@ LoadTableFile <-
     for (x in seq_along(file_path)) {
       legend_nickname <-
         strsplit(as.character(file_name[x]), '.tab')[[1]][1]
-      if (any(legend_nickname == names(list_data$table_file) | legend_nickname == names(list_data$gene_info))) {
+      if (any(legend_nickname == names(list_data$table_file)) | any(legend_nickname == names(list_data$gene_info))) {
         showModal(modalDialog(
           title = "Information message",
           paste(file_name[x], "has already been loaded"),
@@ -294,6 +294,12 @@ LoadTableFile <-
         list_data$gene_file[[legend_nickname]]$full <-
           distinct(tablefile, gene)
         list_data$gene_file[[legend_nickname]]$use <- gene_names
+        list_data$gene_file[[legend_nickname]]$info <-
+          paste(
+            "Loaded gene list from file",
+            legend_nickname,
+            Sys.Date()
+          )
         if(length(list_data$gene_file) > 5){
           mytint <- 0
         } else{
@@ -786,7 +792,8 @@ SortTop <-
       apply_bins <- group_by(apply_bins, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
-        mutate(myper = as.numeric(strtrim(cume_dist(mysums), 5)))
+        mutate(myper = as.numeric(strtrim(cume_dist(mysums), 5))) %>%
+        arrange(desc(mysums))
       
       gene_count <- nrow(apply_bins)
       
@@ -795,16 +802,15 @@ SortTop <-
         topbottom <- paste(topbottom, paste0(num, "%"))
       } else if (topbottom == "Quick%") {
         num2 <-
-          c(1, count(apply_bins, myper >= mean(myper, na.rm = TRUE))[[2]][2])
+          c(count(apply_bins, myper >= .75)[[2]][2], count(apply_bins, myper <= .25)[[2]][1])
       } else {
         num2 <-
           c(ceiling((gene_count + 1) - (gene_count * (num / 100))), gene_count)
         topbottom <- paste(topbottom, paste0(num, "%"))
       }
       nickname <- list_data$gene_info[[1]][[j]]$set
-      outlist2 <- arrange(apply_bins, desc(mysums)) %>%
-        mutate(!!nickname := myper) %>%
-        select(gene,!!nickname) %>%
+      outlist2 <- mutate(apply_bins, !!nickname := myper) %>%
+        select(gene, !!nickname) %>%
         slice(num2[1]:num2[2])
       if (lc > 0) {
         outlist <<- inner_join(outlist, outlist2, by = 'gene')
@@ -817,6 +823,9 @@ SortTop <-
     if (length(old_name) > 0) {
       list_data$gene_file[[old_name]] <- NULL
       list_data$gene_info[[old_name]] <- NULL
+    }
+    if(length(outlist$gene) == 0){
+      return(NULL)
     }
     setProgress(lc + 2, detail = "building list")
     nick_name <- strtrim(gsub("(.{30})", "\\1... ", paste0("Sort\nn = ", n_distinct(outlist$gene), "-", list_name)),33)

@@ -25,22 +25,13 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4]
 ####
 
-
-sort option to remove both high and low outlyers
-
-clean up code
-  removing all unused ID's
-  
-# file size restriction the set correctly?
-
-loading gene lists stores info if avalible? 
-more $info work and updating on loading/deleting files
-
-better handleing of loading 0 gene lists?
 gene numbers updated when NA gene thrown out?
+add box plot bins and a way to split ... meadian of bins clustering? check box to remove showing outliers
 add icons to buttons
-test loading multiple gene lists
 search TODO
-more remove all files test and controls
-combide one file and remove print statements
-add box plot bins and a way to split ... meadian of bins clustering?
+more remove all files tests and controls
+remove print statements
+
+sort and other tools no gene list generated produce a message
+
+renderUI pickerInput problem ... keep older (0.3.4) for now but lookout for example or update to fix

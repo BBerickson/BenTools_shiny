@@ -71,7 +71,8 @@ Sort tool
 
   select gene list and file(s) for that list
   select bin range to work on
-  select top/bottom rank % cut off
+  select top/bottom rank % cut off or Quick sort button
+    Quick sort removes top and bottom % outliers
   
   returns data table
     search data table

@@ -8,8 +8,8 @@
 source("helper.R")
 
 # By default, the file size limit is 5MB. It can be changed by
-# setting this option. Here we'll raise limit to 30MB.
-options(shiny.maxRequestSize = 30 * 1024 ^ 2)
+# setting this option. Here we'll raise limit to 50MB.
+options(shiny.maxRequestSize = 50 * 1024 ^ 2)
 
 
 
@@ -705,16 +705,16 @@ server <- function(input, output, session) {
                    LIST_DATA$gene_info <<-
                      CheckBoxOnOff(checkboxonoff,
                                    LIST_DATA$gene_info)
-                   if (LIST_DATA$STATE[4] == 2) {
+                   # if (LIST_DATA$STATE[4] == 2) { _TODO do I need
                      LIST_DATA$STATE[1] <<- 2
                      print("toggle on/off")
                      toggle("actionmyplotshow", condition = (input$tabs == "mainplot"))
                      # reactive_values$Plot_controler <- plot(0,type='n',axes=FALSE,ann=FALSE)
                      reactive_values$Apply_Math <- NULL
                      disable("showmainplot")
-                   } else {
-                     LIST_DATA$STATE[4] <<- 2
-                   }
+                   # } else {
+                   #   LIST_DATA$STATE[4] <<- 2
+                   # }
                  }
                })
   
@@ -1297,6 +1297,7 @@ server <- function(input, output, session) {
   observeEvent(input$actionsorttool, {
     print("sort tool")
     hide('actionsortdatatable')
+    hide('sorttable')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -1344,6 +1345,7 @@ server <- function(input, output, session) {
   # sort quick tool action ----
   observeEvent(input$actionsortquick, ignoreInit = TRUE, {
     print("quick sort")
+    hide('sorttable')
     hide('actionsortdatatable')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
@@ -1367,8 +1369,9 @@ server <- function(input, output, session) {
     }
   })
   
-  # Sort generate gene list ----
+  # Sort gene list show data table ----
   observeEvent(input$actionsortdatatable, ignoreInit = TRUE,{
+    print("show data table")
     if(any(grep("Sort\nn", names(LIST_DATA$gene_info)) > 0)){
       newnames <-
         gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$full))
