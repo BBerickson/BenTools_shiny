@@ -22,16 +22,24 @@ https://rstudio.github.io/DT/
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
 #####
-on off picker problems look at STATE[4]
+on off picker problems look at STATE[4] ... make fun to update on/off (not triggerd by added or removing gene list) reactive value
 ####
 
+
+add proggress bar to apply math
 gene numbers updated when NA gene thrown out?
-add box plot bins and a way to split ... meadian of bins clustering? check box to remove showing outliers
+Sort middle % crashed function on plot?
+gene lists use main nickname as start
+
 add icons to buttons
 search TODO
 more remove all files tests and controls
 remove print statements
 
+norm factor ... only alow 1 apply at a time and add a undo button so a nother one can be applied
+
 sort and other tools no gene list generated produce a message
 
-renderUI pickerInput problem ... keep older (0.3.4) for now but lookout for example or update to fix
+renderUI pickerInput problem with 0.3.6 ... keep older (0.3.4) for now but lookout for example or update to fix
+# library("devtools")
+# install_version("shinyWidgets", version = "0.3.4")
