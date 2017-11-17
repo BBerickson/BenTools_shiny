@@ -49,7 +49,7 @@ kDotOptions <-
   )
 
 # LIST_DATA ----
-LIST_DATA <- list(
+LIST_DATA <<- list(
   table_file = list(),
   # [[]] gene X1 X2 ...
   gene_file = list(),
@@ -1391,6 +1391,7 @@ ApplyMath <-
     gene_info = list_data$gene_info
     list_data_frame <- NULL
     list_long_data_frame <- NULL
+    setProgress(1, detail = paste("Gathering info"))
     if (sum(unlist(sapply(names(gene_info), function(i)
       sapply(gene_info[[i]], "[[", 5) != 0))) == 0) {
       return(NULL)
@@ -1420,6 +1421,7 @@ ApplyMath <-
         print("nothing to plot")
         return(NULL)
       }
+      setProgress(1+ length(list_data_frame), detail = paste("applying math to ", i))
       # applys math to pared down data file
       if (relative_frequency == "rel gene frequency") {
         list_long_data_frame[[i]] <- bind_rows(list_data_frame) %>%
@@ -2119,6 +2121,10 @@ server <- function(input, output, session) {
         sapply(LIST_DATA, function(i)
           (names(i)))
       if (LIST_DATA$STATE[4] == 0) {
+        withProgress(message = 'Calculation in progress',
+                     detail = 'This may take a while...',
+                     value = 0,
+                     {
         reactive_values$Apply_Math <-
           ApplyMath(
             LIST_DATA,
@@ -2126,10 +2132,14 @@ server <- function(input, output, session) {
             input$radioplotnrom,
             as.numeric(input$sliderplotBinNorm)
           )
+                     })
         if (!is.null(reactive_values$Apply_Math)) {
           reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
           enable("showmainplot")
-          LIST_DATA$STATE[c(1, 4)] <<- c(1, 3)
+          print(LIST_DATA$STATE)
+          LIST_DATA$STATE[1] <<- 1
+          LIST_DATA$STATE[4] <<- 1
+          print(LIST_DATA$STATE)
         } else{
           disable("showmainplot")
         }
@@ -2504,6 +2514,7 @@ server <- function(input, output, session) {
                ignoreNULL = FALSE,
                ignoreInit = TRUE,
                {
+                 print(LIST_DATA$STATE)
                  if (LIST_DATA$STATE[4] != 0) {
                    if (LIST_DATA$STATE[4] == 3) {
                      LIST_DATA$STATE[4] <<- 1
@@ -2540,13 +2551,18 @@ server <- function(input, output, session) {
   # plots when action button is pressed ----
   observeEvent(input$actionmyplot, ignoreInit = TRUE, {
     print("plot button")
-    reactive_values$Apply_Math <-
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {
+                   reactive_values$Apply_Math <-
       ApplyMath(
         LIST_DATA,
         input$myMath,
         input$radioplotnrom,
         as.numeric(input$sliderplotBinNorm)
       )
+                 })
     if (!is.null(reactive_values$Apply_Math)) {
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       enable("showmainplot")
@@ -2603,13 +2619,17 @@ server <- function(input, output, session) {
                    )
                  if (LIST_DATA$STATE[1] == 1) {
                    print("apply math")
-                   reactive_values$Apply_Math <-
+                   withProgress(message = 'Calculation in progress',
+                                detail = 'This may take a while...',
+                                value = 0,
+                                { reactive_values$Apply_Math <-
                      ApplyMath(
                        LIST_DATA,
                        input$myMath,
                        input$radioplotnrom,
                        as.numeric(input$sliderplotBinNorm)
                      )
+                                })
                  }
                })
   
@@ -3771,12 +3791,17 @@ server <- function(input, output, session) {
             LD[[i]][[j]][5] <<- 0
           }))
       LIST_DATA$gene_info <- LD
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
         input$myMath,
         input$radioplotnrom,
         as.numeric(input$sliderplotBinNorm)
       )
+                   })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
           MakePlotOptionFrame(LIST_DATA)
@@ -3847,12 +3872,17 @@ server <- function(input, output, session) {
             LD[[i]][[j]][5] <<- 0
           }))
       LIST_DATA$gene_info <- LD
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
         input$myMath,
         input$radioplotnrom,
         as.numeric(input$sliderplotBinNorm)
       )
+                   })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
           MakePlotOptionFrame(LIST_DATA)
@@ -3923,12 +3953,17 @@ server <- function(input, output, session) {
             LD[[i]][[j]][5] <<- 0
           }))
       LIST_DATA$gene_info <- LD
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
         input$myMath,
         input$radioplotnrom,
         as.numeric(input$sliderplotBinNorm)
       )
+                   })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
           MakePlotOptionFrame(LIST_DATA)
@@ -4000,12 +4035,17 @@ server <- function(input, output, session) {
             LD[[i]][[j]][5] <<- 0
           }))
       LIST_DATA$gene_info <- LD
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
         input$myMath,
         input$radioplotnrom,
         as.numeric(input$sliderplotBinNorm)
       )
+                   })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
           MakePlotOptionFrame(LIST_DATA)
@@ -4428,13 +4468,17 @@ server <- function(input, output, session) {
         } else{
           LIST_DATA$gene_info[[i]][[j]][5] <<- 0
         }))
-    
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
       LIST_DATA,
       input$myMath,
       input$radioplotnrom,
       as.numeric(input$sliderplotBinNorm)
     )
+                 })
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
       reactive_values$Plot_Cluster_Options <-
         MakePlotOptionFrame(LIST_DATA)
