@@ -22,20 +22,14 @@ https://rstudio.github.io/DT/
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
 #####
-on off picker problems look at STATE[4] ... search print(LIST_DATA$STATE)
-reacive_value$onoff[[i]] 
-for (i in names(LIST_DATA$gene_info)) { print(sapply(LIST_DATA$gene_info[[i]], "[[", 5))}
-... test for changes and use this reacive for observation to restrict hits
+on off picker problems look at STATE[4] ... 
 ####
 
-change tss and polya line type to dotted
-
-auto set quick lines at start not working ... after lines and lables button set select to none
-ggplot legend remove start and end white space, and shrink text to a min size
-color tint still needs work
-gene numbers updated when NA gene thrown out?
-
-
+color tint ... make gene list button fuction and remove automatic appling
+load file tab ... rework layout and hide norm button tab some options
+gene numbers updated when NA gene thrown out? on norm functions
+loading tables that have all bins in one row kills program on plot
+lines and lables needs rethinking and working
 
 add icons to buttons
 search TODO
