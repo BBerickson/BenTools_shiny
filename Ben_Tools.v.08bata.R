@@ -321,11 +321,6 @@ LoadTableFile <-
           paste("Loaded gene list from file",
                 legend_nickname,
                 Sys.Date())
-        if (length(list_data$gene_file) > 5) {
-          mytint <- 0
-        } else{
-          mytint <- length(list_data$gene_file) * 0.1
-        }
         list_data$gene_info[[legend_nickname]] <-
           lapply(setNames(
             names(list_data$gene_info[[1]]),
@@ -336,8 +331,7 @@ LoadTableFile <-
               set = i,
               mydot = kDotOptions[1],
               myline = kLineOptions[1],
-              mycol = RgbToHex(my_hex = list_data$gene_info[[1]][[i]]$mycol,
-                               tint = mytint),
+              mycol = list_data$gene_info[[1]][[i]]$mycol,
               onoff = 0,
               rnorm = "1"
             ))
@@ -426,17 +420,12 @@ LoadTableFile <-
             )
           names(list_data$gene_file)[g] <<- my_name_g
           names(list_data$gene_info)[g] <<- my_name_g
-          if (length(list_data$gene_file) > 5) {
-            mytint <- 0
-          } else{
-            mytint <- length(list_data$gene_file) * 0.1
-          }
           list_data$gene_info[[g]][[legend_nickname]] <<-
             tibble(
               set = legend_nickname,
               mydot = kDotOptions[1],
               myline = kLineOptions[1],
-              mycol = RgbToHex(my_hex = color_select, tint = mytint),
+              mycol = list_data$gene_info[[1]][[my_name_g]]$mycol,
               onoff = 0,
               rnorm = "1"
             )
@@ -636,17 +625,12 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
         )
       names(list_data$gene_file)[g] <<- my_name_g
       names(list_data$gene_info)[g] <<- my_name_g
-      if (length(list_data$gene_file) > 5) {
-        mytint <- 0
-      } else{
-        mytint <- length(list_data$gene_file) * 0.1
-      }
       list_data$gene_info[[g]][[legend_nickname]] <<-
         tibble(
           set = legend_nickname,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = RgbToHex(my_hex = color_select, tint = mytint),
+          mycol = list_data$gene_info[[1]][[my_name_g]]$mycol,
           onoff = 0,
           rnorm = "1"
         )
@@ -790,11 +774,6 @@ IntersectGeneLists <- function(list_data, list_name) {
     }
   }
   setProgress(5, detail = "finishing up")
-  if (length(list_data$gene_file) > 5) {
-    mytint <- 0
-  } else{
-    mytint <- length(list_data$gene_file) * 0.1
-  }
   for (nn in nick_name) {
     list_data$gene_info[[nn]] <-
       lapply(setNames(
@@ -806,8 +785,7 @@ IntersectGeneLists <- function(list_data, list_name) {
           set = i,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
-                           tint = mytint),
+          mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
           onoff = 0,
           rnorm = "1"
         ))
@@ -896,11 +874,6 @@ SortTop <-
         paste(file_names, collapse = " "),
         Sys.Date()
       )
-    if (length(list_data$gene_file) > 5) {
-      mytint <- 0
-    } else{
-      mytint <- length(list_data$gene_file) * 0.1
-    }
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
@@ -909,8 +882,7 @@ SortTop <-
                  set = i,
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
-                 mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
-                                  tint = mytint),
+                 mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
                  onoff = 0,
                  rnorm = "1"
                ))
@@ -1087,11 +1059,6 @@ CompareRatios <-
           Sys.Date()
         )
     }
-    if (length(list_data$gene_file) > 5) {
-      mytint <- 0
-    } else{
-      mytint <- length(list_data$gene_file) * 0.1
-    }
     for (nn in nick_name) {
       list_data$gene_info[[nn]] <-
         lapply(setNames(
@@ -1103,8 +1070,7 @@ CompareRatios <-
             set = i,
             mydot = kDotOptions[1],
             myline = kLineOptions[1],
-            mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
-                             tint = mytint),
+            mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
             onoff = 0,
             rnorm = "1"
           ))
@@ -1166,11 +1132,6 @@ ClusterNumList <- function(list_data,
         Sys.Date()
       )
     setProgress(4, detail = paste("finishing cluster", nn))
-    if (length(list_data$gene_file) > 5) {
-      mytint <- 0
-    } else{
-      mytint <- length(list_data$gene_file) * 0.1
-    }
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(
         names(list_data$gene_info[[1]]),
@@ -1181,8 +1142,7 @@ ClusterNumList <- function(list_data,
           set = i,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
-                           tint = mytint),
+          mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
           onoff = 0,
           rnorm = "1"
         ))
@@ -1333,11 +1293,6 @@ CumulativeDistribution <-
     } else {
       use_header <- "Log2 PI Cumulative plot"
     }
-    if (length(list_data$gene_file) > 5) {
-      mytint <- 0
-    } else{
-      mytint <- length(list_data$gene_file) * 0.1
-    }
     list_data$gene_info[[nick_name1]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
@@ -1346,8 +1301,7 @@ CumulativeDistribution <-
                  set = i,
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
-                 mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol,
-                                  tint = mytint),
+                 mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol,
                  onoff = 0,
                  rnorm = "1",
                  myheader = use_header
@@ -2273,9 +2227,13 @@ server <- function(input, output, session) {
                  if (my_list == names(LIST_DATA$gene_info)[1]) {
                    enable("normfactor")
                    disable("actionremovegene")
+                   hide("checkboxtint")
+                   enable("kbrewer")
                  } else {
                    disable("normfactor")
                    enable("actionremovegene")
+                   show("checkboxtint")
+                   disable("kbrewer")
                  }
                })
   
@@ -2729,14 +2687,8 @@ server <- function(input, output, session) {
           if (color_safe == 0) {
             color_safe <- 1
           }
-          if (i == common_name) {
-            LIST_DATA$gene_info[[i]][[j]][4] <<-
+          LIST_DATA$gene_info[[i]][[j]][4] <<-
               kListColorSet[color_safe]
-          } else {
-            nn <- which(names(LIST_DATA$gene_info) == i)
-            LIST_DATA$gene_info[[i]][[j]][4] <<-
-              RgbToHex(my_hex = kListColorSet[color_safe], tint = nn * .1)
-          }
         })
       })
       updateColourInput(session, "colourhex", value =
@@ -2755,6 +2707,35 @@ server <- function(input, output, session) {
           )
       }
       updateSelectInput(session, "kbrewer", selected = "select")
+    }
+  })
+  
+  # gene list tint ----
+  observeEvent(input$checkboxtint, ignoreInit = TRUE, {
+    print("tint")
+    if (length(LIST_DATA$gene_info) > 1) {
+      common_name <- names(LIST_DATA$gene_info)[1]
+        lapply(seq_along(LIST_DATA$gene_info[[input$selectgenelistoptions]]), function(j) {
+            nn <- which(names(LIST_DATA$gene_info) == input$selectgenelistoptions)
+            LIST_DATA$gene_info[[input$selectgenelistoptions]][[j]][4] <<-
+            RgbToHex(my_hex = LIST_DATA$gene_info[[1]][[j]]$mycol, tint = nn * .1)
+        })
+      updateColourInput(session, "colourhex", value =
+                          paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
+      if (!is.null(reactive_values$Apply_Math)) {
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+        reactive_values$Plot_controler <-
+          GGplotLineDot(
+            reactive_values$Apply_Math,
+            input$sliderplotBinRange,
+            reactive_values$Plot_Options,
+            reactive_values$Y_Axis_numbers,
+            reactive_values$Lines_Lables_List,
+            input$checkboxsmooth,
+            reactive_values$Y_Axis_Lable
+          )
+      }
+      updateCheckboxInput(session, "checkboxtint", value = FALSE)
     }
   })
   
@@ -5003,12 +4984,24 @@ ui <- dashboardPage(
                     status = "primary",
                     solidHeader = T,
                     selectInput("selectgenelistoptions", "", choices = "common"),
-                    downloadButton("downloadGeneList", "Save Gene/Color List"),
-                    checkboxInput("checkboxsavesplit", "split location and name"),
+                    fluidRow(
+                      column(4,
+                             downloadButton("downloadGeneList", "Save Gene/Color List")
+                             ),
+                      column(4,
+                        checkboxInput("checkboxsavesplit", "split location and name")
+                      )
+                    ),
                     actionButton("actionremovegene", "Remove Gene list"),
-                    selectInput("kbrewer",
-                                "color brewer",
+                    fluidRow(
+                    column(4,selectInput("kbrewer",
+                                "color brewer theme",
                                 c(choices = "select", kBrewerList))
+                           ),
+                    column(4, style = "padding-top:5%;",
+                           checkboxInput("checkboxtint", "tint gene")
+                    )
+                    )
                   ),
                   box(
                     title =  "Set Plot Color Options",
@@ -5037,9 +5030,14 @@ ui <- dashboardPage(
                     status = "primary",
                     solidHeader = T,
                     selectInput("selectdataoption", "", choices = "Load data file"),
-                    checkboxInput("checkboxremovefile",
-                                  "remove all files and restart", value = FALSE),
-                    actionButton("actionremovefile", "Remove File(s)"),
+                    fluidRow(
+                      column(3, actionButton("actionremovefile", "Remove File(s)")
+                             ),
+                      column(4,
+                             checkboxInput("checkboxremovefile",
+                                    "remove all files and restart", value = FALSE)
+                      )
+                    ),
                     textInput("textnickname", "Update Nickname"),
                     actionButton("actionoptions", "Set Nickname"),
                     fluidRow(
@@ -5049,8 +5047,7 @@ ui <- dashboardPage(
                     column(4, style = "padding-top:10%;",
                     actionButton("actionnormfactor", "Apply norm factor")
                     )
-                    ),
-                    helpText("Need to update Nickname and/or nrom factor")
+                    )
                   )
                 ))
               )),
