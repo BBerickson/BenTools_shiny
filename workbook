@@ -25,8 +25,6 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 ####
 
-fix making gene list before ploting makes plot button appeare ???
-set nickname applies to all
 load file tab ... rework layout and hide norm button tab some options
 gene numbers updated when NA gene thrown out? on norm functions
 loading tables that have all bins in one row kills program on plot

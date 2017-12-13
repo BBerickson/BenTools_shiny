@@ -1777,7 +1777,8 @@ server <- function(input, output, session) {
     Plot_Options = NULL,
     Plot_controler = NULL,
     Picker_controler = NULL,
-    Y_Axis_plot = 0
+    Y_Axis_plot = 0,
+    onoff = list()
   )
   
   # change tab controls ----
@@ -2286,7 +2287,7 @@ server <- function(input, output, session) {
     }
   )
   
-  # record new nickname and norm factor ---- 
+  # Apply norm factor ---- 
   observeEvent(input$actionnormfactor, ignoreInit = TRUE, {
     if (!is.na(input$normfactor) &
         !input$normfactor %in% c(0, 1) &
@@ -2305,19 +2306,13 @@ server <- function(input, output, session) {
     }
   })
   
-  # record new nickname and norm factor ---- 
+  # record new nickname  ---- 
   observeEvent(input$actionoptions, ignoreInit = TRUE, {
     if (nchar(input$textnickname) > 0) {
       print("new nickname")
-      oldnickname <-
-        paste(
-          gsub("(.{17})", "\\1\n", input$selectgenelistoptions),
-          gsub("(.{17})", "\\1\n",
-               LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"]),
-          sep = '\n'
-        )
-      
-      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"] <<-
+     
+     for(i in names(LIST_DATA$gene_info)) 
+      LIST_DATA$gene_info[[i]][[input$selectdataoption]]["set"] <<-
         input$textnickname
       LIST_DATA$table_file[[input$selectdataoption]]["set"] <<-
         input$textnickname
