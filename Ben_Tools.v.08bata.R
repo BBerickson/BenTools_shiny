@@ -556,7 +556,8 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
         replace_na(new_gene_list,
                    list(score.y = new_min_for_na, score.x = new_min_for_na))
     } else {
-      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
+      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) %>%
+        na_if(0)
       new_gene_list <-
         group_by(new_gene_list, gene) %>%
         summarise(test = sum(score.x, score.y)) %>%
@@ -2241,7 +2242,7 @@ server <- function(input, output, session) {
   # saves gene list ----
   output$downloadGeneList <- downloadHandler(
     filename = function() {
-      if (input$loadfiles == "Color") {
+      if (input$checkboxsavecolor) {
         paste(Sys.Date(), ".color.txt", sep = "")
       } else {
         paste(gsub("\nn = ", " n = ", input$selectgenelistoptions),
@@ -2251,7 +2252,7 @@ server <- function(input, output, session) {
       }
     },
     content = function(file) {
-      if (input$loadfiles == "Color") {
+      if (input$checkboxsavecolor) {
         new_comments <- NULL
         for (i in names(LIST_DATA$gene_info[[input$selectgenelistoptions]])) {
           new_comments <-
@@ -2822,6 +2823,10 @@ server <- function(input, output, session) {
   
   # create norm file ----
   observeEvent(input$actionnorm, ignoreInit = TRUE, {
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {
     LIST_DATA <<- MakeNormFile(
       LIST_DATA,
       input$pickernumerator,
@@ -2829,6 +2834,7 @@ server <- function(input, output, session) {
       input$checkboxnormmean,
       input$checkboxnormzero
     )
+                 })
     updatePickerInput(session,
                       "pickernumerator", selected = "")
     updatePickerInput(session,
@@ -4980,11 +4986,14 @@ ui <- dashboardPage(
                     solidHeader = T,
                     selectInput("selectgenelistoptions", "", choices = "common"),
                     fluidRow(
-                      column(4,
-                             downloadButton("downloadGeneList", "Save Gene/Color List")
+                      column(3,
+                             downloadButton("downloadGeneList", "Save List")
                              ),
-                      column(4,
+                      column(5,
                         checkboxInput("checkboxsavesplit", "split location and name")
+                      ),
+                      column(4,
+                               checkboxInput("checkboxsavecolor", "Save common color - file pair")
                       )
                     ),
                     actionButton("actionremovegene", "Remove Gene list"),
@@ -4998,16 +5007,14 @@ ui <- dashboardPage(
                     )
                     )
                   ),
+                  box(title = "File Options",
+                      solidHeader = T, width = 12,
                   box(
                     title =  "Set Plot Color Options",
                     width = 4,
                     status = "primary",
                     solidHeader = T,
-                    selectInput("selectdot", "Select dot type", choices = kDotOptions),
-                    selectInput("selectline", "Select line type", choices = kLineOptions),
-                    
                     fluidRow(
-                      # column(1,tags$br()),
                       box(
                         width = 12,
                         status = "info",
@@ -5017,16 +5024,18 @@ ui <- dashboardPage(
                         textInput("textrgbtohex", "RGB"),
                         actionButton("actionmyrgb", "Update HEX color")
                       )
-                    )
+                    ),
+                    selectInput("selectdot", "Select dot type", choices = kDotOptions),
+                    selectInput("selectline", "Select line type", choices = kLineOptions)
                   ),
                   box(
-                    title =  "Set File Plot Options",
+                    title =  "Set Plot Options",
                     width = 8,
                     status = "primary",
                     solidHeader = T,
                     selectInput("selectdataoption", "", choices = "Load data file"),
                     fluidRow(
-                      column(3, actionButton("actionremovefile", "Remove File(s)")
+                      column(4, actionButton("actionremovefile", "Remove File(s)")
                              ),
                       column(4,
                              checkboxInput("checkboxremovefile",
@@ -5035,6 +5044,7 @@ ui <- dashboardPage(
                     ),
                     textInput("textnickname", "Update Nickname"),
                     actionButton("actionoptions", "Set Nickname"),
+                    tags$hr(style="color: #2e6da4; background-color: #2e6da4; border-color: #2e6da4;"),
                     fluidRow(
                       column(4,
                     numericInput("normfactor", "Set norm factor, score/rpm", value = 1)
@@ -5043,6 +5053,7 @@ ui <- dashboardPage(
                     actionButton("actionnormfactor", "Apply norm factor")
                     )
                     )
+                  )
                   )
                 ))
               )),
