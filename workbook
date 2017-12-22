@@ -25,7 +25,17 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 ####
 
-lines and lables needs rethinking and working
+add sub plot text gene list info ... use_x_label
+make norm file fails on no genes being left?  when not replacing 0's
+lines and lables: don't let regions overlap, don't do close replace
+plot tab pickers closer, and 2 scrolls bars, 
+test remove file adds genes back?
+ratio tool can use normalized to bin data
+y-axis num boxs added
+nrom bin slider to selecter
+restart checkbox resets after 
+move check box to left side
+norm tool unchecked 0 by defalut, and add bin by bin, and better discriptions, don't limit data to common list
 
 add icons to buttons
 search TODO

@@ -48,7 +48,7 @@ Norm tab
 
   select a file and one to noromalize by
     select divide gene by gene or mean by mean
-    select replacing 0's (and NA's) in denominator by min/2
+    select replacing 0's (and NA's) in denominator by min/2 or remove that gene
     
     adds new "data file"
     

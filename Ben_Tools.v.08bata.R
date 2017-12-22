@@ -540,27 +540,26 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
       mynom <-
         group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
       mydom <-
-        group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
+        group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup() %>%
+        na_if(0)
     }
     if (nodivzero) {
       myname <- paste0(myname, "-0_min/2")
       # find min value /2 to replace 0s
       new_gene_list <-
-        inner_join(mynom, mydom, by = c("gene", "bin")) %>%
-        na_if(0)
+        inner_join(mynom, mydom, by = c("gene", "bin")) 
       new_min_for_na <-
-        min(c(new_gene_list$score.x, new_gene_list$score.y),
+        min(c(new_gene_list$score.y),
             na.rm = TRUE) / 2
       # replace 0's with min/2
       new_gene_list <-
         replace_na(new_gene_list,
-                   list(score.y = new_min_for_na, score.x = new_min_for_na))
+                   list(score.y = new_min_for_na))
     } else {
-      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) %>%
-        na_if(0)
+      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) 
       new_gene_list <-
         group_by(new_gene_list, gene) %>%
-        summarise(test = sum(score.x, score.y)) %>%
+        summarise(test = sum(score.y)) %>%
         filter(!is.na(test)) %>%
         semi_join(new_gene_list, ., by = "gene")
     }
@@ -858,7 +857,7 @@ SortTop <-
       strtrim(gsub(
         "(.{30})",
         "\\1... ",
-        paste0("Sort\nn = ", n_distinct(outlist$gene), "-", list_name)
+        paste0("Sort n = ", n_distinct(outlist$gene))
       ), 33)
     list_data$gene_file[[nick_name]]$full <- outlist
     list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
@@ -1091,6 +1090,7 @@ ClusterNumList <- function(list_data,
   if (is_empty(list_data$clust)) {
     return(NULL)
   }
+  ListColorSet <- brewer.pal(4, "Dark2")
   setProgress(3, detail = "spliting into clusters")
   for (rr in grep("Cluster_", names(list_data$gene_file), value = T)) {
     if (length(rr) > 0) {
@@ -1143,7 +1143,7 @@ ClusterNumList <- function(list_data,
           set = i,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
+          mycol = ListColorSet[nn],
           onoff = 0,
           rnorm = "1"
         ))
@@ -1404,6 +1404,7 @@ MakePlotOptionFrame <- function(list_data) {
   print("plot options fun")
   gene_info <- list_data$gene_info
   list_data_frame <- NULL
+  tt <- ""
   for (i in names(gene_info)) {
     # checks to see if at least one file in list is acitve
     if (sum(sapply(gene_info[[i]], "[[", 5) != 0) == 0) {
@@ -1429,9 +1430,12 @@ MakePlotOptionFrame <- function(list_data) {
           )
         )
     }
+    tt <- c(tt, list_data$gene_file[[i]]$info)
   }
   if (!is.null(names(list_data_frame))) {
-    return(bind_rows(list_data_frame))
+    bb <- bind_rows(list_data_frame)
+    # bb$use_x_label <- tt
+    return(bb)
   } else {
     print("no options")
     return(NULL)
@@ -1632,7 +1636,7 @@ LinesLablesPreSet <- function(mytype) {
 }
 
 # help get min and max from apply math data set
-MyXSetValues <- function(apply_math, xBinRange, yBinRange) {
+MyXSetValues <- function(apply_math, xBinRange, yBinRange = c(0,100)) {
   tt <- group_by(apply_math, set) %>%
     filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
     ungroup() %>%
@@ -1662,6 +1666,7 @@ GGplotLineDot <-
     legend_space <- lengths(strsplit(
       sort(plot_options$set), "\n"
     ))
+    # print(plot_options$use_x_label)
     gp <-
       ggplot(
         list_long_data_frame,
@@ -1689,7 +1694,7 @@ GGplotLineDot <-
       scale_color_manual(values = use_col) +
       scale_shape_manual(values = use_dot) +
       scale_linetype_manual(values = use_line) +
-      # xlab(use_x_label) +
+      # xlab(unique(plot_options$use_x_label)) +
       ylab(use_y_label) +  # Set axis labels
       scale_x_continuous(breaks = line_list$mybrakes,
                          labels = line_list$mylables) +
@@ -1717,7 +1722,7 @@ GGplotLineDot <-
         legend.title = element_blank(),
         legend.key = element_rect(size = 5, color = 'white'),
         legend.key.height = unit(legend_space, "line"),
-        legend.text = element_text(size = 12)
+        legend.text = element_text(size = 10)
       )  +
       coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
     suppressMessages(print(gp))
@@ -1777,6 +1782,7 @@ server <- function(input, output, session) {
     Apply_Math = NULL,
     Plot_Options = NULL,
     Plot_controler = NULL,
+    Plot_controler_cluster = NULL,
     Picker_controler = NULL,
     Y_Axis_plot = 0,
     onoff = list()
@@ -1851,7 +1857,7 @@ server <- function(input, output, session) {
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- names(LIST_DATA$gene_file)[1]
       } else if (!all(og %in% names(LIST_DATA$table_file)) |
-                 LIST_DATA$STATE[3] == "Sort\nn") {
+                 LIST_DATA$STATE[3] == "Sort n") {
         og <- NULL
       }
       updateSelectInput(
@@ -1869,7 +1875,7 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
         ), sep = ":"))
       )
-      if (sum(grepl("Sort\nn =", names(LIST_DATA$gene_file))) == 0) {
+      if (sum(grepl("Sort n =", names(LIST_DATA$gene_file))) == 0) {
         updateSliderInput(
           session,
           "slidersortbinrange",
@@ -1959,21 +1965,6 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
         ), sep = ":"))
       )
-      if (sum(grepl("Cluster_1\nn =", names(LIST_DATA$gene_file))) == 0) {
-        output$plotcluster <- renderPlot({
-          NULL
-        })
-        updateSliderInput(
-          session,
-          "sliderbincluster",
-          min = LIST_DATA$x_plot_range[1],
-          max = LIST_DATA$x_plot_range[2],
-          value = LIST_DATA$x_plot_range
-        )
-        hide('actionclusterplot')
-        hide('actionclusterdatatable')
-      }
-      
     }
     
     if (input$tabs == "cdftool" & LIST_DATA$STATE[1] != 0) {
@@ -2033,7 +2024,7 @@ server <- function(input, output, session) {
     
     toggle(
       "selectlineslablesshow",
-      condition = (input$tabs == "mainplot" &
+      condition = (input$tabs == "mainplot" | input$tabs == "clustertool" &
                      LIST_DATA$STATE[1] != 0)
     )
     # first time switch tab auto plot
@@ -2517,7 +2508,9 @@ server <- function(input, output, session) {
   output$plot <- renderPlot({
     reactive_values$Plot_controler
   })
-  
+  output$plotcluster <- renderPlot({
+    reactive_values$Plot_controler_cluster
+  })
   # updates norm applymath ----
   observeEvent(c(input$myMath,
                  input$sliderplotBinNorm,
@@ -3159,7 +3152,7 @@ server <- function(input, output, session) {
       )
       ol <- input$selectsortfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
-        ol <- grep("Sort\nn", names(LIST_DATA$gene_file), value = TRUE)
+        ol <- grep("Sort n", names(LIST_DATA$gene_file), value = TRUE)
         reactive_values$pickerfile_controler <- input$pickersortfile
       } else {
         reactive_values$pickerfile_controler <- ""
@@ -3178,16 +3171,16 @@ server <- function(input, output, session) {
   # Sort gene list show data table ----
   observeEvent(input$actionsortdatatable, ignoreInit = TRUE, {
     print("show data table")
-    if (any(grep("Sort\nn", names(LIST_DATA$gene_info)) > 0)) {
+    if (any(grep("Sort n", names(LIST_DATA$gene_info)) > 0)) {
       newnames <-
-        gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$full))
+        gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full))
       dt <- datatable(
-        LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$full,
+        LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full,
         rownames = FALSE,
         colnames = strtrim(newnames, 24),
         class = 'cell-border stripe compact',
         filter = 'top',
-        caption = LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$info,
+        caption = LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$info,
         options = list(
           pageLength = 15,
           scrollX = TRUE,
@@ -3206,7 +3199,7 @@ server <- function(input, output, session) {
             )
           )
         )
-      ) %>% formatPercentage(names(LIST_DATA$gene_file[[grep("Sort\nn", names(LIST_DATA$gene_info))]]$full)[-1])
+      ) %>% formatPercentage(names(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full)[-1])
     } else {
       dt <- datatable(
         LIST_DATA$gene_file[[1]]$empty,
@@ -3235,7 +3228,7 @@ server <- function(input, output, session) {
           LIST_DATA$STATE[2]
         )
       )), 33)
-    oldname <- grep("Sort\nn =", names(LIST_DATA$gene_file))
+    oldname <- grep("Sort n =", names(LIST_DATA$gene_file))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("sort filter $use")
       LIST_DATA$STATE[2] <<- newname
@@ -3741,8 +3734,8 @@ server <- function(input, output, session) {
                    {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
-        input$myMath,
-        input$radioplotnrom,
+        input$myMathcluster,
+        input$radioplotnromcluster,
         as.numeric(input$sliderplotBinNorm)
       )
                    })
@@ -3752,17 +3745,20 @@ server <- function(input, output, session) {
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange)
-        output$plotcluster <- renderPlot({
-          GGplotLineDot(
+        reactive_values$Plot_controler_cluster <- GGplotLineDot(
             reactive_values$Apply_Cluster_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Cluster_Options,
             Y_Axis_Cluster_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth,
-            reactive_values$Y_Axis_Lable
+            input$checkboxsmoothcluster,
+            isolate(YAxisLable(
+              input$myMathcluster,
+              input$radioplotnromcluster,
+              as.numeric(input$sliderplotBinNorm),
+              input$checkboxsmoothcluster
+            ))
           )
-        })
       }
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
@@ -3822,8 +3818,8 @@ server <- function(input, output, session) {
                    {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
-        input$myMath,
-        input$radioplotnrom,
+        input$myMathcluster,
+        input$radioplotnromcluster,
         as.numeric(input$sliderplotBinNorm)
       )
                    })
@@ -3833,17 +3829,20 @@ server <- function(input, output, session) {
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange)
-        output$plotcluster <- renderPlot({
-          GGplotLineDot(
+        reactive_values$Plot_controler_cluster <- GGplotLineDot(
             reactive_values$Apply_Cluster_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Cluster_Options,
             Y_Axis_Cluster_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth,
-            reactive_values$Y_Axis_Lable
+            input$checkboxsmoothcluster,
+            isolate(YAxisLable(
+              input$myMathcluster,
+              input$radioplotnromcluster,
+              as.numeric(input$sliderplotBinNorm),
+              input$checkboxsmoothcluster
+            ))
           )
-        })
       }
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
@@ -3903,8 +3902,8 @@ server <- function(input, output, session) {
                    {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
-        input$myMath,
-        input$radioplotnrom,
+        input$myMathcluster,
+        input$radioplotnromcluster,
         as.numeric(input$sliderplotBinNorm)
       )
                    })
@@ -3914,17 +3913,20 @@ server <- function(input, output, session) {
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange)
-        output$plotcluster <- renderPlot({
-          GGplotLineDot(
+        reactive_values$Plot_controler_cluster <- GGplotLineDot(
             reactive_values$Apply_Cluster_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Cluster_Options,
             Y_Axis_Cluster_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth,
-            reactive_values$Y_Axis_Lable
+            input$checkboxsmoothcluster,
+            isolate(YAxisLable(
+              input$myMathcluster,
+              input$radioplotnromcluster,
+              as.numeric(input$sliderplotBinNorm),
+              input$checkboxsmoothcluster
+            ))
           )
-        })
       }
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
@@ -3985,8 +3987,8 @@ server <- function(input, output, session) {
                    {
       reactive_values$Apply_Cluster_Math <- ApplyMath(
         LIST_DATA,
-        input$myMath,
-        input$radioplotnrom,
+        input$myMathcluster,
+        input$radioplotnromcluster,
         as.numeric(input$sliderplotBinNorm)
       )
                    })
@@ -3996,17 +3998,20 @@ server <- function(input, output, session) {
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange)
-        output$plotcluster <- renderPlot({
-          GGplotLineDot(
+        reactive_values$Plot_controler_cluster <- GGplotLineDot(
             reactive_values$Apply_Cluster_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Cluster_Options,
             Y_Axis_Cluster_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth,
-            reactive_values$Y_Axis_Lable
+            input$checkboxsmoothcluster,
+            isolate(YAxisLable(
+              input$myMathcluster,
+              input$radioplotnromcluster,
+              as.numeric(input$sliderplotBinNorm),
+              input$checkboxsmoothcluster
+            ))
           )
-        })
       }
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
@@ -4409,6 +4414,7 @@ server <- function(input, output, session) {
                         names(LIST_DATA$gene_info),
                         value = T) & j == input$pickerclusterfile) {
           LIST_DATA$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
+          kListColorSet
         } else{
           LIST_DATA$gene_info[[i]][[j]][5] <<- 0
         }))
@@ -4418,8 +4424,8 @@ server <- function(input, output, session) {
                  {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
       LIST_DATA,
-      input$myMath,
-      input$radioplotnrom,
+      input$myMathcluster,
+      input$radioplotnromcluster,
       as.numeric(input$sliderplotBinNorm)
     )
                  })
@@ -4429,20 +4435,22 @@ server <- function(input, output, session) {
       Y_Axis_Cluster_numbers <-
         MyXSetValues(reactive_values$Apply_Cluster_Math,
                      input$sliderplotBinRange)
-      output$plotcluster <- renderPlot({
-        GGplotLineDot(
+      reactive_values$Plot_controler_cluster <- GGplotLineDot(
           reactive_values$Apply_Cluster_Math,
           input$sliderplotBinRange,
           reactive_values$Plot_Cluster_Options,
           Y_Axis_Cluster_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth,
-          reactive_values$Y_Axis_Lable
+          input$checkboxsmoothcluster,
+          isolate(YAxisLable(
+            input$myMathcluster,
+            input$radioplotnromcluster,
+            as.numeric(input$sliderplotBinNorm),
+            input$checkboxsmoothcluster
+          ))
         )
-      })
     }
     LIST_DATA$gene_info <<- LD
-    hide('actionclusterplot')
   })
   
   # CDF tool picker control ----
@@ -5092,7 +5100,7 @@ ui <- dashboardPage(
           checkboxInput("checkboxnormmean", label = "gene by gene", value = TRUE),
           checkboxInput("checkboxnormzero", label = "denom 0 -> min/2", value = TRUE),
           helpText(
-            "if 0's are not converted genes containing will be removed from all gene lists"
+            "if 0's are not converted genes containing 0' in denom will be removed from all gene lists"
           )
           
         )
@@ -5132,7 +5140,7 @@ ui <- dashboardPage(
                     ),
                     sliderInput(
                       "sliderplotYRange",
-                      label = "Plot Y hight:",
+                      label = "Plot Y height:",
                       min = -20,
                       max = 120,
                       post = "%",
@@ -5429,9 +5437,10 @@ ui <- dashboardPage(
                   title = "Cluster tools",
                   status = "primary",
                   solidHeader = T,
-                  width = 12,
+                  width = 6,
+                  height = "250px",
                   fluidRow(column(
-                    2,
+                    4,
                     selectInput(
                       inputId = "selectclusternumber",
                       label = "Select number of clusters",
@@ -5441,7 +5450,7 @@ ui <- dashboardPage(
                     )
                   ),
                   column(
-                    5,
+                    8,
                     sliderInput(
                       "sliderbincluster",
                       label = "Select Bin Range:",
@@ -5452,8 +5461,32 @@ ui <- dashboardPage(
                   )),
                   actionButton("actionclustertool", "Get clusters"),
                   actionButton("actiongroupstool", "Get groups")
-                  
-                  
+                ),
+                box(
+                  title = "Cluster Plot Options",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 6,
+                  height = "250px",
+                  fluidRow(column(
+                    6,
+                      awesomeRadio(
+                        "myMathcluster",
+                        label =
+                          " ",
+                        choices = c("mean", "sum", "median", "var"),
+                        selected = "mean"
+                        ),
+                    actionButton("actionclusterplot", "plot")
+                  ),
+                    awesomeRadio(
+                      "radioplotnromcluster",
+                      label = "Set Y Normalization",
+                      choices = c("none", "relative frequency", "rel gene frequency"),
+                      selected = "none"
+                    ),
+                    checkboxInput("checkboxsmoothcluster", label = "smooth")
+                  )
                 ),
                 box(
                   title = "Cluster Plot",
@@ -5461,8 +5494,6 @@ ui <- dashboardPage(
                   solidHeader = TRUE,
                   width = 12,
                   collapsible = TRUE,
-                  collapsed = TRUE,
-                  actionButton("actionclusterplot", "plot"),
                   withSpinner(plotOutput("plotcluster"), type = 4)
                 ),
                 div(
