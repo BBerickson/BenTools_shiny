@@ -25,8 +25,9 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 ####
 
-add sub plot text gene list info ... use_x_label
-make norm file fails on no genes being left?  when not replacing 0's
+make norm file fails on 0 genes when removing files with 0's
+norm tool unchecked 0 by defalut, and add bin by bin, and better discriptions, don't limit data to common list
+
 lines and lables: don't let regions overlap, don't do close replace
 plot tab pickers closer, and 2 scrolls bars, 
 test remove file adds genes back?
@@ -34,15 +35,16 @@ ratio tool can use normalized to bin data
 y-axis num boxs added
 nrom bin slider to selecter
 restart checkbox resets after 
-move check box to left side
-norm tool unchecked 0 by defalut, and add bin by bin, and better discriptions, don't limit data to common list
+move check box to left side of pickers?
+norm factor ... don't do math until needed so the change is not permenent ... can make reactive
 
+update $sub info for xlab
 add icons to buttons
 search TODO
 more remove all files tests and controls
 remove print statements
 
-norm factor ... only alow 1 apply at a time and add a undo button so a nother one can be applied
+
 
 sort and other tools no gene list generated produce a message
 

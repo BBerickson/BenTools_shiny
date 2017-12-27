@@ -321,6 +321,8 @@ LoadTableFile <-
           paste("Loaded gene list from file",
                 legend_nickname,
                 Sys.Date())
+        list_data$gene_file[[legend_nickname]]$sub <-
+          paste(Sys.Date())
         list_data$gene_info[[legend_nickname]] <-
           lapply(setNames(
             names(list_data$gene_info[[1]]),
@@ -383,6 +385,7 @@ LoadTableFile <-
         }
         list_data$table_file[[legend_nickname]] <- tablefile
         list_data$gene_file[[my_name]]$use <- gene_names
+        list_data$gene_file[[my_name]]$sub <-  paste(Sys.Date())
         list_data$gene_info[[my_name]][[legend_nickname]] <-
           # don't change the order of postions
           tibble(
@@ -742,6 +745,8 @@ IntersectGeneLists <- function(list_data, list_name) {
             "from",
             paste(list_name, collapse = " and "),
             Sys.Date())
+    list_data$gene_file[[nick_name1]]$sub <-
+      paste(Sys.Date())
   }
   setProgress(3, detail = paste("building intersect list"))
   intersect <- filter(outlist, duplicated(gene))
@@ -756,6 +761,8 @@ IntersectGeneLists <- function(list_data, list_name) {
             "from",
             paste(list_name, collapse = " and "),
             Sys.Date())
+    list_data$gene_file[[nick_name1]]$sub <-
+      paste(Sys.Date())
     
     setProgress(4, detail = paste("building exclusive list"))
     exclusive <- anti_join(inclusive, intersect, by = "gene")
@@ -771,6 +778,8 @@ IntersectGeneLists <- function(list_data, list_name) {
               "from",
               paste(list_name, collapse = " and "),
               Sys.Date())
+      list_data$gene_file[[nick_name1]]$sub <-
+        paste(Sys.Date())
     }
   }
   setProgress(5, detail = "finishing up")
@@ -874,6 +883,10 @@ SortTop <-
         paste(file_names, collapse = " "),
         Sys.Date()
       )
+    list_data$gene_file[[nick_name]]$sub <-
+      paste(
+        "Sort",
+        topbottom)
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
@@ -1000,6 +1013,12 @@ CompareRatios <-
           "gene list",
           Sys.Date()
         )
+      list_data$gene_file[[nick_name1]]$sub <-
+        paste("Ratio_Up_file1",
+          "fold change cut off",
+          num,
+          "0  to min/2?",
+          nodivzero)
     }
     setProgress(3, detail = paste("building list", ratio2file))
     upratio <- filter(outlist[[1]], Ratio > num)
@@ -1024,11 +1043,19 @@ CompareRatios <-
           end2_bin,
           "fold change cut off",
           num,
+          "0  to min/2?",
+          nodivzero,
           "from",
           list_name,
           "gene list",
           Sys.Date()
         )
+      list_data$gene_file[[nick_name2]]$sub <-
+        paste("Ratio_Up_file2",
+              "fold change cut off",
+              num,
+              "0  to min/2?",
+              nodivzero)
     }
     setProgress(4, detail = paste("building list: no change"))
     upratio <- filter(outlist[[1]], Ratio <= num & Ratio >= 1 / num)
@@ -1053,11 +1080,19 @@ CompareRatios <-
           end2_bin,
           "fold change cut off",
           num,
+          "0  to min/2?",
+          nodivzero,
           "from",
           list_name,
           "gene list",
           Sys.Date()
         )
+      list_data$gene_file[[nick_name2]]$sub <-
+        paste("Ratio_No_Diff",
+              "fold change cut off",
+              num,
+              "0  to min/2?",
+              nodivzero)
     }
     for (nn in nick_name) {
       list_data$gene_info[[nn]] <-
@@ -1132,6 +1167,8 @@ ClusterNumList <- function(list_data,
         "total",
         Sys.Date()
       )
+    list_data$gene_file[[nick_name]]$sub <-
+      paste(Sys.Date())
     setProgress(4, detail = paste("finishing cluster", nn))
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(
@@ -1288,6 +1325,8 @@ CumulativeDistribution <-
           paste(cdffile, collapse = " "),
           Sys.Date()
         )
+      list_data$gene_file[[nick_name1]]$sub <-
+        paste(Sys.Date())
     }
     if (sum(start1_bin, end1_bin) > sum(start2_bin, end2_bin)) {
       use_header <- "Log2 EI Cumulative plot"
@@ -1404,7 +1443,6 @@ MakePlotOptionFrame <- function(list_data) {
   print("plot options fun")
   gene_info <- list_data$gene_info
   list_data_frame <- NULL
-  tt <- ""
   for (i in names(gene_info)) {
     # checks to see if at least one file in list is acitve
     if (sum(sapply(gene_info[[i]], "[[", 5) != 0) == 0) {
@@ -1427,15 +1465,14 @@ MakePlotOptionFrame <- function(list_data) {
             gsub("(.{17})", "\\1\n", i),
             gsub("(.{17})", "\\1\n", set),
             sep = '\n'
-          )
+          ),
+          mysub = paste(list_data$gene_file[[i]]$sub)
         )
     }
-    tt <- c(tt, list_data$gene_file[[i]]$info)
   }
+  print(tt)
   if (!is.null(names(list_data_frame))) {
-    bb <- bind_rows(list_data_frame)
-    # bb$use_x_label <- tt
-    return(bb)
+    return(bind_rows(list_data_frame))
   } else {
     print("no options")
     return(NULL)
@@ -1666,7 +1703,7 @@ GGplotLineDot <-
     legend_space <- lengths(strsplit(
       sort(plot_options$set), "\n"
     ))
-    # print(plot_options$use_x_label)
+    print(unique(plot_options$mysub))
     gp <-
       ggplot(
         list_long_data_frame,
@@ -1694,7 +1731,7 @@ GGplotLineDot <-
       scale_color_manual(values = use_col) +
       scale_shape_manual(values = use_dot) +
       scale_linetype_manual(values = use_line) +
-      # xlab(unique(plot_options$use_x_label)) +
+      xlab(cat(unique(plot_options$mysub), sep = ", ")) +
       ylab(use_y_label) +  # Set axis labels
       scale_x_continuous(breaks = line_list$mybrakes,
                          labels = line_list$mylables) +
@@ -1710,7 +1747,7 @@ GGplotLineDot <-
       theme(panel.grid.minor = element_blank(),
             panel.grid.major = element_blank()) +
       theme(axis.title.y = element_text(size =  15, margin = margin(2, 10, 2, 2))) +
-      theme(axis.title.x =  element_blank()) + # element_text(size =  10, vjust = .5)) +
+      theme(axis.title.x = element_text(size =  10, vjust = .5)) +
       theme(axis.text.x = element_text(
         size = 12,
         angle = -45,
