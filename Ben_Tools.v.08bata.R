@@ -532,41 +532,61 @@ CheckBoxOnOff <- function(check_box, list_data) {
 }
 
 # make normalized file ... devide one by the other
-MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
+MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
   if (nom != "" && dnom != "") {
     mynom <- list_data$table_file[[nom]]
     mydom <- list_data$table_file[[dnom]]
     myname <- "gene_by_gene"
     setProgress(1, detail = "Gathering data")
-    if (!gbyg) {
-      myname <- "mean_norm"
+    if (gbyg == "bin by bin") {
+      myname <- "bin_by_bin"
       mynom <-
         group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
       mydom <-
-        group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup() %>%
-        na_if(0)
+        group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup() 
     }
-    if (nodivzero) {
-      myname <- paste0(myname, "-0_min/2")
-      # find min value /2 to replace 0s
-      new_gene_list <-
-        inner_join(mynom, mydom, by = c("gene", "bin")) 
-      new_min_for_na <-
-        min(c(new_gene_list$score.y),
-            na.rm = TRUE) / 2
-      # replace 0's with min/2
+    # make gene list
+    if (divzerofix == "replace with 0") {
+      myname <- paste0(myname, "_Inf->0")
+    } else {
+      myname <- paste0(myname, "_Inf_RM")
+    }
+    new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
+    legend_nickname <- paste0(nom, " / ", dnom, ": ", myname)
+    new_gene_list <- transmute(
+      new_gene_list,
+      gene = gene,
+      bin = bin,
+      set = legend_nickname,
+      score = score.x / score.y
+    ) %>% na_if(Inf)
+    
+    if (divzerofix == "replace with 0") {
+      # find Inf and Na's replace 0s
       new_gene_list <-
         replace_na(new_gene_list,
-                   list(score.y = new_min_for_na))
+                   list(score = 0))
     } else {
-      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) 
       new_gene_list <-
         group_by(new_gene_list, gene) %>%
-        summarise(test = sum(score.y)) %>%
+        summarise(test = sum(score)) %>%
         filter(!is.na(test)) %>%
         semi_join(new_gene_list, ., by = "gene")
     }
-    legend_nickname <- paste0(nom, " / ", dnom, ": ", myname)
+    
+    if (n_distinct(new_gene_list$gene) < 1) {
+      showModal(
+        modalDialog(
+          title = "Information message",
+          " No genes in left, try replacing Inf and/or bin by bin",
+          size = "s",
+          easyClose = TRUE
+        )
+      )
+      setProgress(5, detail = "Done")
+      return(list_data)
+    }
+    
     color_safe <-
       (length(list_data$table_file) + 1) %% length(kListColorSet)
     if (color_safe == 0) {
@@ -580,17 +600,8 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, nodivzero) {
     names(list_data$gene_info)[1] <- my_name
     color_select <- kListColorSet[color_safe]
     setProgress(2, detail = "building new data")
-    list_data$table_file[[legend_nickname]] <-
-      transmute(
-        new_gene_list,
-        gene = gene,
-        bin = bin,
-        set = legend_nickname,
-        score = score.x / score.y
-      ) %>% na_if(Inf) %>% replace_na(list(score = 0))
-    list_data$gene_file[[my_name]]$use <-
-      semi_join(list_data$gene_file[[my_name]]$use,
-                list_data$table_file[[legend_nickname]], by = "gene")
+    list_data$table_file[[legend_nickname]] <- new_gene_list
+    list_data$gene_file[[my_name]]$use <- gene_names
     list_data$gene_info[[my_name]][[legend_nickname]] <-
       # don't change the order of postions
       tibble(
@@ -1470,7 +1481,6 @@ MakePlotOptionFrame <- function(list_data) {
         )
     }
   }
-  print(tt)
   if (!is.null(names(list_data_frame))) {
     return(bind_rows(list_data_frame))
   } else {
@@ -1703,7 +1713,6 @@ GGplotLineDot <-
     legend_space <- lengths(strsplit(
       sort(plot_options$set), "\n"
     ))
-    print(unique(plot_options$mysub))
     gp <-
       ggplot(
         list_long_data_frame,
@@ -1731,7 +1740,7 @@ GGplotLineDot <-
       scale_color_manual(values = use_col) +
       scale_shape_manual(values = use_dot) +
       scale_linetype_manual(values = use_line) +
-      xlab(cat(unique(plot_options$mysub), sep = ", ")) +
+      xlab(paste(unique(plot_options$mysub), collapse = ", ")) +
       ylab(use_y_label) +  # Set axis labels
       scale_x_continuous(breaks = line_list$mybrakes,
                          labels = line_list$mylables) +
@@ -2861,8 +2870,8 @@ server <- function(input, output, session) {
       LIST_DATA,
       input$pickernumerator,
       input$pickerdenominator,
-      input$checkboxnormmean,
-      input$checkboxnormzero
+      input$radiogenebygene,
+      input$radionormzero
     )
                  })
     updatePickerInput(session,
@@ -5134,12 +5143,13 @@ ui <- dashboardPage(
                 )
               )),
           actionButton("actionnorm", label = "create norm file"),
-          checkboxInput("checkboxnormmean", label = "gene by gene", value = TRUE),
-          checkboxInput("checkboxnormzero", label = "denom 0 -> min/2", value = TRUE),
-          helpText(
-            "if 0's are not converted genes containing 0' in denom will be removed from all gene lists"
-          )
-          
+          awesomeRadio("radiogenebygene", 
+                       label = "",
+                       choices = c("gene by gene", "bin by bin"),
+                       selected = "gene by gene"),
+          awesomeRadio("radionormzero", label = "Handling #/0 = Inf", 
+                       choices = c("replace with 0", "remove genes containing"),
+                       selected = "replace with 0")
         )
       ),
       

@@ -25,9 +25,6 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 ####
 
-make norm file fails on 0 genes when removing files with 0's
-norm tool unchecked 0 by defalut, and add bin by bin, and better discriptions, don't limit data to common list
-
 lines and lables: don't let regions overlap, don't do close replace
 plot tab pickers closer, and 2 scrolls bars, 
 test remove file adds genes back?
