@@ -25,8 +25,7 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 ####
 
-lines and lables: don't let regions overlap, don't do close replace
-plot tab pickers closer, and 2 scrolls bars, 
+plot tab pickers closer, and 2 scrolls bars?, 
 test remove file adds genes back?
 ratio tool can use normalized to bin data
 y-axis num boxs added
@@ -35,6 +34,7 @@ restart checkbox resets after
 move check box to left side of pickers?
 norm factor ... don't do math until needed so the change is not permenent ... can make reactive
 
+more URL info like color and nickname ... and can make saved URL file
 update $sub info for xlab
 add icons to buttons
 search TODO

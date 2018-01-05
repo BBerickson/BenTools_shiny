@@ -1541,37 +1541,44 @@ LinesLablesList <- function(body1bin = 20,
   everybp <- everybin * binbp
   if (everybp > 0) {
     if (mytype == "543") {
-      LOC1 <-
-        rev(seq(
-          body1bin + 1,
-          by = -everybin,
-          length.out = (body1bin / everybin) + 1
-        ))
-      LOC1[near(LOC1, tssbin, tol = everybin - 1)] <- tssbin + .5
-      LOC1[near(LOC1, body1bin, tol = everybin - 1)] <-
-        body1bin + .5
-      LOC2 <-
-        seq(body2bin,
-            by = everybin,
-            length.out = (body2bin / everybin) + 1)
-      LOC2[near(LOC2, tesbin, tol = everybin - 1)] <- tesbin + .5
-      LOC2[near(LOC2, body2bin, tol = everybin - 1)] <-
-        body2bin + .5
-      LOCname1 <-
-        rev(seq((body1bin - tssbin) * binbp,
-                by = -everybp,
-                length.out = (body1bin / everybin) + 1
-        ))
-      LOCname1[near(LOC1, tssbin, tol = everybin - 1)] <- "TSS"
-      LOCname2 <-
-        abs(seq(
-          -(tesbin - body2bin) * binbp,
-          by = everybp,
-          length.out = (body2bin / everybin) + 1
-        ))
-      LOCname2[near(LOC2, tesbin, tol = everybin - 1)] <- "TES"
+      LOCname1 <- seq(-tssbin * binbp, (body1bin-tssbin)* binbp, by = everybp)
+      LOC1 <- seq(1,  by = everybin, length.out = length(LOCname1))
+      
+      if(any(near(LOCname1, (body1bin-tssbin)* binbp, tol = everybp/2)) & length(LOCname1) > 1){
+        LOC1[near(LOCname1, (body1bin-tssbin)* binbp, tol = everybp/2)] <- body1bin+.5
+        LOCname1[near(LOCname1, (body1bin-tssbin)* binbp, tol = everybp/2)] <- (body1bin-tssbin)* binbp
+      } else {
+        LOC1 <- sort(c(LOC1, body1bin+.5))
+        LOCname1 <- append(LOCname1, (body1bin-tssbin)* binbp, length(LOCname1))
+      }
+      if(any(near(LOCname1, 0, tol = everybp/2)) & length(LOCname1) > 2){
+        LOC1[near(LOCname1, 0, tol = everybp/2)] <- tssbin + .5
+        LOCname1[near(LOCname1, 0, tol = everybp/2)] <- "TSS"
+      } else {
+        LOC1 <- sort(c(LOC1, tssbin+.5))
+        LOCname1 <- append(LOCname1, "TSS", which(LOCname1 > 0)[1]-1)
+      }
+      LOCname2 <-  seq(abs(-(tesbin - body2bin) * binbp), abs((body2bin*binbp)-everybp), by = everybp)
+      LOC2 <- seq(body2bin +.5, by = everybin, length.out = length(LOCname2))
+      
+      if(any(near(LOCname2, abs((body2bin*binbp)-everybp), tol = everybp/2)) & length(LOCname2) > 1){
+        LOC2[near(LOCname2, abs((body2bin*binbp)-everybp), tol = everybp/2)] <- totbins
+        LOCname2[near(LOCname2, abs((body2bin*binbp)-everybp), tol = everybp/2)] <- abs((body2bin*binbp)-everybp)
+      } else {
+        LOC2 <- sort(c(LOC2, totbins))
+        LOCname2 <- append(LOCname2, abs((body2bin*binbp)-everybp), length(LOCname2))
+      }
+      if(any(near(LOCname2, 0, tol = everybp/2)) & length(LOCname2) > 2){
+        LOC2[near(LOCname2, 0, tol = everybp/2)] <- tesbin + .5
+        LOCname2[near(LOCname2, 0, tol = everybp/2)] <- "TES"
+      } else {
+        LOC2 <- sort(c(LOC2, tesbin+.5))
+        LOCname2 <- append(LOCname2, "TES", 1)
+      }
       use_plot_breaks <- c(LOC1, LOC2)
       use_plot_breaks_labels <- c(LOCname1, LOCname2)
+      use_plot_breaks_labels <- use_plot_breaks_labels[1:length(use_plot_breaks)]
+      
       use_virtical_line <-
         c(tssbin, tesbin, body1bin, body2bin) + .5
     } else if (mytype == "5'") {
@@ -1667,17 +1674,17 @@ LinesLablesList <- function(body1bin = 20,
 LinesLablesPreSet <- function(mytype) {
   # 5|4, 4|3, tss, tes, bp/bin, every bin
   if (mytype == "543 bins 20,20,40") {
-    tt <- c(20, 40, 15, 45, 100, 5)
+    tt <- c(20, 40, 15, 45, 100, 80, 5)
   } else if (mytype == "543 bins 10,10,10") {
-    tt <- c(10, 20, 5, 25, 100, 5)
+    tt <- c(10, 20, 5, 25, 100, 30, 5)
   } else if (mytype == "5' 1k 1k 80bins") {
-    tt <- c(0, 0, 40, 0, 25, 20)
+    tt <- c(0, 0, 40, 0, 25, 80, 20)
   } else if (mytype == "5' .25k 10k 205bins") {
-    tt <- c(0, 0, 5, 0, 50, 6)
+    tt <- c(0, 0, 5, 0, 50, 205, 6)
   } else if (mytype == "3'") {
-    tt <- c(0, 0, 0, 40, 25, 20)
+    tt <- c(0, 0, 0, 40, 25, LIST_DATA$x_plot_range[2], 20)
   } else{
-    tt <- c(0, 0, 15, 45, 100, 5)
+    tt <- c(0, 0, 15, 45, 100, LIST_DATA$x_plot_range[2], 5)
   }
   tt
 }
@@ -2633,7 +2640,7 @@ server <- function(input, output, session) {
     updateNumericInput(session, "numerictss", value = myset[3])
     updateNumericInput(session, "numerictes", value = myset[4])
     updateNumericInput(session, "numericbinsize", value = myset[5])
-    updateNumericInput(session, "numericlabelspaceing", value = myset[6])
+    updateNumericInput(session, "numericlabelspaceing", value = myset[7])
     
     
     reactive_values$Lines_Lables_List <-
@@ -2642,8 +2649,8 @@ server <- function(input, output, session) {
                       myset[3],
                       myset[4],
                       myset[5],
-                      LIST_DATA$x_plot_range[2],
-                      myset[6])
+                      myset[6],
+                      myset[7])
   updateSelectInput(session, "selectlineslables", selected = "")
     
   })
@@ -2664,10 +2671,27 @@ server <- function(input, output, session) {
     for (i in seq_along(myset)) {
       if (myset[i] < 1) {
         myset[i] <- 0
-      } else if (i %in% c(1:4, 6) &
-                 myset[i] > LIST_DATA$x_plot_range[2]) {
-        myset[i] <- LIST_DATA$x_plot_range[2]
+        } else if (i %in% c(1:4, 6) &
+                   myset[i] > LIST_DATA$x_plot_range[2]) {
+          myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
+          myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
+          myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
+          myset[3] <- floor(LIST_DATA$x_plot_range[2]*.25)
       }
+    }
+    if(myset[1] > 0 & myset[1] >= myset[2]){
+      myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
+      myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
+    }
+    if(myset[3] > 0 & myset[3] >= myset[4]){
+      myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
+      myset[3] <- floor(LIST_DATA$x_plot_range[2]*.25)
+    }
+    if(myset[1] > 0 & myset[3] > 0 & myset[1] <= myset[3]){
+      myset[1] <- myset[3] + 1
+    }
+    if(myset[2] > 0 & myset[4] > 0 & myset[2] >= myset[4]){
+      myset[2] <- myset[4] - 1
     }
     updateNumericInput(session, "numericbody1", value = myset[1])
     updateNumericInput(session, "numericbody2", value = myset[2])

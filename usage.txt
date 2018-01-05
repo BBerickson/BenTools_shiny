@@ -47,8 +47,8 @@ Load Data tab
 Norm tab
 
   select a file and one to noromalize by
-    select divide gene by gene or mean by mean
-    select replacing 0's (and NA's) in denominator by min/2 or remove that gene
+    select divide gene by gene or bin by bin
+    select replacing #/0 = Inf or remove that gene
     
     adds new "data file"
     
@@ -61,7 +61,7 @@ Plot tab
   set math and normalization to data for plotting
   quick color setting
   cusome set x axis bin lables
-  
+  lines and labels tool will reset to a defalt if bins are outof bounds or regions in the wrong order
 
 Gene tool
 
