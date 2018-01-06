@@ -25,9 +25,8 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 ####
 
-plot tab pickers closer, and 2 scrolls bars?, 
-test remove file adds genes back?
-ratio tool can use normalized to bin data
+ratio tool can use normalized to bin data, change option to fix INF search replace_na, add tint option
+status boxes report gene list sizes on all tools ... go blank when button is pressed
 y-axis num boxs added
 nrom bin slider to selecter
 restart checkbox resets after 
@@ -40,8 +39,8 @@ add icons to buttons
 search TODO
 more remove all files tests and controls
 remove print statements
-
-
+test 5 4 and 3 lines and lables function
+plot tab pickers closer, and 2 scrolls bars?, search uiOutput("DynamicGenePicker")
 
 sort and other tools no gene list generated produce a message
 

@@ -1034,8 +1034,7 @@ CompareRatios <-
     setProgress(3, detail = paste("building list", ratio2file))
     upratio <- filter(outlist[[1]], Ratio > num)
     if (n_distinct(upratio$gene) > 0) {
-      nick_name2 <-
-        paste("Ratio_Up_file2\nn =", n_distinct(upratio$gene))
+      nick_name2 <- paste("Ratio_Up_file2\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name2)
       list_data$gene_file[[nick_name2]]$full <- upratio
       list_data$gene_file[[nick_name2]]$use <- select(upratio, gene)
@@ -1098,7 +1097,7 @@ CompareRatios <-
           "gene list",
           Sys.Date()
         )
-      list_data$gene_file[[nick_name2]]$sub <-
+      list_data$gene_file[[nick_name3]]$sub <-
         paste("Ratio_No_Diff",
               "fold change cut off",
               num,
@@ -2826,7 +2825,7 @@ server <- function(input, output, session) {
             )
           )
       }
-      output$DynamicGenePicker <- renderUI({
+      output$DynamicGenePicker <- renderUI({  
         pickerlist
       })
     }
@@ -4862,7 +4861,7 @@ ui <- dashboardPage(
       menuItem("Norm data", tabName = "filenorm", icon = icon("files-o")),
       menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
       hidden(div(
-        style = "padding-left: 15%;",
+        style = "padding-left: 15%; margin: -10px;",
         id = "showpicker",
         uiOutput("DynamicGenePicker")
       )),
