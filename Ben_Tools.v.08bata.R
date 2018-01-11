@@ -12,8 +12,6 @@ my_packages <- function(x) {
       require(i , character.only = TRUE)
     }
   }
-  # library("devtools")
-  # install_version("shinyWidgets", version = "0.3.4")
 }
 
 # run load needed pakages using my_pakages(x) ----
@@ -428,7 +426,7 @@ LoadTableFile <-
               set = legend_nickname,
               mydot = kDotOptions[1],
               myline = kLineOptions[1],
-              mycol = list_data$gene_info[[1]][[my_name_g]]$mycol,
+              mycol = list_data$gene_info[[1]][[g]]$mycol,
               onoff = 0,
               rnorm = "1"
             )
@@ -725,7 +723,7 @@ RemoveFile <- function(list_data, file_name, remove_all) {
 }
 
 # inclusive, exclusive and intersected gene lists
-IntersectGeneLists <- function(list_data, list_name) {
+IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
   if (is.null(list_name)) {
     return(NULL)
   }
@@ -794,6 +792,11 @@ IntersectGeneLists <- function(list_data, list_name) {
     }
   }
   setProgress(5, detail = "finishing up")
+  if(mytint){
+    mytint <- length(list_data$gene_file) * 0.1
+  } else {
+    mytint <- 0
+  }
   for (nn in nick_name) {
     list_data$gene_info[[nn]] <-
       lapply(setNames(
@@ -805,7 +808,7 @@ IntersectGeneLists <- function(list_data, list_name) {
           set = i,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
+          mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol, tint = mytint),
           onoff = 0,
           rnorm = "1"
         ))
@@ -821,7 +824,8 @@ SortTop <-
            start_bin,
            end_bin,
            num,
-           topbottom) {
+           topbottom,
+           mytint = FALSE) {
     if (is.null(file_names)) {
       return(NULL)
     }
@@ -898,6 +902,11 @@ SortTop <-
       paste(
         "Sort",
         topbottom)
+    if(mytint){
+      mytint <- length(list_data$gene_file) * 0.1
+    } else {
+      mytint <- 0
+    }
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
@@ -906,7 +915,7 @@ SortTop <-
                  set = i,
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
-                 mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol,
+                 mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol, tint = mytint),
                  onoff = 0,
                  rnorm = "1"
                ))
@@ -925,7 +934,9 @@ CompareRatios <-
            start2_bin,
            end2_bin,
            num,
-           nodivzero) {
+           divzerofix,
+           normbin = 0,
+           mytint = FALSE) {
     if (ratio1file == "" | ratio2file == "") {
       return()
     }
@@ -936,35 +947,18 @@ CompareRatios <-
       enesg <-
         list_data$gene_file[[list_name]]$use
       df <-
-        semi_join(list_data$table_file[[j]], enesg, by = 'gene') %>%
-        group_by(gene) %>%
-        summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                  sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
-        na_if(0) %>% ungroup()
-      if (nodivzero) {
-        # find min value /2 to replace 0s
-        new_min_for_na <-
-          min(c(df$sum1, df$sum2), na.rm = TRUE) / 2
-        df <-
-          group_by(df, gene) %>%
-          replace_na(list(sum1 = new_min_for_na, sum2 = new_min_for_na)) %>%
+        semi_join(list_data$table_file[[j]], enesg, by = 'gene') 
+      if (normbin > 0) {
+        df <- group_by(df, gene) %>%
+          mutate(score = score / nth(score, normbin)) %>%
+          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
           ungroup()
       } else {
-        if (start2_bin == 0 | end2_bin == 0) {
-          df <-
-            group_by(df, gene) %>%
-            summarise(test = sum(sum1)) %>%
-            filter(!is.na(test)) %>%
-            semi_join(df, ., by = "gene") %>%
-            ungroup()
-        } else {
-          df <-
-            group_by(df, gene) %>%
-            summarise(test = sum(sum1, sum2)) %>%
-            filter(!is.na(test)) %>%
-            semi_join(df, ., by = "gene") %>%
-            ungroup()
-        }
+        df <- group_by(df, gene) %>%
+        summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                  sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+        ungroup()
       }
       lc <<- lc + 1
       if (start2_bin == 0 | end2_bin == 0) {
@@ -972,17 +966,26 @@ CompareRatios <-
       } else {
         outlist[[lc]] <<-
           transmute(df, gene = gene, sum1 = sum1 / sum2) %>%
-          na_if(Inf) %>%
-          replace_na(list(score = 0))
+          na_if(Inf)
       }
       if (lc > 1) {
         outlist[[1]] <<-
           inner_join(outlist[[1]], outlist[[lc]], by = 'gene') %>%
           transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
-          na_if(Inf) %>%
-          replace_na(list(Ratio = 0)) %>%
-          arrange(desc(Ratio)) %>% select(gene, Ratio)
-        
+          na_if(Inf)  %>% select(gene, Ratio)
+        if (divzerofix == "replace with 0") {
+          # find Inf and Na's replace 0s
+          outlist[[1]] <<-
+            replace_na(outlist[[1]], list(Ratio = 0)) %>%
+            arrange(desc(Ratio))
+        } else {
+          outlist[[1]] <<-
+            group_by(outlist[[1]], gene) %>%
+            summarise(test = sum(Ratio)) %>%
+            filter(!is.na(test)) %>%
+            semi_join(outlist[[1]], ., by = "gene") %>%
+            arrange(desc(Ratio))
+        }
       }
     })
     
@@ -995,7 +998,7 @@ CompareRatios <-
     
     nick_name <- NULL
     setProgress(2, detail = paste("building list", ratio1file))
-    upratio <- filter(outlist[[1]], Ratio < 1 / num)
+    upratio <- filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
     if (n_distinct(upratio$gene) > 0) {
       nick_name1 <-
         paste("Ratio_Up_file1\nn =", n_distinct(upratio$gene))
@@ -1017,8 +1020,7 @@ CompareRatios <-
           end2_bin,
           "fold change cut off",
           num,
-          "0  to min/2?",
-          nodivzero,
+          divzerofix,
           "from",
           list_name,
           "gene list",
@@ -1028,11 +1030,10 @@ CompareRatios <-
         paste("Ratio_Up_file1",
           "fold change cut off",
           num,
-          "0  to min/2?",
-          nodivzero)
+          divzerofix)
     }
     setProgress(3, detail = paste("building list", ratio2file))
-    upratio <- filter(outlist[[1]], Ratio > num)
+    upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
     if (n_distinct(upratio$gene) > 0) {
       nick_name2 <- paste("Ratio_Up_file2\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name2)
@@ -1053,8 +1054,7 @@ CompareRatios <-
           end2_bin,
           "fold change cut off",
           num,
-          "0  to min/2?",
-          nodivzero,
+          divzerofix,
           "from",
           list_name,
           "gene list",
@@ -1064,11 +1064,10 @@ CompareRatios <-
         paste("Ratio_Up_file2",
               "fold change cut off",
               num,
-              "0  to min/2?",
-              nodivzero)
+              divzerofix)
     }
     setProgress(4, detail = paste("building list: no change"))
-    upratio <- filter(outlist[[1]], Ratio <= num & Ratio >= 1 / num)
+    upratio <- filter(outlist[[1]], Ratio <= num & Ratio >= 1 / num | Ratio == 0)
     if (n_distinct(upratio$gene) > 0) {
       nick_name3 <-
         paste("Ratio_No_Diff\nn =", n_distinct(upratio$gene))
@@ -1090,8 +1089,7 @@ CompareRatios <-
           end2_bin,
           "fold change cut off",
           num,
-          "0  to min/2?",
-          nodivzero,
+          divzerofix,
           "from",
           list_name,
           "gene list",
@@ -1101,8 +1099,12 @@ CompareRatios <-
         paste("Ratio_No_Diff",
               "fold change cut off",
               num,
-              "0  to min/2?",
-              nodivzero)
+              divzerofix)
+    }
+    if(mytint){
+      mytint <- length(list_data$gene_file) * 0.1
+    } else {
+      mytint <- 0
     }
     for (nn in nick_name) {
       list_data$gene_info[[nn]] <-
@@ -1115,7 +1117,7 @@ CompareRatios <-
             set = i,
             mydot = kDotOptions[1],
             myline = kLineOptions[1],
-            mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol,
+            mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol, tint = mytint),
             onoff = 0,
             rnorm = "1"
           ))
@@ -1253,7 +1255,8 @@ CumulativeDistribution <-
            end2_bin,
            bottom_per,
            top_per,
-           nodivzero) {
+           nodivzero,
+           mytint = FALSE) {
     if (is.null(cdffile)) {
       return()
     }
@@ -1343,6 +1346,11 @@ CumulativeDistribution <-
     } else {
       use_header <- "Log2 PI Cumulative plot"
     }
+    if(mytint){
+      mytint <- length(list_data$gene_file) * 0.1
+    } else {
+      mytint <- 0
+    }
     list_data$gene_info[[nick_name1]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
@@ -1351,7 +1359,7 @@ CumulativeDistribution <-
                  set = i,
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
-                 mycol = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol,
+                 mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol, tint = mytint),
                  onoff = 0,
                  rnorm = "1",
                  myheader = use_header
@@ -1837,7 +1845,8 @@ server <- function(input, output, session) {
     Plot_controler_cluster = NULL,
     Picker_controler = NULL,
     Y_Axis_plot = 0,
-    onoff = list()
+    onoff = list(),
+    binset = FALSE
   )
   
   # change tab controls ----
@@ -1928,13 +1937,6 @@ server <- function(input, output, session) {
         ), sep = ":"))
       )
       if (sum(grepl("Sort n =", names(LIST_DATA$gene_file))) == 0) {
-        updateSliderInput(
-          session,
-          "slidersortbinrange",
-          min = LIST_DATA$x_plot_range[1],
-          max = LIST_DATA$x_plot_range[2],
-          value = LIST_DATA$x_plot_range
-        )
         hide('actionsortdatatable')
       }
       
@@ -1974,23 +1976,8 @@ server <- function(input, output, session) {
         ), sep = ":"))
       )
       if (sum(grepl("Ratio_", names(LIST_DATA$gene_file))) == 0) {
-        updateSliderInput(
-          session,
-          "sliderbinratio1",
-          min = LIST_DATA$x_plot_range[1],
-          max = LIST_DATA$x_plot_range[2],
-          value = LIST_DATA$x_plot_range
-        )
-        updateSliderInput(
-          session,
-          "sliderbinratio2",
-          min = 0,
-          max = LIST_DATA$x_plot_range[2],
-          value = c(0, 0)
-        )
         hide('actionratiodatatable')
       }
-      
     }
     
     if (input$tabs == "clustertool" & LIST_DATA$STATE[1] != 0) {
@@ -2018,7 +2005,7 @@ server <- function(input, output, session) {
         ), sep = ":"))
       )
     }
-    
+    #CDF
     if (input$tabs == "cdftool" & LIST_DATA$STATE[1] != 0) {
       ol1 <- input$selectcdffile1
       og1 <- input$pickercdffile1
@@ -2043,37 +2030,15 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectcdffile1]], "[[", 4)
         ), sep = ":"))
       )
+     
       if (sum(grepl("CDF\nn", names(LIST_DATA$gene_file))) == 0) {
         output$plotcdf <- renderPlot({
           NULL
         })
         hide('plotcdf')
-        updateSliderInput(
-          session,
-          "sliderbincdf1",
-          min = LIST_DATA$x_plot_range[1],
-          max = LIST_DATA$x_plot_range[2],
-          value = c(
-            LIST_DATA$x_plot_range[1],
-            floor(LIST_DATA$x_plot_range[2] / 3)
-          )
-        )
-        updateSliderInput(
-          session,
-          "sliderbincdf2",
-          min = LIST_DATA$x_plot_range[1],
-          max = LIST_DATA$x_plot_range[2],
-          value = c(
-            ceiling(LIST_DATA$x_plot_range[2] / 3),
-            LIST_DATA$x_plot_range[2]
-          )
-        )
-        
         hide('actioncdfdatatable')
       }
-      
     }
-    
     toggle(
       "selectlineslablesshow",
       condition = (input$tabs == "mainplot" | input$tabs == "clustertool" &
@@ -2115,6 +2080,88 @@ server <- function(input, output, session) {
     }
   })
   
+  # sets initual states ----
+  observeEvent(reactive_values$binset,{
+    #Plot
+    updateSliderInput(
+      session,
+      "sliderplotBinRange",
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = LIST_DATA$x_plot_range
+    )
+    updateSliderInput(
+      session,
+      "sliderplotBinNorm",
+      min = 0,
+      max = LIST_DATA$x_plot_range[2],
+      value = 0
+    )
+    
+    #Sort
+    updateSliderInput(
+      session,
+      "slidersortbinrange",
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = LIST_DATA$x_plot_range
+    )
+    
+    #Ratio
+    updateSliderInput(
+      session,
+      "sliderbinratio1",
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = LIST_DATA$x_plot_range
+    )
+    updateSliderInput(
+      session,
+      "sliderbinratio2",
+      min = 0,
+      max = LIST_DATA$x_plot_range[2],
+      value = c(0, 0)
+    )
+    updateSliderInput(
+      session,
+      "sliderRatioBinNorm",
+      min = 0,
+      max = LIST_DATA$x_plot_range[2],
+      value = 0
+    ) 
+    
+    #Cluster
+    updateSliderInput(
+      session,
+      "sliderbincluster",
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = LIST_DATA$x_plot_range
+    )
+    
+    #CDF
+    updateSliderInput(
+      session,
+      "sliderbincdf1",
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = c(
+        LIST_DATA$x_plot_range[1],
+        floor(LIST_DATA$x_plot_range[2] / 3)
+      )
+    )
+    updateSliderInput(
+      session,
+      "sliderbincdf2",
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = c(
+        ceiling(LIST_DATA$x_plot_range[2] / 3),
+        LIST_DATA$x_plot_range[2]
+      )
+    )
+  })
+  
   # loads data file(s) ----
   observeEvent(input$filetable, {
     print("load file")
@@ -2153,20 +2200,7 @@ server <- function(input, output, session) {
       print("1st slider and plot lines Ylable")
       reactive_values$Y_Axis_Lable <- YAxisLable()
       reactive_values$Lines_Lables_List <- LinesLablesList()
-      updateSliderInput(
-        session,
-        "sliderplotBinRange",
-        min = LIST_DATA$x_plot_range[1],
-        max = LIST_DATA$x_plot_range[2],
-        value = LIST_DATA$x_plot_range
-      )
-      updateSliderInput(
-        session,
-        "sliderplotBinNorm",
-        min = 0,
-        max = LIST_DATA$x_plot_range[2],
-        value = 0
-      )
+      reactive_values$binset <- TRUE
       shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
       num_bins <-
         collapse(summarise(LIST_DATA$table_file[[1]], max(bin)))[[1]]
@@ -2865,7 +2899,7 @@ server <- function(input, output, session) {
       hide("startoff")
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
     }
-    
+    reactive_values$binset <- FALSE
     reactive_values$Picker_controler <- names(LIST_DATA$table_file)
   })
   
@@ -2880,7 +2914,6 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_info),
       selected = LIST_DATA$STATE[2]
     )
-    
   })
   
   # create norm file ----
@@ -3509,6 +3542,38 @@ server <- function(input, output, session) {
     } else {
       updateNumericInput(session, "numericratio", value = 2)
     }
+    if(input$sliderbinratio2[1] == 0 & input$sliderbinratio2[2] > 0){
+      updateSliderInput(
+        session,
+        "sliderbinratio2",
+        value = c(input$sliderbinratio2[2], input$sliderbinratio2[2])
+      )
+    }
+    if(input$sliderbinratio2[2] > 0 & input$sliderbinratio1[2] >= input$sliderbinratio2[1]){
+      showModal(modalDialog(
+        title = "Information message",
+        paste("Bins regions should not overlab, \nBins set to 1/3 2/3"),
+        size = "s",
+        easyClose = TRUE
+      ))
+      updateSliderInput(
+        session,
+        "sliderbinratio1",
+        value = c(
+          LIST_DATA$x_plot_range[1],
+          floor(LIST_DATA$x_plot_range[2] / 3)
+        )
+      )
+      updateSliderInput(
+        session,
+        "sliderbinratio2",
+        value = c(
+          ceiling(LIST_DATA$x_plot_range[2] / 3),
+          LIST_DATA$x_plot_range[2]
+        )
+      )
+    }
+    
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -3524,7 +3589,9 @@ server <- function(input, output, session) {
                        input$sliderbinratio2[1],
                        input$sliderbinratio2[2],
                        input$numericratio,
-                       input$checkboxnodivzero
+                       input$radioratiozero,
+                       input$sliderRatioBinNorm,
+                       input$checkboxratiotint
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -4741,11 +4808,35 @@ server <- function(input, output, session) {
     print("CDF tool action")
     hide('cdftable')
     hide('plotcdf')
+    if(any(between(input$sliderbincdf1, input$sliderbincdf2[1], input$sliderbincdf2[2])) | any(between(input$sliderbincdf2, input$sliderbincdf1[1], input$sliderbincdf1[2]))){
+      showModal(modalDialog(
+        title = "Information message",
+        paste("Bins regions should not overlab, \nBins set to 1/3 2/3"),
+        size = "s",
+        easyClose = TRUE
+      ))
+      updateSliderInput(
+        session,
+        "sliderbincdf1",
+        value = c(
+          LIST_DATA$x_plot_range[1],
+          floor(LIST_DATA$x_plot_range[2] / 3)
+        )
+      )
+      updateSliderInput(
+        session,
+        "sliderbincdf2",
+        value = c(
+          ceiling(LIST_DATA$x_plot_range[2] / 3),
+          LIST_DATA$x_plot_range[2]
+        )
+      )
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
                  {
-                   LD <<-
+                   LD <-
                      CumulativeDistribution(
                        LIST_DATA,
                        input$selectcdffile1,
@@ -4756,7 +4847,7 @@ server <- function(input, output, session) {
                        input$sliderbincdf2[2],
                        input$slidercdfper[1],
                        input$slidercdfper[2],
-                       input$checkboxnodivzero
+                       input$checkboxnodivzerocdf
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -5473,10 +5564,16 @@ ui <- dashboardPage(
                     )
                   ),
                   actionButton("actionratiotool", "Get fold changes"),
-                  checkboxInput("checkboxnodivzero", label = "0 to min/2", value = TRUE),
-                  helpText(
-                    "if 0's are not converted gene's containing region with sum(0) will be removed from results"
-                  )
+                  awesomeRadio("radioratiozero", label = "Handling #/0 = Inf", 
+                               choices = c("replace with 0", "remove genes containing"),
+                               selected = "remove genes containing"),
+                  checkboxInput("checkboxratiotint", "tint gene list"),
+                  sliderInput("sliderRatioBinNorm",
+                                   label = "Bin Norm:",
+                                   min = 0,
+                                   max = 80,
+                                   value = 0
+                                 )
                 ),
                 div(
                   id = "hideratiotable",
@@ -5524,9 +5621,9 @@ ui <- dashboardPage(
                     sliderInput(
                       "sliderbincluster",
                       label = "Select Bin Range:",
-                      min = 0,
+                      min = 1,
                       max = 80,
-                      value = c(0, 80)
+                      value = c(1, 80)
                     )
                   )),
                   actionButton("actionclustertool", "Get clusters"),
