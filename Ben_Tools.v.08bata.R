@@ -2048,7 +2048,7 @@ server <- function(input, output, session) {
             LIST_DATA,
             input$myMath,
             input$radioplotnrom,
-            as.numeric(input$sliderplotBinNorm)
+            as.numeric(input$selectplotBinNorm)
           )
                      })
         if (!is.null(reactive_values$Apply_Math)) {
@@ -2079,12 +2079,11 @@ server <- function(input, output, session) {
       max = LIST_DATA$x_plot_range[2],
       value = LIST_DATA$x_plot_range
     )
-    updateSliderInput(
+    updateSelectInput(
       session,
-      "sliderplotBinNorm",
-      min = 0,
-      max = LIST_DATA$x_plot_range[2],
-      value = 0
+      "selectplotBinNorm",
+      choices = c(0:LIST_DATA$x_plot_range[2]),
+      selected = 0
     )
     
     #Sort
@@ -2540,7 +2539,7 @@ server <- function(input, output, session) {
         LIST_DATA,
         input$myMath,
         input$radioplotnrom,
-        as.numeric(input$sliderplotBinNorm)
+        as.numeric(input$selectplotBinNorm)
       )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
@@ -2566,6 +2565,7 @@ server <- function(input, output, session) {
   
   # updates y axis limits
   observeEvent(reactive_values$Apply_Math, {
+    print("updates y axis limits")
     reactive_values$Y_Axis_numbers <-
       MyXSetValues(reactive_values$Apply_Math,
                    input$sliderplotBinRange,
@@ -2577,6 +2577,8 @@ server <- function(input, output, session) {
     if (all(c(0, 100) == input$sliderplotYRange)) {
       reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
     }
+    updateNumericInput(session, "numericYRangeHigh", value = reactive_values$Y_Axis_numbers[2])
+    updateNumericInput(session, "numericYRangeLow", value = reactive_values$Y_Axis_numbers[1])
   })
   
   # renders plot ----
@@ -2588,7 +2590,7 @@ server <- function(input, output, session) {
   })
   # updates norm applymath ----
   observeEvent(c(input$myMath,
-                 input$sliderplotBinNorm,
+                 input$selectplotBinNorm,
                  input$radioplotnrom),
                ignoreInit = TRUE,
                {
@@ -2596,7 +2598,7 @@ server <- function(input, output, session) {
                    YAxisLable(
                      input$myMath,
                      input$radioplotnrom,
-                     as.numeric(input$sliderplotBinNorm),
+                     as.numeric(input$selectplotBinNorm),
                      input$checkboxsmooth
                    )
                  if (LIST_DATA$STATE[1] == 1) {
@@ -2609,7 +2611,7 @@ server <- function(input, output, session) {
                        LIST_DATA,
                        input$myMath,
                        input$radioplotnrom,
-                       as.numeric(input$sliderplotBinNorm)
+                       as.numeric(input$selectplotBinNorm)
                      )
                                 })
                  }
@@ -2622,9 +2624,29 @@ server <- function(input, output, session) {
       MyXSetValues(reactive_values$Apply_Math,
                    input$sliderplotBinRange,
                    input$sliderplotYRange)
+    updateNumericInput(session, "numericYRangeHigh", value = reactive_values$Y_Axis_numbers[2])
+    updateNumericInput(session, "numericYRangeLow", value = reactive_values$Y_Axis_numbers[1])
     reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
   })
   
+  # y box check box trigger
+  observeEvent(input$checkboxyrange, ignoreInit = T,{
+    print("y numierc plot")
+    if (!is.null(reactive_values$Apply_Math) & input$checkboxyrange) {
+      reactive_values$Y_Axis_numbers <- c(input$numericYRangeHigh, input$numericYRangeLow)
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Options,
+          reactive_values$Y_Axis_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth,
+          reactive_values$Y_Axis_Lable
+        )
+    }
+    updateCheckboxInput(session, "checkboxyrange", value = FALSE)
+  })
   # plots when bin slider or other triggers is triggered ----
   observeEvent(
     c(
@@ -2739,7 +2761,7 @@ server <- function(input, output, session) {
       YAxisLable(
         input$myMath,
         input$radioplotnrom,
-        as.numeric(input$sliderplotBinNorm),
+        as.numeric(input$selectplotBinNorm),
         input$checkboxsmooth
       )
     reactive_values$Plot_controler <-
@@ -3940,7 +3962,7 @@ server <- function(input, output, session) {
         LIST_DATA,
         input$myMathcluster,
         input$radioplotnromcluster,
-        as.numeric(input$sliderplotBinNorm)
+        as.numeric(input$selectplotBinNorm)
       )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -3959,7 +3981,7 @@ server <- function(input, output, session) {
             isolate(YAxisLable(
               input$myMathcluster,
               input$radioplotnromcluster,
-              as.numeric(input$sliderplotBinNorm),
+              as.numeric(input$selectplotBinNorm),
               input$checkboxsmoothcluster
             ))
           )
@@ -4024,7 +4046,7 @@ server <- function(input, output, session) {
         LIST_DATA,
         input$myMathcluster,
         input$radioplotnromcluster,
-        as.numeric(input$sliderplotBinNorm)
+        as.numeric(input$selectplotBinNorm)
       )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -4043,7 +4065,7 @@ server <- function(input, output, session) {
             isolate(YAxisLable(
               input$myMathcluster,
               input$radioplotnromcluster,
-              as.numeric(input$sliderplotBinNorm),
+              as.numeric(input$selectplotBinNorm),
               input$checkboxsmoothcluster
             ))
           )
@@ -4108,7 +4130,7 @@ server <- function(input, output, session) {
         LIST_DATA,
         input$myMathcluster,
         input$radioplotnromcluster,
-        as.numeric(input$sliderplotBinNorm)
+        as.numeric(input$selectplotBinNorm)
       )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -4127,7 +4149,7 @@ server <- function(input, output, session) {
             isolate(YAxisLable(
               input$myMathcluster,
               input$radioplotnromcluster,
-              as.numeric(input$sliderplotBinNorm),
+              as.numeric(input$selectplotBinNorm),
               input$checkboxsmoothcluster
             ))
           )
@@ -4193,7 +4215,7 @@ server <- function(input, output, session) {
         LIST_DATA,
         input$myMathcluster,
         input$radioplotnromcluster,
-        as.numeric(input$sliderplotBinNorm)
+        as.numeric(input$selectplotBinNorm)
       )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -4212,7 +4234,7 @@ server <- function(input, output, session) {
             isolate(YAxisLable(
               input$myMathcluster,
               input$radioplotnromcluster,
-              as.numeric(input$sliderplotBinNorm),
+              as.numeric(input$selectplotBinNorm),
               input$checkboxsmoothcluster
             ))
           )
@@ -4701,7 +4723,7 @@ server <- function(input, output, session) {
       LD,
       input$myMathcluster,
       input$radioplotnromcluster,
-      as.numeric(input$sliderplotBinNorm)
+      as.numeric(input$selectplotBinNorm)
     )
                  })
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -4720,7 +4742,7 @@ server <- function(input, output, session) {
           isolate(YAxisLable(
             input$myMathcluster,
             input$radioplotnromcluster,
-            as.numeric(input$sliderplotBinNorm),
+            as.numeric(input$selectplotBinNorm),
             input$checkboxsmoothcluster
           ))
         )
@@ -5452,6 +5474,18 @@ ui <- dashboardPage(
                       max = 120,
                       post = "%",
                       value = c(0, 100)
+                    ),
+                    fluidRow(
+                      column(4,
+                    numericInput("numericYRangeHigh", label = "Plot Y max:", value = 0)
+                    ),
+                    column(4,
+                           numericInput("numericYRangeLow", label = "Plot Y min:", value = 0)
+                           ),
+                           column(2,
+                                  checkboxInput("checkboxyrange", label = "apply")
+                           )
+                    
                     )
                   ),
                   box(
@@ -5460,12 +5494,11 @@ ui <- dashboardPage(
                     solidHeader = T,
                     width = 6,
                     collapsible = TRUE,
-                    sliderInput(
-                      "sliderplotBinNorm",
-                      label = "Bin Norm:",
-                      min = 0,
-                      max = 80,
-                      value = 0
+                    selectInput(
+                      "selectplotBinNorm",
+                      label = "Bin Norm:", 
+                      choices = c(0:80), 
+                      selected = 0
                     )
                   ),
                   box(

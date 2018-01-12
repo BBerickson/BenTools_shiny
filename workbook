@@ -23,10 +23,8 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 #####
 on off picker problems look at STATE[4] ... 
-####
+#####
 
-y-axis num boxs added
-nrom bin slider to selecter
 restart checkbox resets after 
 move check box to left side of pickers?
 norm factor ... don't do math until needed so the change is not permenent ... can make reactive (don't forget norm #/#)
