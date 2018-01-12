@@ -25,41 +25,6 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 ####
 
-ratio tool
-  status boxes ... report gene list sizes on all tools ... go blank when button is pressed
-  note on datatable: filtering is reflected in list
-  dont reset tool for changing gene selection?
-  
-norm tool
-  status boxes ... say done
-
-gene compare tool
-  note: need 2 gene lists to compare
-  status boxes ... report gene list sizes on all tools ... go blank when button is pressed
-  add tint option
-  note on datatable: filtering is reflected in list
-  dont reset tool for changing gene selection?
-  
-Sort tool
-  status boxes ... report gene list sizes on all tools ... go blank when button is pressed
-  add tint option
-  note on datatable: filtering is reflected in list
-  dont reset tool for changing gene selection?
-  
-Cluster tool
-  status boxes ... report gene list sizes on all tools ... go blank when button is pressed
-  add tint option
-  note on datatable: filtering is reflected in list
-  dont reset tool for changing gene selection?
-  
-CDF tool
-  note: sugjested boxes based on normal 543 file creation
-  status boxes ... report gene list sizes on all tools ... go blank when button is pressed
-  change option to fix INF
-  add PI/EI number to datatable
-  note on datatable: filtering is reflected in list
-  dont reset tool for changing gene selection?
-  
 y-axis num boxs added
 nrom bin slider to selecter
 restart checkbox resets after 

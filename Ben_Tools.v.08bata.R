@@ -1133,11 +1133,11 @@ ClusterNumList <- function(list_data,
                            start_bin,
                            end_bin,
                            num,
-                           myname) {
+                           myname,
+                           mytint = FALSE) {
   if (is_empty(list_data$clust)) {
     return(NULL)
   }
-  ListColorSet <- brewer.pal(4, "Dark2")
   setProgress(3, detail = "spliting into clusters")
   for (rr in grep("Cluster_", names(list_data$gene_file), value = T)) {
     if (length(rr) > 0) {
@@ -1182,6 +1182,11 @@ ClusterNumList <- function(list_data,
     list_data$gene_file[[nick_name]]$sub <-
       paste(Sys.Date())
     setProgress(4, detail = paste("finishing cluster", nn))
+    if(mytint){
+      mytint <- length(list_data$gene_file) * 0.1
+    } else {
+      mytint <- 0
+    }
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(
         names(list_data$gene_info[[1]]),
@@ -1192,7 +1197,7 @@ ClusterNumList <- function(list_data,
           set = i,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = ListColorSet[nn],
+          mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol, tint = mytint),
           onoff = 0,
           rnorm = "1"
         ))
@@ -1255,7 +1260,7 @@ CumulativeDistribution <-
            end2_bin,
            bottom_per,
            top_per,
-           nodivzero,
+           divzerofix,
            mytint = FALSE) {
     if (is.null(cdffile)) {
       return()
@@ -1272,29 +1277,25 @@ CumulativeDistribution <-
         semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>%
         group_by(gene) %>%
         summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                  sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
-        na_if(0) %>% ungroup()
-      if (nodivzero) {
-        # find min value /2 to replace 0s
-        new_min_for_na <-
-          min(c(df$sum1, df$sum2), na.rm = TRUE) / 2
-        df <-
-          group_by(df, gene) %>%
-          replace_na(list(sum1 = new_min_for_na, sum2 = new_min_for_na)) %>%
-          ungroup()
-      } else {
-        df <- group_by(df, gene) %>%
-          summarise(test = sum(sum1, sum2)) %>%
-          filter(!is.na(test)) %>%
-          semi_join(df, ., by = "gene") %>%
-          ungroup()
-      }
+                  sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>% ungroup()
       outlist[[j]] <<-
         transmute(df, gene = gene, value = sum1 / sum2) %>%
-        na_if(Inf) %>%
-        replace_na(list(value = 0)) %>%
-        arrange(desc(value)) %>%
-        mutate(bin = row_number(), set = j)
+        na_if(Inf)
+      if (divzerofix == "replace with 0") {
+        # find Inf and Na's replace 0s
+        outlist[[j]] <<-
+          replace_na(outlist[[j]], list(value = 0)) %>%
+          arrange(desc(value)) %>%
+          mutate(bin = row_number(), set = j, value = value)
+      } else {
+        outlist[[j]] <<-
+          group_by(outlist[[j]], gene) %>%
+          summarise(test = sum(value)) %>%
+          filter(!is.na(test)) %>%
+          semi_join(outlist[[1]], ., by = "gene") %>%
+          arrange(desc(value)) %>%
+          mutate(bin = row_number(), set = j, value = value)
+      }
     })
     
     outlist <- bind_rows(outlist)
@@ -1330,8 +1331,7 @@ CumulativeDistribution <-
           bottom_per,
           "to",
           top_per,
-          "0  to min/2?",
-          nodivzero,
+          divzerofix,
           "from",
           list_name,
           "gene list",
@@ -1891,6 +1891,12 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[1]], "[[", 4)
         ), sep = ":"))
       )
+      output$valueboxnormfile <- renderValueBox({
+        valueBox(
+          "0%", "Done", icon = icon("cogs"),
+          color = "yellow"
+        )
+      })
     }
     if (input$tabs == "genelists" &
         length(LIST_DATA$gene_file) != 0) {
@@ -1914,13 +1920,9 @@ server <- function(input, output, session) {
     }
     if (input$tabs == "sorttool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectsortfile
-      og <- input$pickersortfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- names(LIST_DATA$gene_file)[1]
-      } else if (!all(og %in% names(LIST_DATA$table_file)) |
-                 LIST_DATA$STATE[3] == "Sort n") {
-        og <- NULL
-      }
+      } 
       updateSelectInput(
         session,
         "selectsortfile",
@@ -1931,7 +1933,7 @@ server <- function(input, output, session) {
         session,
         "pickersortfile",
         choices = names(LIST_DATA$table_file),
-        selected = og,
+        selected = NULL,
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
         ), sep = ":"))
@@ -1939,18 +1941,13 @@ server <- function(input, output, session) {
       if (sum(grepl("Sort n =", names(LIST_DATA$gene_file))) == 0) {
         hide('actionsortdatatable')
       }
-      
     }
     
     if (input$tabs == "ratiotool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectratiofile
-      og <- c(input$pickerratio1file, input$pickerratio2file)
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- names(LIST_DATA$gene_file)[1]
-      } else if (!all(og %in% names(LIST_DATA$table_file)) |
-                 LIST_DATA$STATE[3] == "Ratio_") {
-        og <- c("", "")
-      }
+      } 
       updateSelectInput(
         session,
         "selectratiofile",
@@ -1961,7 +1958,7 @@ server <- function(input, output, session) {
         session,
         "pickerratio1file",
         choices = names(LIST_DATA$table_file),
-        selected = og[1],
+        selected = "",
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
         ), sep = ":"))
@@ -1970,7 +1967,7 @@ server <- function(input, output, session) {
         session,
         "pickerratio2file",
         choices = names(LIST_DATA$table_file),
-        selected = og[2],
+        selected = "",
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
         ), sep = ":"))
@@ -1982,13 +1979,9 @@ server <- function(input, output, session) {
     
     if (input$tabs == "clustertool" & LIST_DATA$STATE[1] != 0) {
       ol <- input$selectclusterfile
-      og <- input$pickerclusterfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- names(LIST_DATA$gene_file)[1]
-      } else if (!all(og %in% names(LIST_DATA$table_file)) |
-                 LIST_DATA$STATE[3] == "Cluste") {
-        og <- NULL
-      }
+      } 
       updateSelectInput(
         session,
         "selectclusterfile",
@@ -1999,7 +1992,7 @@ server <- function(input, output, session) {
         session,
         "pickerclusterfile",
         choices = names(LIST_DATA$table_file),
-        selected = og,
+        selected = NULL,
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
         ), sep = ":"))
@@ -2008,13 +2001,9 @@ server <- function(input, output, session) {
     #CDF
     if (input$tabs == "cdftool" & LIST_DATA$STATE[1] != 0) {
       ol1 <- input$selectcdffile1
-      og1 <- input$pickercdffile1
       if (!ol1 %in% names(LIST_DATA$gene_file)) {
         ol1 <- names(LIST_DATA$gene_file)[1]
-      } else if (!all(og1 %in% names(LIST_DATA$table_file)) |
-                 LIST_DATA$STATE[3] == "CDF\nn") {
-        og1 <- ""
-      }
+      } 
       updateSelectInput(
         session,
         "selectcdffile1",
@@ -2025,7 +2014,7 @@ server <- function(input, output, session) {
         session,
         "pickercdffile1",
         choices = names(LIST_DATA$table_file),
-        selected = og1,
+        selected = "",
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[input$selectcdffile1]], "[[", 4)
         ), sep = ":"))
@@ -2916,6 +2905,16 @@ server <- function(input, output, session) {
     )
   })
   
+  observeEvent(input$pickernumerator,{
+    if(input$pickernumerator != ""){
+    output$valueboxnormfile <- renderValueBox({
+      valueBox(
+        "0%", "Done", icon = icon("cogs"),
+        color = "yellow"
+      )
+    })
+    }
+  })
   # create norm file ----
   observeEvent(input$actionnorm, ignoreInit = TRUE, {
     withProgress(message = 'Calculation in progress',
@@ -2944,20 +2943,13 @@ server <- function(input, output, session) {
       choices = names(LIST_DATA$gene_info),
       selected = LIST_DATA$STATE[2]
     )
+    output$valueboxnormfile <- renderValueBox({
+      valueBox(
+        "100%", "Done", icon = icon("thumbs-up", lib = "glyphicon"),
+        color = "green"
+      )
+    })
   })
-  
-  # Gene lists picker enable/disable ----
-  observeEvent(input$actiongenelists,
-               ignoreNULL = FALSE,
-               ignoreInit = TRUE,
-               {
-                 if (is.null(input$actiongenelists)) {
-                   hide('genelists1table')
-                   hide('genelists2table')
-                   hide('genelists3table')
-                 }
-               })
-  
   
   # Gene action ----
   observeEvent(input$actiongenelists, {
@@ -2971,7 +2963,7 @@ server <- function(input, output, session) {
                  value = 0,
                  {
                    LD <- IntersectGeneLists(LIST_DATA,
-                                            input$pickergenelists)
+                                            input$pickergenelists, input$checkboxgenelists)
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
@@ -2998,6 +2990,57 @@ server <- function(input, output, session) {
         selected = ol
       )
       show('actiongenelistsdatatable')
+      if (any(grep("Gene_List_intersect\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxgene1 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Gene_List_intersect\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Gene List intersect", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxgene1 <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List intersect", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
+      if (any(grep("Gene_List_inclusive\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxgene2 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Gene_List_inclusive\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Gene List inclusive", icon = icon("list"),
+            color = "yellow"
+          )
+        })
+      }else{
+        output$valueboxgene2 <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List inclusive", icon = icon("list"),
+            color = "yellow"
+          )
+        })
+      }
+      if (any(grep("Gene_List_exclusive\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxgene3 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Gene_List_exclusive\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Gene List exclusive", icon = icon("list"),
+            color = "red"
+          )
+        })
+      }else{
+        output$valueboxgene3 <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List exclusive", icon = icon("list"),
+            color = "red"
+          )
+        })
+      }
     } else {
       return()
     }
@@ -3208,18 +3251,6 @@ server <- function(input, output, session) {
     reactive_values$pickerfile_controler <- ""
   })
   
-  # sort tool picker enable/disable ----
-  observeEvent(input$pickersortfile,
-               ignoreNULL = FALSE,
-               ignoreInit = TRUE,
-               {
-                 if (is.null(input$pickersortfile)) {
-                   hide('sorttable')
-                 } else if (input$pickersortfile[1] == "") {
-                   hide('sorttable')
-                 }
-               })
-  
   # sort tool action ----
   observeEvent(input$actionsorttool, {
     print("sort tool")
@@ -3236,7 +3267,8 @@ server <- function(input, output, session) {
                      input$slidersortbinrange[1],
                      input$slidersortbinrange[2],
                      input$slidersortpercent,
-                     input$selectsorttop
+                     input$selectsorttop,
+                     input$checkboxsorttool
                    )
                  })
     if (!is_empty(LD$table_file)) {
@@ -3265,6 +3297,23 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      if (any(grep("Sort n", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxsort <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$use), 
+            "Gene List Sort", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxsort <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List Sort", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
     } else {
       return()
     }
@@ -3392,22 +3441,6 @@ server <- function(input, output, session) {
     )
     reactive_values$pickerfile_controler <- ""
   })
-  
-  # ratio tool picker enable/disable ----
-  observeEvent(
-    c(input$pickerratio1file, input$pickerratio2file),
-    ignoreInit = TRUE,
-    ignoreNULL = FALSE,
-    {
-      if (input$pickerratio1file != "" | input$pickerratio2file != "") {
-        
-      } else {
-        hide('ratio1table')
-        hide('ratio2table')
-        hide('ratio3table')
-      }
-    }
-  )
   
   # ratio tool gene lists $use ----
   observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, {
@@ -3624,6 +3657,57 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      if (any(grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxratio1 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Ratio Up file1", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxratio1 <- renderValueBox({
+          valueBox(
+            0, 
+            "Ratio Up file1", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
+      if (any(grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxratio2 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Ratio Up file2", icon = icon("list"),
+            color = "blue"
+          )
+        })
+      } else{
+        output$valueboxratio2 <- renderValueBox({
+          valueBox(
+            0, 
+            "Ratio Up file2", icon = icon("list"),
+            color = "blue"
+          )
+        })
+      }
+      if (any(grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxratio3 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Ratio No Diff", icon = icon("list"),
+            color = "yellow"
+          )
+        })
+      } else{
+        output$valueboxratio3 <- renderValueBox({
+          valueBox(
+            0, 
+            "Ratio No Diff", icon = icon("list"),
+            color = "yellow"
+          )
+        })
+      }
     } else {
       return()
     }
@@ -3820,22 +3904,6 @@ server <- function(input, output, session) {
     )
     reactive_values$pickerfile_controler <- ""
   })
-  
-  # cluster tool picker enable/disable ----
-  observeEvent(input$pickerclusterfile,
-               ignoreInit = TRUE,
-               ignoreNULL = FALSE,
-               {
-                 if (input$pickerclusterfile != "") {
-                   
-                 } else {
-                   hide("cluster1table")
-                   hide("cluster2table")
-                   hide("cluster3table")
-                   hide("cluster4table")
-                   reactive_values$clustergroups <- NULL
-                 }
-               })
   
   # cluster tool gene lists $use ----
   observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, {
@@ -4186,6 +4254,7 @@ server <- function(input, output, session) {
     hide("cluster4table")
     reactive_values$clustergroups <- NULL
     if (n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4) {
+      reactive_values$clustergroups <- "Cluster_"
       return()
     }
     withProgress(message = 'Calculation in progress',
@@ -4219,6 +4288,7 @@ server <- function(input, output, session) {
     hide("cluster4table")
     reactive_values$clustergroups <- NULL
     if (n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4) {
+      reactive_values$clustergroups <- "Group_"
       return()
     }
     withProgress(message = 'Calculation in progress',
@@ -4266,7 +4336,8 @@ server <- function(input, output, session) {
                                     input$sliderbincluster[1],
                                     input$sliderbincluster[2],
                                     input$selectclusternumber,
-                                    reactive_values$clustergroups
+                                    reactive_values$clustergroups,
+                                    input$checkboxgrouptint
                                   )
                               })
                  if (!is_empty(LD$table_file)) {
@@ -4300,6 +4371,74 @@ server <- function(input, output, session) {
                      choices = names(LIST_DATA$gene_file),
                      selected = ol
                    )
+                   if (any(grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+                     output$valueboxcluster1 <- renderValueBox({
+                       valueBox(
+                         n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info))]]$use), 
+                         "Gene List 1", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }else{
+                     output$valueboxcluster1 <- renderValueBox({
+                       valueBox(
+                         0, 
+                         "Gene List 1", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }
+                   if (any(grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+                     output$valueboxcluster2 <- renderValueBox({
+                       valueBox(
+                         n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info))]]$use), 
+                         "Gene List 2", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }else{
+                     output$valueboxcluster2 <- renderValueBox({
+                       valueBox(
+                         0, 
+                         "Gene List 2", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }
+                   if (any(grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+                     output$valueboxcluster3 <- renderValueBox({
+                       valueBox(
+                         n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info))]]$use), 
+                         "Gene List 3", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }else{
+                     output$valueboxcluster3 <- renderValueBox({
+                       valueBox(
+                         0, 
+                         "Gene List 3", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }
+                   if (any(grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+                     output$valueboxcluster4 <- renderValueBox({
+                       valueBox(
+                         n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info))]]$use), 
+                         "Gene List 4", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }else{
+                     output$valueboxcluster4 <- renderValueBox({
+                       valueBox(
+                         0, 
+                         "Gene List 4", icon = icon("list"),
+                         color = "green"
+                       )
+                     })
+                   }
                  } else {
                    return()
                  }
@@ -4309,10 +4448,7 @@ server <- function(input, output, session) {
   observeEvent(input$actionclusterdatatable, ignoreInit = TRUE, {
     updateTabItems(session, "clustertooltab", "Cluster 1")
     newnames <- gsub("(.{20})", "\\1... ", input$pickerclusterfile)
-    if (any(grep(
-      paste0(reactive_values$clustergroups, "1\nn ="),
-      names(LIST_DATA$gene_info)
-    ) > 0)) {
+    if (any(grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info)) > 0)) {
       withProgress(message = 'Calculation in progress',
                    detail = 'This may take a while...',
                    value = 0,
@@ -4543,23 +4679,26 @@ server <- function(input, output, session) {
   observeEvent(input$actionclusterplot, {
     print("cluster plot button")
     show('plotcluster')
-    LD <- LIST_DATA$gene_info
-    sapply(names(LIST_DATA$gene_info), function(i)
-      sapply(names(LIST_DATA$gene_info[[i]]), function(j)
+    LD <- LIST_DATA
+    count <- 0
+    ListColorSet <- brewer.pal(4, "Dark2")
+    sapply(names(LD$gene_info), function(i)
+      sapply(names(LD$gene_info[[i]]), function(j)
         if (i %in% grep(reactive_values$clustergroups,
-                        names(LIST_DATA$gene_info),
+                        names(LD$gene_info),
                         value = T) & j == input$pickerclusterfile) {
-          LIST_DATA$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
-          kListColorSet
+          count <<- count + 1
+          LD$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
+          LD$gene_info[[i]][[j]][4] <<- ListColorSet[count]
         } else{
-          LIST_DATA$gene_info[[i]][[j]][5] <<- 0
+          LD$gene_info[[i]][[j]][5] <<- 0
         }))
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
                  {
     reactive_values$Apply_Cluster_Math <- ApplyMath(
-      LIST_DATA,
+      LD,
       input$myMathcluster,
       input$radioplotnromcluster,
       as.numeric(input$sliderplotBinNorm)
@@ -4567,7 +4706,7 @@ server <- function(input, output, session) {
                  })
     if (!is.null(reactive_values$Apply_Cluster_Math)) {
       reactive_values$Plot_Cluster_Options <-
-        MakePlotOptionFrame(LIST_DATA)
+        MakePlotOptionFrame(LD)
       Y_Axis_Cluster_numbers <-
         MyXSetValues(reactive_values$Apply_Cluster_Math,
                      input$sliderplotBinRange)
@@ -4586,7 +4725,6 @@ server <- function(input, output, session) {
           ))
         )
     }
-    LIST_DATA$gene_info <<- LD
   })
   
   # CDF tool picker control ----
@@ -4603,21 +4741,6 @@ server <- function(input, output, session) {
     )
     reactive_values$pickerfile_controler <- ""
   })
-  
-  
-  # CDF tool picker enable/disable ----
-  observeEvent(c(input$pickercdffile1),
-               ignoreInit = TRUE,
-               ignoreNULL = FALSE,
-               {
-                 if (is.null(input$pickercdffile1)) {
-                   hide('cdftable')
-                   hide('plotcdf')
-                 } else if (input$pickercdffile1[1] == "") {
-                   hide('cdftable')
-                   hide('plotcdf')
-                 }
-               })
   
   # CDF percent reactive
   observeEvent(input$slidercdfper, ignoreInit = TRUE, {
@@ -4694,15 +4817,36 @@ server <- function(input, output, session) {
   # CDF generate gene list ----
   observeEvent(input$actioncdfdatatable, ignoreInit = TRUE, {
     if (any(grep("CDF\nn", names(LIST_DATA$gene_info)) > 0)) {
+      newnames1 <-
+        gsub("\n", " ",
+             grep("CDF\nn",
+               names(LIST_DATA$gene_info),
+               value = TRUE
+             ))
       dt <- datatable(
-        LIST_DATA$gene_file[[grep("CDF\nn", names(LIST_DATA$gene_info))]]$use,
+        select(LIST_DATA$gene_file[[grep("CDF\nn", names(LIST_DATA$gene_info))]]$full, gene, value),
         rownames = FALSE,
+        colnames = c(newnames1, "INDEX"),
         class = 'cell-border stripe compact',
         filter = 'top',
+        caption = LIST_DATA$gene_file[[grep("CDF\nn", names(LIST_DATA$gene_info))]]$info,
         options = list(
           pageLength = 15,
           scrollX = TRUE,
-          scrollY = TRUE
+          scrollY = TRUE,
+          autoWidth = FALSE,
+          columnDefs = list(
+            list(className = 'dt-center ', targets = "_all"),
+            list(
+              targets = 0,
+              render = JS(
+                "function(data, type, row, meta) {",
+                "return type === 'display' && data.length > 44 ?",
+                "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
+                "}"
+              )
+            )
+          )
         )
       )
     } else {
@@ -4847,7 +4991,8 @@ server <- function(input, output, session) {
                        input$sliderbincdf2[2],
                        input$slidercdfper[1],
                        input$slidercdfper[2],
-                       input$checkboxnodivzerocdf
+                       input$radiocdfzero,
+                       input$checkboxcdftint
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -5263,7 +5408,8 @@ ui <- dashboardPage(
                        selected = "gene by gene"),
           awesomeRadio("radionormzero", label = "Handling #/0 = Inf", 
                        choices = c("replace with 0", "remove genes containing"),
-                       selected = "replace with 0")
+                       selected = "replace with 0"),
+          valueBoxOutput("valueboxnormfile")
         )
       ),
       
@@ -5438,6 +5584,7 @@ ui <- dashboardPage(
                   solidHeader = T,
                   width = 12,
                   actionButton("actiongenelists", "Compare Gene lists"),
+                  checkboxInput("checkboxgenelists", "tint gene list"),
                   helpText("Shows intersected, exlusive, and inclusive gene lists")
                 ),
                 box(
@@ -5445,23 +5592,32 @@ ui <- dashboardPage(
                   status = "primary",
                   solidHeader = T,
                   width = 12,
+                  helpText("Needs at least 2 gene lists"),
                   actionButton("actiongenelistsdatatable", "Show gene list"),
                   tabBox(
                     id = "geneliststooltab",
                     width = 12,
                     tabPanel(
                       "Intersected Gene Lists",
+                      helpText("All filtering applied to gene list usage elsewhere"),
                       DT::dataTableOutput('genelists1table')
                     ),
                     tabPanel(
                       "Inclusive Gene Lists",
+                      helpText("All filtering applied to gene list usage elsewhere"),
                       DT::dataTableOutput('genelists2table')
                     ),
                     tabPanel(
                       "Exclusive Gene Lists",
+                      helpText("All filtering applied to gene list usage elsewhere"),
                       DT::dataTableOutput('genelists3table')
                     )
                   )
+                ),
+                fluidRow(
+                  valueBoxOutput("valueboxgene1"),
+                  valueBoxOutput("valueboxgene2"),
+                  valueBoxOutput("valueboxgene3")
                 )
               )),
       # main sort tab ----
@@ -5507,7 +5663,8 @@ ui <- dashboardPage(
                       )
                     )
                   ),
-                  actionButton("actionsorttool", "Sort")
+                  actionButton("actionsorttool", "Sort"),
+                  checkboxInput("checkboxsorttool", "tint gene list")
                 ),
                 div(
                   id = "hidesorttable",
@@ -5517,9 +5674,11 @@ ui <- dashboardPage(
                     solidHeader = T,
                     width = 12,
                     actionButton("actionsortdatatable", "Show gene list"),
+                    helpText("All filtering applied to gene list usage elsewhere"),
                     DT::dataTableOutput('sorttable')
                   )
-                )
+                ),
+                valueBoxOutput("valueboxsort")
               )),
       # main ratio tab ----
       tabItem(tabName = "ratiotool",
@@ -5587,13 +5746,21 @@ ui <- dashboardPage(
                       id = "ratiotooltab",
                       width = 12,
                       tabPanel("Up Fold Change file 1",
+                               helpText("All filtering applied to gene list usage elsewhere"),
                                DT::dataTableOutput('ratio1table')),
                       tabPanel("Up Fold Change file 2",
+                               helpText("All filtering applied to gene list usage elsewhere"),
                                DT::dataTableOutput('ratio2table')),
                       tabPanel("No Fold Change",
+                               helpText("All filtering applied to gene list usage elsewhere"),
                                DT::dataTableOutput('ratio3table'))
                     )
                   )
+                ),
+                fluidRow(
+                  valueBoxOutput("valueboxratio1"),
+                  valueBoxOutput("valueboxratio2"),
+                  valueBoxOutput("valueboxratio3")
                 )
               )),
       # main cluster tool tab ----
@@ -5627,7 +5794,8 @@ ui <- dashboardPage(
                     )
                   )),
                   actionButton("actionclustertool", "Get clusters"),
-                  actionButton("actiongroupstool", "Get groups")
+                  actionButton("actiongroupstool", "Get groups"),
+                  checkboxInput("checkboxgrouptint", "tint gene list")
                 ),
                 box(
                   title = "Cluster Plot Options",
@@ -5675,15 +5843,25 @@ ui <- dashboardPage(
                       id = "clustertooltab",
                       width = 12,
                       tabPanel("Cluster 1",
+                               helpText("All filtering applied to gene list usage elsewhere"),
                                DT::dataTableOutput('cluster1table')),
                       tabPanel("Cluster 2",
+                               helpText("All filtering applied to gene list usage elsewhere"),
                                DT::dataTableOutput('cluster2table')),
                       tabPanel("Cluster 3",
+                               helpText("All filtering applied to gene list usage elsewhere"),
                                DT::dataTableOutput('cluster3table')),
                       tabPanel("Cluster 4",
+                               helpText("All filtering applied to gene list usage elsewhere"),
                                DT::dataTableOutput('cluster4table'))
                     )
                   )
+                ),
+                fluidRow(
+                  valueBoxOutput("valueboxcluster1"),
+                  valueBoxOutput("valueboxcluster2"),
+                  valueBoxOutput("valueboxcluster3"),
+                  valueBoxOutput("valueboxcluster4")
                 )
               )),
       # main CDF tool tab ----
@@ -5727,10 +5905,10 @@ ui <- dashboardPage(
                     )
                   ),
                   actionButton("actioncdftool", "Plot CDF"),
-                  checkboxInput("checkboxnodivzerocdf", label = "0 to min/2", value = TRUE),
-                  helpText(
-                    "if 0's are not converted gene's containing region with sum(0) will be removed from results"
-                  )
+                  awesomeRadio("radiocdfzero", label = "Handling #/0 = Inf", 
+                               choices = c("replace with 0", "remove genes containing"),
+                               selected = "replace with 0"),
+                  checkboxInput("checkboxcdftint", "tint gene list")
                 ),
                 box(
                   title = "CDF Plot",
@@ -5748,6 +5926,7 @@ ui <- dashboardPage(
                     solidHeader = T,
                     width = 12,
                     actionButton("actioncdfdatatable", "Show gene list(s)"),
+                    helpText("All filtering applied to gene list usage elsewhere"),
                     DT::dataTableOutput('cdftable')
                   )
                 )
