@@ -25,10 +25,9 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 #####
 
-restart checkbox resets after 
-move check box to left side of pickers?
-norm factor ... don't do math until needed so the change is not permenent ... can make reactive (don't forget norm #/#)
 
+norm factor ... test that it works and add usage note
+sort and other tools no gene list generated produce a message
 more URL info like color and nickname ... and can make saved URL file
 update $sub info for xlab
 add icons to buttons
@@ -37,9 +36,7 @@ more remove all files tests and controls
 remove print statements
 test 5 4 and 3 lines and lables function
 plot tab pickers closer, and 2 scrolls bars?, search uiOutput("DynamicGenePicker")
+move check box to left side of pickers?
 
-sort and other tools no gene list generated produce a message
-
-renderUI pickerInput problem with 0.3.6 ... keep older (0.3.4) for now but lookout for example or update to fix
-# library("devtools")
-# install_version("shinyWidgets", version = "0.3.4")
+require(devtools)
+install_version(“tidyverse”, version = “1.1.1”)

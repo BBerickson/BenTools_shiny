@@ -837,6 +837,10 @@ SortTop <-
         list_data$gene_file[[list_name]]$use
       apply_bins <-
         semi_join(list_data$table_file[[j]], enesg, by = 'gene')
+      if(list_data$gene_info[[list_name]][[j]]["rnorm"] != 1){
+        apply_bins <-mutate(apply_bins,
+                            score = score / list_data$gene_info[[list_name]][[j]]["rnorm"])
+      }
       apply_bins <- group_by(apply_bins, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
@@ -948,6 +952,9 @@ CompareRatios <-
         list_data$gene_file[[list_name]]$use
       df <-
         semi_join(list_data$table_file[[j]], enesg, by = 'gene') 
+      if(list_data$gene_info[[list_name]][[j]]["rnorm"] != 1){
+        df <- mutate(df, score = score / list_data$gene_info[[list_name]][[j]]["rnorm"])
+      }
       if (normbin > 0) {
         df <- group_by(df, gene) %>%
           mutate(score = score / nth(score, normbin)) %>%
@@ -1274,8 +1281,11 @@ CumulativeDistribution <-
     outlist <- NULL
     lapply(cdffile, function(j) {
       df <-
-        semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>%
-        group_by(gene) %>%
+        semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') 
+      if(list_data$gene_info[[list_name]][[j]]["rnorm"] != 1){
+        df <-mutate(df, score = score / list_data$gene_info[[list_name]][[j]]["rnorm"])
+      }
+        group_by(df, gene) %>%
         summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
                   sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>% ungroup()
       outlist[[j]] <<-
@@ -1403,9 +1413,14 @@ ApplyMath <-
         }
         truefalse <-
           c(sapply(gene_info[[i]], "[[", 5) != 0)
+        mynorm <- bind_rows(LIST_DATA$gene_info[[i]][truefalse]) %>% 
+          select(rnorm, set) %>% mutate(rnorm = as.numeric(rnorm))
         list_data_frame[[i]] <-
           bind_rows(table_file[truefalse]) %>%
-          semi_join(., enesg, by = "gene")
+          semi_join(., enesg, by = "gene") %>% 
+          inner_join(., mynorm, by= "set") %>% 
+          mutate(., score=score/rnorm) %>% 
+          select(-rmorm)
       }
       
       if (is.null(names(list_data_frame))) {
@@ -2354,21 +2369,18 @@ server <- function(input, output, session) {
   )
   
   # Apply norm factor ---- 
-  observeEvent(input$actionnormfactor, ignoreInit = TRUE, {
-    if (!is.na(input$normfactor) &
-        !input$normfactor %in% c(0, 1) &
-        input$normfactor != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"]) {
-      print("norm")
+  observeEvent(input$normfactor, ignoreInit = TRUE, {
+    print("norm")
+    if (input$normfactor == 1 | input$normfactor != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"]) {
       LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<-
         as.character(input$normfactor)
-      LIST_DATA$table_file[[input$selectdataoption]] <<-
-        mutate(LIST_DATA$table_file[[input$selectdataoption]],
-               score = score / as.numeric(input$normfactor))
       LIST_DATA$STATE[4] <<- 0
-    } else if (!is.na(input$normfactor)) {
+    } else if (is.na(input$normfactor) | input$normfactor == 0) {
+      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<- 1
+      LIST_DATA$STATE[4] <<- 0
       updateNumericInput(session,
                          "normfactor",
-                         value = as.numeric(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"]))
+                         value = 1)
     }
   })
   
@@ -2894,6 +2906,7 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_info),
         selected = LIST_DATA$STATE[2]
       )
+      updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
     } else{
       updateSelectInput(session,
                          "selectdataoption",
@@ -2937,6 +2950,7 @@ server <- function(input, output, session) {
     })
     }
   })
+  
   # create norm file ----
   observeEvent(input$actionnorm, ignoreInit = TRUE, {
     withProgress(message = 'Calculation in progress',
@@ -5385,7 +5399,7 @@ ui <- dashboardPage(
                     numericInput("normfactor", "Set norm factor, score/rpm", value = 1)
                     ),
                     column(4, style = "padding-top:10%;",
-                    actionButton("actionnormfactor", "Apply norm factor")
+                    helpText("Set to 1 to reset")
                     )
                     )
                   )
