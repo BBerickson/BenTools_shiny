@@ -1413,14 +1413,14 @@ ApplyMath <-
         }
         truefalse <-
           c(sapply(gene_info[[i]], "[[", 5) != 0)
-        mynorm <- bind_rows(LIST_DATA$gene_info[[i]][truefalse]) %>% 
+        mynorm <- bind_rows(list_data$gene_info[[i]][truefalse]) %>% 
           select(rnorm, set) %>% mutate(rnorm = as.numeric(rnorm))
         list_data_frame[[i]] <-
           bind_rows(table_file[truefalse]) %>%
           semi_join(., enesg, by = "gene") %>% 
           inner_join(., mynorm, by= "set") %>% 
           mutate(., score=score/rnorm) %>% 
-          select(-rmorm)
+          select(-rnorm)
       }
       
       if (is.null(names(list_data_frame))) {
