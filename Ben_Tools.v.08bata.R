@@ -328,12 +328,12 @@ LoadTableFile <-
           ),
           function(i)
             tibble(
-              set = i,
+              set = paste(list_data$gene_info[[1]][[i]]["set"]),
               mydot = kDotOptions[1],
               myline = kLineOptions[1],
               mycol = list_data$gene_info[[1]][[i]]$mycol,
               onoff = 0,
-              rnorm = "1"
+              rnorm = paste(list_data$gene_info[[1]][[i]]["rnorm"])
             ))
         list_data$STATE[2] <- legend_nickname
       } else {
@@ -428,7 +428,7 @@ LoadTableFile <-
               myline = kLineOptions[1],
               mycol = list_data$gene_info[[1]][[g]]$mycol,
               onoff = 0,
-              rnorm = "1"
+              rnorm = paste(list_data$gene_info[[1]][[g]]["rnorm"]) 
             )
         })
         file_count <- 1
@@ -534,6 +534,12 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
   if (nom != "" && dnom != "") {
     mynom <- list_data$table_file[[nom]]
     mydom <- list_data$table_file[[dnom]]
+    if(list_data$gene_info[[1]][[nom]]["rnorm"] != 1){
+      mynom <- mutate(mynom, score = score / as.numeric(list_data$gene_info[[1]][[nom]]["rnorm"]))
+    }
+    if(list_data$gene_info[[1]][[dnom]]["rnorm"] != 1){
+      mydom <- mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
+    }
     myname <- "gene_by_gene"
     setProgress(1, detail = "Gathering data")
     if (gbyg == "bin by bin") {
@@ -805,12 +811,12 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
       ),
       function(i)
         tibble(
-          set = i,
+          set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
           mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol, tint = mytint),
           onoff = 0,
-          rnorm = "1"
+          rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
         ))
   }
   list_data
@@ -837,10 +843,6 @@ SortTop <-
         list_data$gene_file[[list_name]]$use
       apply_bins <-
         semi_join(list_data$table_file[[j]], enesg, by = 'gene')
-      if(list_data$gene_info[[list_name]][[j]]["rnorm"] != 1){
-        apply_bins <-mutate(apply_bins,
-                            score = score / list_data$gene_info[[list_name]][[j]]["rnorm"])
-      }
       apply_bins <- group_by(apply_bins, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
@@ -916,12 +918,12 @@ SortTop <-
                       names(list_data$gene_info[[1]])),
              function(i)
                tibble(
-                 set = i,
+                 set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
                  mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol, tint = mytint),
                  onoff = 0,
-                 rnorm = "1"
+                 rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
                ))
     list_data$STATE[2] <- nick_name
     list_data
@@ -953,7 +955,7 @@ CompareRatios <-
       df <-
         semi_join(list_data$table_file[[j]], enesg, by = 'gene') 
       if(list_data$gene_info[[list_name]][[j]]["rnorm"] != 1){
-        df <- mutate(df, score = score / list_data$gene_info[[list_name]][[j]]["rnorm"])
+        df <- mutate(df, score = score / as.numeric(list_data$gene_info[[list_name]][[j]]["rnorm"]))
       }
       if (normbin > 0) {
         df <- group_by(df, gene) %>%
@@ -1121,12 +1123,12 @@ CompareRatios <-
         ),
         function(i)
           tibble(
-            set = i,
+            set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
             mydot = kDotOptions[1],
             myline = kLineOptions[1],
             mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol, tint = mytint),
             onoff = 0,
-            rnorm = "1"
+            rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
           ))
     }
     setProgress(5, detail = "finishing up")
@@ -1201,12 +1203,12 @@ ClusterNumList <- function(list_data,
       ),
       function(i)
         tibble(
-          set = i,
+          set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
           mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol, tint = mytint),
           onoff = 0,
-          rnorm = "1"
+          rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
         ))
   }
   list_data$STATE[2] <-
@@ -1281,11 +1283,8 @@ CumulativeDistribution <-
     outlist <- NULL
     lapply(cdffile, function(j) {
       df <-
-        semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') 
-      if(list_data$gene_info[[list_name]][[j]]["rnorm"] != 1){
-        df <-mutate(df, score = score / list_data$gene_info[[list_name]][[j]]["rnorm"])
-      }
-        group_by(df, gene) %>%
+        semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
+      group_by(gene) %>%
         summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
                   sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>% ungroup()
       outlist[[j]] <<-
@@ -1366,12 +1365,12 @@ CumulativeDistribution <-
                       names(list_data$gene_info[[1]])),
              function(i)
                tibble(
-                 set = i,
+                 set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
                  mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol, tint = mytint),
                  onoff = 0,
-                 rnorm = "1",
+                 rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"]),
                  myheader = use_header
                ))
     setProgress(5, detail = "finishing up")
@@ -2368,20 +2367,22 @@ server <- function(input, output, session) {
     }
   )
   
-  # Apply norm factor ---- 
+  # save norm factor ---- 
   observeEvent(input$normfactor, ignoreInit = TRUE, {
     print("norm")
+    if(!is.na(input$normfactor)){
     if (input$normfactor == 1 | input$normfactor != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"]) {
       LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<-
         as.character(input$normfactor)
       LIST_DATA$STATE[4] <<- 0
-    } else if (is.na(input$normfactor) | input$normfactor == 0) {
-      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<- 1
+    } else if (input$normfactor == 0) {
+      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<- "1"
       LIST_DATA$STATE[4] <<- 0
       updateNumericInput(session,
                          "normfactor",
                          value = 1)
     }
+      }
   })
   
   # record new nickname  ---- 
@@ -2600,6 +2601,7 @@ server <- function(input, output, session) {
   output$plotcluster <- renderPlot({
     reactive_values$Plot_controler_cluster
   })
+  
   # updates norm applymath ----
   observeEvent(c(input$myMath,
                  input$selectplotBinNorm,

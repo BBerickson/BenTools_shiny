@@ -35,7 +35,7 @@ Load Data tab
     select plot line and dot type
     select color by rgb or hex
     plot legend label
-    apply normilization factor 
+    apply normilization factor that is applied as needed and passed on to children lists
     remove file from all gene lists
     
   save gene/color list

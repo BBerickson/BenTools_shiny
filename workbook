@@ -25,11 +25,16 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 #####
 
-
-norm factor ... test that it works and add usage note
+cdf gene out fix report index factor
+when plot norm to bin is that mean or gene by gene
+change plot asstecits to be inline with how David likes ...
+  don't tilt bin numbers, color TSS and TES, check size and bold, add slightly more room for y title
+fix gene by gene and bin by bin for mean of bins
+cdf, include check box for inner_join gene lists
 sort and other tools no gene list generated produce a message
 more URL info like color and nickname ... and can make saved URL file
 update $sub info for xlab
+go though functions and look for ways to clean up simplify and add notes
 add icons to buttons
 search TODO
 more remove all files tests and controls
