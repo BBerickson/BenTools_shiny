@@ -31,8 +31,8 @@ suppressPackageStartupMessages(my_packages(
 ))
 
 # By default, the file size limit is 5MB. It can be changed by
-# setting this option. Here we'll raise limit to 50MB. ----
-options(shiny.maxRequestSize = 50 * 1024 ^ 2)
+# setting this option. Here we'll raise limit to 500MB. ----
+options(shiny.maxRequestSize = 500 * 1024 ^ 2)
 
 # types of dots to be used in plotting ----
 kDotOptions <-
@@ -1261,8 +1261,7 @@ FindGroups <- function(list_data,
 # Cumulative Distribution data prep
 CumulativeDistribution <-
   function(list_data,
-           list_name,
-           cdffile,
+           onoff,
            start1_bin,
            end1_bin,
            start2_bin,
@@ -1271,44 +1270,46 @@ CumulativeDistribution <-
            top_per,
            divzerofix,
            mytint = FALSE) {
-    if (is.null(cdffile)) {
+    if (is.null(onoff)) {
       return()
     }
-    setProgress(1, detail = paste("dividing one by the other"))
-    gene_count <-
-      n_distinct(list_data$gene_file[[list_name]]$use$gene)
-    num <-
-      c(ceiling(gene_count * bottom_per / 100),
-        ceiling(gene_count * top_per / 100))
     outlist <- NULL
-    lapply(cdffile, function(j) {
-      df <-
-        semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
-      group_by(gene) %>%
-        summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                  sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>% ungroup()
-      outlist[[j]] <<-
-        transmute(df, gene = gene, value = sum1 / sum2) %>%
-        na_if(Inf)
-      if (divzerofix == "replace with 0") {
-        # find Inf and Na's replace 0s
-        outlist[[j]] <<-
-          replace_na(outlist[[j]], list(value = 0)) %>%
-          arrange(desc(value)) %>%
-          mutate(bin = row_number(), set = j, value = value)
-      } else {
-        outlist[[j]] <<-
-          group_by(outlist[[j]], gene) %>%
-          summarise(test = sum(value)) %>%
-          filter(!is.na(test)) %>%
-          semi_join(outlist[[1]], ., by = "gene") %>%
-          arrange(desc(value)) %>%
-          mutate(bin = row_number(), set = j, value = value)
-      }
-    })
-    
+    for(list_name in names(onoff)){
+      # setProgress(1, detail = paste("dividing one by the other"))
+      gene_count <-
+        n_distinct(list_data$gene_file[[list_name]]$use$gene)
+      num <-
+        c(ceiling(gene_count * bottom_per / 100),
+          ceiling(gene_count * top_per / 100))
+      lapply(onoff[[list_name]], function(j) {
+        df <-
+          semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
+        group_by(gene) %>%
+          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>% ungroup()
+        outlist[[paste0(list_name, "-", j)]] <<-
+          transmute(df, gene = gene, value = sum1 / sum2) %>%
+          na_if(Inf)
+        if (divzerofix == "replace with 0") {
+          # find Inf and Na's replace 0s
+          outlist[[paste0(list_name, "-", j)]] <<-
+            replace_na(outlist[[paste0(list_name, "-", j)]], list(value = 0)) %>%
+            arrange(desc(value)) %>%
+            mutate(bin = row_number(), set = j, set2 = paste(sub("\n", " ", list_name), "-", j), value = value)
+        } else {
+          outlist[[paste0(list_name, "-", j)]] <<-
+            group_by(outlist[[paste0(list_name, "-", j)]], gene) %>%
+            summarise(test = sum(value)) %>%
+            filter(!is.na(test)) %>%
+            semi_join(list_data$gene_file[[list_name]]$use, ., by = "gene") %>%
+            arrange(desc(value)) %>%
+            mutate(bin = row_number(), set = j, set2 = paste(sub("\n", " ", list_name), "-", j), value = value)
+        }
+      })
+    }
     outlist <- bind_rows(outlist)
-    for (rr in grep("CDF\nn", names(LIST_DATA$gene_file), value = T)) {
+    
+    for (rr in grep("CDF:", names(LIST_DATA$gene_file), value = T)) {
       if (length(rr) > 0) {
         list_data$gene_file[[rr]] <- NULL
         list_data$gene_info[[rr]] <- NULL
@@ -1321,8 +1322,7 @@ CumulativeDistribution <-
       distinct(gene) %>%
       ungroup()
     if (n_distinct(gene_list$gene) > 0) {
-      nick_name1 <-
-        paste("CDF\nn =", n_distinct(gene_list$gene))
+      nick_name1 <- "CDF:"
       list_data$gene_file[[nick_name1]]$full <- outlist
       list_data$gene_file[[nick_name1]]$use <- gene_list
       list_data$gene_file[[nick_name1]]$info <-
@@ -1344,7 +1344,7 @@ CumulativeDistribution <-
           "from",
           list_name,
           "gene list",
-          paste(cdffile, collapse = " "),
+          paste(distinct(outlist, set2), collapse = " "),
           Sys.Date()
         )
       list_data$gene_file[[nick_name1]]$sub <-
@@ -2014,27 +2014,31 @@ server <- function(input, output, session) {
     }
     #CDF
     if (input$tabs == "cdftool" & LIST_DATA$STATE[1] != 0) {
-      ol1 <- input$selectcdffile1
-      if (!ol1 %in% names(LIST_DATA$gene_file)) {
-        ol1 <- names(LIST_DATA$gene_file)[1]
-      } 
-      updateSelectInput(
-        session,
-        "selectcdffile1",
-        choices = names(LIST_DATA$gene_file),
-        selected = ol1
-      )
-      updatePickerInput(
-        session,
-        "pickercdffile1",
-        choices = names(LIST_DATA$table_file),
-        selected = "",
-        choicesOpt = list(style = paste("color", c(
-          sapply(LIST_DATA$gene_info[[input$selectcdffile1]], "[[", 4)
-        ), sep = ":"))
-      )
-     
-      if (sum(grepl("CDF\nn", names(LIST_DATA$gene_file))) == 0) {
+      #update cdf dynamic picker
+      output$DynamicCDFPicker <- renderUI({
+      pickercdf <- list()
+      for (i in names(LIST_DATA$gene_info)[grep("CDF:", names(LIST_DATA$gene_info), invert = T)]) {
+        pickercdf[[i]] <-
+          list(
+            pickerInput(
+              inputId = gsub(" ", "-cdfspace2-", gsub("\n", "-cdfspace1-", i)),
+              label = i,
+              width = "99%",
+              choices = names(LIST_DATA$table_file),
+              multiple = T,
+              options = list(
+                `actions-box` = TRUE,
+                `selected-text-format` = "count > 0"
+              ),
+              choicesOpt = list(style = paste("color", c(
+                sapply(LIST_DATA$gene_info[[i]], "[[", 4)
+              ), sep = ":"))
+            )
+          )
+      }
+      pickercdf
+      })
+      if (sum(grepl("CDF:", names(LIST_DATA$gene_file))) == 0) {
         output$plotcdf <- renderPlot({
           NULL
         })
@@ -2519,7 +2523,7 @@ server <- function(input, output, session) {
                  }
                })
   
-  # sets and resects plot button on/off ----
+  # sets and resets plot button on/off ----
   observeEvent(reactive_values$onoff,
                ignoreNULL = FALSE,
                ignoreInit = TRUE,
@@ -4765,24 +4769,9 @@ server <- function(input, output, session) {
     }
   })
   
-  # CDF tool picker control ----
-  observeEvent(c(input$selectcdffile1), ignoreInit = TRUE, {
-    print("cdf picker update")
-    updatePickerInput(
-      session,
-      "pickercdffile1",
-      choices = names(LIST_DATA$table_file),
-      selected = reactive_values$pickerfile_controler,
-      choicesOpt = list(style = paste("color", c(
-        sapply(LIST_DATA$gene_info[[input$selectcdffile1]], "[[", 4)
-      ), sep = ":"))
-    )
-    reactive_values$pickerfile_controler <- ""
-  })
-  
   # CDF percent reactive
   observeEvent(input$slidercdfper, ignoreInit = TRUE, {
-    oldname <- grep("CDF\nn =", names(LIST_DATA$gene_info))
+    oldname <- grep("CDF:", names(LIST_DATA$gene_info))
     if (is_empty(oldname)) {
       return()
     }
@@ -4797,7 +4786,7 @@ server <- function(input, output, session) {
       filter(all(between(bin, num[1], num[2]))) %>%
       distinct(gene) %>%
       ungroup()
-    newname <- paste("CDF\nn =", n_distinct(gene_list$gene))
+    newname <- paste("CDF:", n_distinct(gene_list$gene))
     if (newname != names(LIST_DATA$gene_info)[oldname]) {
       hide('cdftable')
       show('actioncdfdatatable')
@@ -4854,25 +4843,29 @@ server <- function(input, output, session) {
   
   # CDF generate gene list ----
   observeEvent(input$actioncdfdatatable, ignoreInit = TRUE, {
-    if (any(grep("CDF\nn", names(LIST_DATA$gene_info)) > 0)) {
+    if (any(grep("CDF:", names(LIST_DATA$gene_info)) > 0)) {
       newnames1 <-
         gsub("\n", " ",
-             grep("CDF\nn",
+             grep("CDF:",
                names(LIST_DATA$gene_info),
                value = TRUE
              ))
+      df <- select(LIST_DATA$gene_file[[grep("CDF:", names(LIST_DATA$gene_info))]]$full, -bin, -set) %>% 
+        mutate(value = round(value, 5)) %>% 
+        spread(., set2, value)
       dt <- datatable(
-        select(LIST_DATA$gene_file[[grep("CDF\nn", names(LIST_DATA$gene_info))]]$full, gene, value),
+        df,
+        colnames = strtrim(c(newnames1, names(df)[-1]), 24),
         rownames = FALSE,
-        colnames = c(newnames1, "INDEX"),
         class = 'cell-border stripe compact',
         filter = 'top',
-        caption = LIST_DATA$gene_file[[grep("CDF\nn", names(LIST_DATA$gene_info))]]$info,
+        caption = LIST_DATA$gene_file[[grep("CDF:", names(LIST_DATA$gene_info))]]$info,
         options = list(
           pageLength = 15,
           scrollX = TRUE,
           scrollY = TRUE,
           autoWidth = FALSE,
+          width = 5,
           columnDefs = list(
             list(className = 'dt-center ', targets = "_all"),
             list(
@@ -4907,8 +4900,8 @@ server <- function(input, output, session) {
   
   # cdf tool gene lists $use ----
   observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, {
-    newname <- paste("CDF\nn =", length(input$cdftable_rows_all))
-    oldname <- grep("CDF\nn =", names(LIST_DATA$gene_info))
+    newname <- paste("CDF:", length(input$cdftable_rows_all))
+    oldname <- grep("CDF:", names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_info)[oldname]) {
       print("cdf filter $use")
       LIST_DATA$STATE[2] <<- newname
@@ -4959,29 +4952,6 @@ server <- function(input, output, session) {
       output$plotcdf <- renderPlot({
         GGplotC(df, df_options, use_header)
       })
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
-      ol1 <- input$selectcdffile1
-      if (!ol1 %in% names(LIST_DATA$gene_file)) {
-        ol1 <- newname
-        reactive_values$pickerfile_controler <- input$pickercdffile1
-      } else {
-        reactive_values$pickerfile_controler <- ""
-      }
-      updateSelectInput(
-        session,
-        "selectcdffile1",
-        choices = names(LIST_DATA$gene_file),
-        selected = ol1
-      )
     }
   })
   
@@ -5014,6 +4984,16 @@ server <- function(input, output, session) {
         )
       )
     }
+    ttt <- reactiveValuesToList(input)[gsub(" ", "-cdfspace2-", gsub("\n", "-cdfspace1-", names(LIST_DATA$gene_info)))]
+    checkboxonoff <- list()
+    for (i in names(ttt)) {
+      for (tt in ttt[i]) {
+        selectgenelistonoff <-
+          gsub("-cdfspace2-", " ", gsub("-cdfspace1-", "\n", i))
+        checkboxonoff[[selectgenelistonoff]] <-
+          c(checkboxonoff[[selectgenelistonoff]], tt)
+      }
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -5021,8 +5001,7 @@ server <- function(input, output, session) {
                    LD <-
                      CumulativeDistribution(
                        LIST_DATA,
-                       input$selectcdffile1,
-                       input$pickercdffile1,
+                       checkboxonoff,
                        input$sliderbincdf1[1],
                        input$sliderbincdf1[2],
                        input$sliderbincdf2[1],
@@ -5038,27 +5017,30 @@ server <- function(input, output, session) {
       show('actioncdfdatatable')
       show('plotcdf')
       newname <-
-        grep("CDF\nn =", names(LIST_DATA$gene_info), value = TRUE)
+        grep("CDF:", names(LIST_DATA$gene_info), value = TRUE)
       df_options <-
-        semi_join(
+        inner_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
-          distinct(LIST_DATA$gene_file[[newname]]$full, set),
+          distinct(LIST_DATA$gene_file[[newname]]$full, set, set2),
           by = "set"
         ) %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set),
+          gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
+      ListColorSet <- brewer.pal(8, "Dark2")
+      if(any(duplicated(df_options$mycol))){
+      df_options$mycol <- brewer.pal(8, "set1")[1:n_distinct(df_options$set)]
+      }
       df <- inner_join(LIST_DATA$gene_file[[newname]]$full,
                        LIST_DATA$gene_file[[newname]]$use,
                        by = "gene") %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set),
+          gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
-      
       use_header <- pull(distinct(df_options, myheader))
       if (n_groups(group_by(df_options, set)) == 2 &
           n_distinct(df$gene) > 1) {
@@ -5082,29 +5064,6 @@ server <- function(input, output, session) {
       output$plotcdf <- renderPlot({
         GGplotC(df, df_options, use_header)
       })
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
-      ol <- input$selectcdffile1
-      if (!ol %in% names(LIST_DATA$gene_file)) {
-        ol <- grep("CDF\nn", names(LIST_DATA$gene_file), value = TRUE)
-        reactive_values$pickerfile_controler <- input$pickercdffile1
-      } else {
-        reactive_values$pickerfile_controler <- ""
-      }
-      updateSelectInput(
-        session,
-        "selectcdffile1",
-        choices = names(LIST_DATA$gene_file),
-        selected = ol
-      )
     } else {
       return()
     }
@@ -5231,20 +5190,7 @@ ui <- dashboardPage(
         div(
           style = "padding-left: 15%;",
           id = "showcdftoolpicker",
-          selectInput(
-            inputId = "selectcdffile1",
-            label = "Select gene list",
-            choices = "Load data file",
-            width = "99%"
-          ),
-          pickerInput(
-            inputId = "pickercdffile1",
-            width = "99%",
-            label = "Select file(s)",
-            choices = "Load data file",
-            multiple = T,
-            options = list(`actions-box` = TRUE, `selected-text-format` = "count > 1")
-          )
+          uiOutput("DynamicCDFPicker")
         )
       ),
       

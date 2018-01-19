@@ -117,13 +117,14 @@ cluster tool
     
 Cumulative Distribution Function (CDF) tool
   
-  select gene list and files form that list
+  select files from gene lists (except CDF)
   select bin 5' and 3' ranges
   select upper and lower percentages to exclude
   
   plots results
     if 2 files are use a ks test p value is returned
     reactive to upper and lower percentages and updates gene list
+    if same file from differnt gene lists is used cdf plot colors will be auto replaced
     
   action button builds datatable and shows
     search and sort data table
