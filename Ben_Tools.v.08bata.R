@@ -540,7 +540,7 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
     if(list_data$gene_info[[1]][[dnom]]["rnorm"] != 1){
       mydom <- mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
     }
-    myname <- "gene_by_gene"
+    myname <- "mean_of_bins"
     setProgress(1, detail = "Gathering data")
     if (gbyg == "bin by bin") {
       myname <- "bin_by_bin"
@@ -1384,6 +1384,7 @@ ApplyMath <-
            use_math,
            relative_frequency,
            normbin,
+           normbinbybin = "mean of bins by mean of bins",
            sel_list = NULL) {
     print("apply math fun")
     table_file = list_data$table_file
@@ -1428,9 +1429,16 @@ ApplyMath <-
       }
       setProgress(1+ length(list_data_frame), detail = paste("applying math to ", i))
       # applys math to pared down data file
-      if (relative_frequency == "rel gene frequency") {
+      if(normbin > 0 & normbinbybin == "bin by bin"){
         list_long_data_frame[[i]] <- bind_rows(list_data_frame) %>%
           group_by(set, gene) %>%
+          mutate(score = score / nth(score, normbin)) %>%
+          ungroup()
+      } else {
+        list_long_data_frame[[i]] <- bind_rows(list_data_frame)
+      }
+      if (relative_frequency == "rel gene frequency") {
+        list_long_data_frame[[i]] <- group_by(list_long_data_frame[[i]], set, gene) %>%
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
           ungroup() %>%
           group_by(set, bin) %>%
@@ -1443,8 +1451,7 @@ ApplyMath <-
           ))
         
       } else {
-        list_long_data_frame[[i]] <- bind_rows(list_data_frame) %>%
-          group_by(set, bin) %>%
+        list_long_data_frame[[i]] <- group_by(list_long_data_frame[[i]], set, bin) %>%
           summarise(value = get(use_math)(score, na.rm = T)) %>%
           ungroup() %>%
           mutate(., set = paste(
@@ -1453,7 +1460,7 @@ ApplyMath <-
             sep = '\n'
           ))
       }
-      if (normbin > 0) {
+      if (normbin > 0 & normbinbybin != "bin by bin") {
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
           mutate(value = value / nth(value, normbin)) %>%
@@ -2066,7 +2073,8 @@ server <- function(input, output, session) {
             LIST_DATA,
             input$myMath,
             input$radioplotnrom,
-            as.numeric(input$selectplotBinNorm)
+            as.numeric(input$selectplotBinNorm),
+            input$selectnormbinbybin
           )
                      })
         if (!is.null(reactive_values$Apply_Math)) {
@@ -2556,7 +2564,8 @@ server <- function(input, output, session) {
         LIST_DATA,
         input$myMath,
         input$radioplotnrom,
-        as.numeric(input$selectplotBinNorm)
+        as.numeric(input$selectplotBinNorm),
+        input$selectnormbinbybin
       )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
@@ -2609,7 +2618,8 @@ server <- function(input, output, session) {
   # updates norm applymath ----
   observeEvent(c(input$myMath,
                  input$selectplotBinNorm,
-                 input$radioplotnrom),
+                 input$radioplotnrom,
+                 input$selectnormbinbybin),
                ignoreInit = TRUE,
                {
                  reactive_values$Y_Axis_Lable <-
@@ -2629,7 +2639,8 @@ server <- function(input, output, session) {
                        LIST_DATA,
                        input$myMath,
                        input$radioplotnrom,
-                       as.numeric(input$selectplotBinNorm)
+                       as.numeric(input$selectplotBinNorm),
+                       input$selectnormbinbybin
                      )
                                 })
                  }
@@ -5388,8 +5399,8 @@ ui <- dashboardPage(
           actionButton("actionnorm", label = "create norm file"),
           awesomeRadio("radiogenebygene", 
                        label = "",
-                       choices = c("gene by gene", "bin by bin"),
-                       selected = "gene by gene"),
+                       choices = c("mean of bins by mean of bins", "bin by bin"),
+                       selected = "mean of bins by mean of bins"),
           awesomeRadio("radionormzero", label = "Handling #/0 = Inf", 
                        choices = c("replace with 0", "remove genes containing"),
                        selected = "replace with 0"),
@@ -5456,12 +5467,18 @@ ui <- dashboardPage(
                     solidHeader = T,
                     width = 6,
                     collapsible = TRUE,
-                    selectInput(
+                    column(5, selectInput(
                       "selectplotBinNorm",
                       label = "Bin Norm:", 
                       choices = c(0:80), 
                       selected = 0
-                    )
+                    )),
+                    column(7,
+                           selectInput("selectnormbinbybin", 
+                                 label = "apply by:",
+                                 choices = c("mean of bins", "bin by bin"),
+                                 selected = "mean of bins")
+                  )
                   ),
                   box(
                     style = 'padding:2px;',

@@ -25,8 +25,6 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 #####
 
-fix gene by gene and bin by bin for mean of bins
-when plot norm to bin is that mean or gene by gene, give option
 go though functions and look for ways to clean up simplify and add notes
 
 update nickname fix STATE[4] plot tab 

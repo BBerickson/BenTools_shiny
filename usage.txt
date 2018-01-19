@@ -57,7 +57,7 @@ Plot tab
   first time runs plotting functions are run and a plot is produced
   quick set default plot x axis bin lables
   drop down selection(s) of data restricted to gene list to be plotted
-  sliders for x and y plot axis
+  sliders and selectors for x and y plot axis
   set math and normalization to data for plotting
   quick color setting
   cusome set x axis bin lables
