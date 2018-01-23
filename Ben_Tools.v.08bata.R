@@ -98,10 +98,26 @@ kListColorSet <- brewer.pal(8, kBrewerList[6])
 kMathOptions <- c("mean", "sum", "median", "var")
 
 # functions ----
+
+# basic test for valid rgb color
+isColor <- function(x) {
+  res <- try(col2rgb(x), silent = TRUE)
+  return(!"try-error" %in% class(res))
+}
+
+# switches hex <--> rgb or appies tint to hex
 RgbToHex <- function(my_hex = NULL,
                      my_rgb = NULL,
                      tint = FALSE) {
+  # converts hex to rgb, unless if is.numieric(tint) returns hex
+  # RgbToHex(my_hex = "#AAAAAA") 
+  #  [1] "170,170,170"
+  # RgbToHex(my_hex = "#AAAAAA", tint = .2) 
+  #  [1] "#BBBBBB"
   if (!is.null(my_hex)) {
+    if (!isColor(my_hex)) {
+      return("#FFFFFF")
+    }
     if (is.numeric(tint)) {
       my_rgb <- as.numeric(col2rgb(c(my_hex)))
       my_rgb <-
@@ -110,6 +126,9 @@ RgbToHex <- function(my_hex = NULL,
       return(paste(col2rgb(c(my_hex)), collapse = ","))
     }
   }
+  # converts rgb to hex, 
+  # RgbToHex(my_rgb = "170,170,170")
+  # [1] "#AAAAAA"
   if (!is.null(my_rgb)) {
     red_green_blue <- strsplit(my_rgb, ",")[[1]]
     if (length(red_green_blue) == 3 &
@@ -121,14 +140,13 @@ RgbToHex <- function(my_hex = NULL,
         maxColorValue = 255
       )
     }
+    if (!isColor(my_hex)) {
+      return("#FFFFFF")
+    }
     return(my_hex)
+  } else {
+    return("#FFFFFF")
   }
-}
-
-# basic test for valid colors
-isColor <- function(x) {
-  res <- try(col2rgb(x), silent = TRUE)
-  return(!"try-error" %in% class(res))
 }
 
 # reads in file, tests, fills out info and returns list_data or gene list
@@ -138,10 +156,12 @@ LoadTableFile <-
            list_data,
            load_gene_list = FALSE,
            convert = FALSE) {
+    # tests if loading a file with a list of address to remote files, requirs .url.txt in file name
     if (length(file_name) == 1 &&
-        length(grep(".url", file_name)) == 1) {
+        length(grep(".url.txt", file_name)) == 1) {
       file_path <- read_lines(file_path)
       file_name <- NULL
+      # if is loaded as list of gene restricts to first entry
       if (load_gene_list) {
         file_path <- file_path[1]
         showModal(modalDialog(
@@ -151,42 +171,44 @@ LoadTableFile <-
           easyClose = TRUE
         ))
       }
+      # builds varible for reading in remote files
       for (i in file_path) {
         file_name <- c(file_name, last(strsplit(i, "/")[[1]]))
       }
     }
+    
+    # gets number of files loaded in master list of lists
     file_count <- length(list_data$table_file)
+    
+    # loop thourgh each item in file_pahth
     for (x in seq_along(file_path)) {
-      legend_nickname <-
-        strsplit(strsplit(as.character(file_name[x]), '.tab')[[1]][1], '\\._')[[1]][1]
-      if(grepl("^543\\.", legend_nickname)){
-        legend_nickname <- strsplit(legend_nickname, "^543\\.")[[1]][2]
-      } else if (grepl("^5\\.", legend_nickname)){
-        legend_nickname <- strsplit(legend_nickname, "^5\\.")[[1]][2]
-      } else if (grepl("^4\\.", legend_nickname)){
-        legend_nickname <- strsplit(legend_nickname, "^4\\.")[[1]][2]
-      } else if (grepl("^3\\.", legend_nickname)){
-        legend_nickname <- strsplit(legend_nickname, "^3\\.")[[1]][2]
-      }
       
-      if (any(legend_nickname == names(list_data$table_file)) |
-          any(legend_nickname == names(list_data$gene_info))) {
-        showModal(modalDialog(
-          title = "Information message",
-          paste(file_name[x], "has already been loaded"),
-          size = "s",
-          easyClose = TRUE
-        ))
-        next()
-      }
-      setProgress(1, detail = "numbins")
-      
+      # shiny progress bar
+      setProgress(1, detail = "start wroking on file")
+    
+      #gets number of columns in file, used to guess how to deal with file
       num_bins <-
         count_fields(file_path[x],
                      n_max = 1,
                      tokenizer = tokenizer_tsv())
       
+      # reads in gene lists file and processes
       if (num_bins == 1 & load_gene_list) {
+        
+        # cleans up file name 
+        legend_nickname <- strsplit(as.character(file_name), '.txt')[[1]][1]
+        
+        # checks if file with same name is in master list of lists
+        if (any(grep(legend_nickname, names(list_data$gene_info)))) {
+          showModal(modalDialog(
+            title = "Information message",
+            paste(file_name[x], "has already been loaded"),
+            size = "s",
+            easyClose = TRUE
+          ))
+          next()
+        }
+        # reads in gene file
         tablefile <-
           suppressMessages(read_tsv(
             file_path,
@@ -194,10 +216,123 @@ LoadTableFile <-
             comment = "#",
             cols(gene = col_character())
           ))
-      } else {
+        
+        # compairs list with loaded lists
+          gene_names <-
+            semi_join(tablefile, list_data$gene_file[[1]]$use, by = "gene") %>% distinct(gene)
+          if (n_distinct(gene_names$gene) == 0 & !convert) {
+            showModal(
+              modalDialog(
+                title = "Information message",
+                " No genes in common, might need to reformat gene name style, try pattern matching",
+                size = "s",
+                easyClose = TRUE
+              )
+            )
+            return()
+            # tries to grep lists and find matches
+          } else if (n_distinct(gene_names$gene) == 0 & convert) {
+            
+            # shiny progress bar
+            setProgress(2, detail = "looking for gene name matches")
+            
+            gene_names <-
+              distinct(tibble(gene = grep(
+                paste(tablefile$gene, collapse = "|"),
+                pull(distinct(list_data$gene_file[[1]]$use)),
+                value = T
+              )))
+            if (n_distinct(gene_names$gene) == 0) {
+              showModal(
+                modalDialog(
+                  title = "Information message",
+                  " No genes found after pattern matching search",
+                  size = "s",
+                  easyClose = TRUE
+                )
+              )
+              return()
+            }
+            showModal(
+              modalDialog(
+                title = "Information message",
+                " Don't forget to save the gene list for future use",
+                size = "s",
+                easyClose = TRUE
+              )
+            )
+          }
+          
+          # adds number of genes to name
+          legend_nickname <-
+            paste(legend_nickname,
+                  "\nn = ",
+                  n_distinct(gene_names$gene),
+                  sep = "")
+          
+          # shiny progress bar
+          setProgress(3, detail = "adding gene list file")
+          
+          # saves data to list of lists
+          list_data$gene_file[[legend_nickname]]$full <-
+            distinct(tablefile, gene)
+          list_data$gene_file[[legend_nickname]]$use <- gene_names
+          list_data$gene_file[[legend_nickname]]$info <-
+            paste("Loaded gene list from file",
+                  legend_nickname,
+                  Sys.Date())
+          list_data$gene_file[[legend_nickname]]$sub <-
+            paste(Sys.Date())
+          list_data$gene_info[[legend_nickname]] <-
+            lapply(setNames(
+              names(list_data$gene_info[[1]]),
+              names(list_data$gene_info[[1]])
+            ),
+            function(i)
+              tibble(
+                set = paste(list_data$gene_info[[1]][[i]]["set"]),
+                mydot = kDotOptions[1],
+                myline = kLineOptions[1],
+                mycol = list_data$gene_info[[1]][[i]]$mycol,
+                onoff = 0,
+                rnorm = paste(list_data$gene_info[[1]][[i]]["rnorm"])
+              ))
+          list_data$STATE[2] <- legend_nickname
+          return(list_data)
+      # data file 
+      } else { 
+        
+        # Auto clean's up name and sets nickname
+        legend_nickname <-
+          strsplit(strsplit(as.character(file_name[x]), '.tab')[[1]][1], '\\._')[[1]][1]
+        if(grepl("^543\\.", legend_nickname)){
+          legend_nickname <- strsplit(legend_nickname, "^543\\.")[[1]][2]
+        } else if (grepl("^5\\.", legend_nickname)){
+          legend_nickname <- strsplit(legend_nickname, "^5\\.")[[1]][2]
+        } else if (grepl("^4\\.", legend_nickname)){
+          legend_nickname <- strsplit(legend_nickname, "^4\\.")[[1]][2]
+        } else if (grepl("^3\\.", legend_nickname)){
+          legend_nickname <- strsplit(legend_nickname, "^3\\.")[[1]][2]
+        }
+        
+        # checks if file with same name is in master list of lists
+        if (any(legend_nickname == names(list_data$table_file))) {
+          showModal(modalDialog(
+            title = "Information message",
+            paste(file_name[x], "has already been loaded"),
+            size = "s",
+            easyClose = TRUE
+          ))
+          next()
+        }
+        
+        # guesses file is in wide Huynmin Kim .table style 
         if (num_bins > 6) {
+          # shiny progress bar
+          setProgress(2, detail = "loading wide file")
+          
           tablefile <- suppressMessages(
-            read_tsv (
+            read_tsv(
               file_path[x],
               comment = "#",
               col_names = c("gene", 1:(num_bins - 1)),
@@ -212,9 +347,12 @@ LoadTableFile <-
             na_if(Inf) %>%
             replace_na(list(score = 0))
           
+          # guesses is in long bedtools from (bed or bedGraph)
         } else {
+          # settings for reading in bed file style
           if (num_bins == 6) {
             col_names <- c("chr", "start", "end", "gene", "bin", "score")
+            # settings for reading in bedGraph file style
           } else if (num_bins == 3) {
             col_names <- c("gene", "bin", "score")
           } else {
@@ -228,7 +366,10 @@ LoadTableFile <-
             )
             next()
           }
-          setProgress(1, detail = "load file")
+          
+          # shiny progress bar
+          setProgress(2, detail = "loading long file")
+          # reads in bedtool file
           tablefile <-
             suppressMessages(read_tsv(file_path[x],
                                       comment = "#",
@@ -237,7 +378,8 @@ LoadTableFile <-
             mutate(set = legend_nickname) %>% na_if(Inf) %>%
             replace_na(list(score = 0))
         }
-        num_bins <- n_distinct(tablefile$bin)
+        
+        # tests for problems with file
         all_empty_bin <-
           group_by(tablefile, bin) %>% summarise(mytest = sum(score) == 0) %>% pull(mytest)
         if (any(all_empty_bin)) {
@@ -250,6 +392,10 @@ LoadTableFile <-
             )
           )
         }
+        
+        # updates the number of columns to number of bins
+        num_bins <- n_distinct(tablefile$bin)
+        
         if (file_count > 0 &
             num_bins != list_data$x_plot_range[2]) {
           showModal(
@@ -260,91 +406,24 @@ LoadTableFile <-
               easyClose = TRUE
             )
           )
-          next ()
+          next()
         }
       }
-      setProgress(2, detail = "process gene list")
-      if (load_gene_list) {
-        gene_names <-
-          semi_join(tablefile, list_data$gene_file[[1]]$use, by = "gene") %>% distinct(gene)
-        if (n_distinct(gene_names$gene) == 0 & !convert) {
-          showModal(
-            modalDialog(
-              title = "Information message",
-              " No genes in common, might need to reformat gene name style, try pattern matching",
-              size = "s",
-              easyClose = TRUE
-            )
-          )
-          return()
-          
-        } else if (n_distinct(gene_names$gene) == 0 & convert) {
-          setProgress(2, detail = "looking for gene name matches")
-          gene_names <-
-            distinct(tibble(gene = grep(
-              paste(tablefile$gene, collapse = "|"),
-              pull(distinct(list_data$gene_file[[1]]$use)),
-              value = T
-            )))
-          if (n_distinct(gene_names$gene) == 0) {
-            showModal(
-              modalDialog(
-                title = "Information message",
-                " No genes found after pattern matching search",
-                size = "s",
-                easyClose = TRUE
-              )
-            )
-            return()
-          }
-          showModal(
-            modalDialog(
-              title = "Information message",
-              " Don't forget to save the gene list for future use",
-              size = "s",
-              easyClose = TRUE
-            )
-          )
-        }
-        legend_nickname <-
-          paste(strsplit(as.character(file_name), '.txt')[[1]][1],
-                "\nn = ",
-                n_distinct(gene_names$gene),
-                sep = "")
-        setProgress(3, detail = "adding file to lists")
-        list_data$gene_file[[legend_nickname]]$full <-
-          distinct(tablefile, gene)
-        list_data$gene_file[[legend_nickname]]$use <- gene_names
-        list_data$gene_file[[legend_nickname]]$info <-
-          paste("Loaded gene list from file",
-                legend_nickname,
-                Sys.Date())
-        list_data$gene_file[[legend_nickname]]$sub <-
-          paste(Sys.Date())
-        list_data$gene_info[[legend_nickname]] <-
-          lapply(setNames(
-            names(list_data$gene_info[[1]]),
-            names(list_data$gene_info[[1]])
-          ),
-          function(i)
-            tibble(
-              set = paste(list_data$gene_info[[1]][[i]]["set"]),
-              mydot = kDotOptions[1],
-              myline = kLineOptions[1],
-              mycol = list_data$gene_info[[1]][[i]]$mycol,
-              onoff = 0,
-              rnorm = paste(list_data$gene_info[[1]][[i]]["rnorm"])
-            ))
-        list_data$STATE[2] <- legend_nickname
-      } else {
+      
+      # shiny progress bar
+      setProgress(3, detail = "Checking form problems")
+      
+      # remove genes with no signal
         zero_genes <-
           group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test != 0)
-        
         tablefile <- semi_join(tablefile, zero_genes, by = "gene")
         
+        # handling building a list of list varibles existing or first time
         if (file_count > 0) {
           gene_names <-
             semi_join(tablefile, list_data$gene_file[[1]]$use, by = "gene") %>% distinct(gene)
+          
+          # test data is compatible with already loaded data
           if (n_distinct(gene_names$gene) == 0) {
             showModal(
               modalDialog(
@@ -361,26 +440,33 @@ LoadTableFile <-
           list_data$x_plot_range <- c(1, num_bins)
         }
         
+        # sets master gene list name 
         my_name <- paste("common\nn =", n_distinct(gene_names$gene))
         list_data$STATE[2] <- my_name
         if (file_count > 0) {
           names(list_data$gene_file)[1] <- my_name
           names(list_data$gene_info)[1] <- my_name
         }
+        # recycles colors if number of items is more then number of colors
         color_safe <-
           (length(list_data$table_file) + 1) %% length(kListColorSet)
         if (color_safe == 0) {
           color_safe <- 1
         }
         color_select <- kListColorSet[color_safe]
-        setProgress(3, detail = "build")
-        # only have plot on if a plot has not been created yet for first 4 files
+        
+        # shiny progress bar
+        setProgress(4, detail = "building data and adding to tools")
+        
+        # only have plot set to on if a plot has not been created yet for first 4 files
         if (list_data$STATE[4] == 0 &
             length(list_data$table_file) < 5) {
           oo <- legend_nickname
         } else {
           oo <- 0
         }
+        
+        # saves data in list of lists
         list_data$table_file[[legend_nickname]] <- tablefile
         list_data$gene_file[[my_name]]$use <- gene_names
         list_data$gene_file[[my_name]]$sub <-  paste(Sys.Date())
@@ -394,9 +480,11 @@ LoadTableFile <-
             onoff = oo,
             rnorm = "1"
           )
-        setProgress(4, detail = "adding to gene list")
         
-        # generate info for new file for loaded gene list(s)
+        # shiny progress bar
+        setProgress(5, detail = "comparing and building up gene lists")
+        
+        # generate info from the new file for loaded gene list(s)
         sapply(seq_along(list_data$gene_file)[-1], function(g) {
           enesg <-
             inner_join(list_data$gene_file[[g]]$full,
@@ -432,8 +520,7 @@ LoadTableFile <-
             )
         })
         file_count <- 1
-      }
-      setProgress(5, detail = "done")
+      setProgress(6, detail = "done with this file")
     }
     list_data
     
@@ -441,37 +528,32 @@ LoadTableFile <-
 
 # read in and match up names and change colors
 LoadColorFile <- function(file_path, list_data, gene_list) {
+  
+  # check number oc columns 
   num_bins <-
     count_fields(file_path,
                  n_max = 1,
-                 skip = 1,
-                 tokenizer = tokenizer_tsv())
+                 tokenizer = tokenizer_delim(" "))
+  
+  # guessing fist column has file name and second has color
   if (num_bins == 2) {
     color_file <-
-      suppressMessages(read_tsv(file_path,
-                                col_names = F,
-                                col_types = "cc"))
-  } else if (num_bins == 1) {
-    num_bins <-
-      count_fields(
+      suppressMessages(read_delim(
+        delim = " ",
         file_path,
-        n_max = 1,
-        skip = 1,
-        tokenizer = tokenizer_delim(" ")
-      )
-    if (num_bins == 2) {
-      color_file <-
-        suppressMessages(read_delim(
-          delim = " ",
-          file_path,
-          col_names = F,
-          col_types = "cc"
-        ))
-    } else {
-      print("can't load file")
+        col_names = F,
+        col_types = "cc"
+      ))
+  } else {
+    showModal(modalDialog(
+      title = "Information message",
+      paste("Needs name and color separeted by a space, ie: a.table 255,0,0"),
+      size = "s",
+      easyClose = TRUE
+    ))
       return(list_data)
-    }
-    # match name test color and update color
+  }
+    # match name test color and update colors in list of lists
     for (i in seq_along(color_file$X1)) {
       nickname <-
         strsplit(as.character(color_file$X1[i]), '.tab')[[1]][1]
@@ -484,33 +566,26 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
         )
       
       if (length(num) > 0) {
+        # convert rgb to hex if needed
         if (suppressWarnings(!is.na(as.numeric(substr(
-          color_file$X2[i], 1, 1
+          color_file$X2[1], 1, 1
         )))) == TRUE) {
-          red_green_blue <- strsplit(color_file$X2[i], ",")
-          if (length(red_green_blue[[1]]) == 3) {
-            color_file$X2[i] <- rgb(
-              as.numeric(red_green_blue[[1]])[1],
-              as.numeric(red_green_blue[[1]])[2],
-              as.numeric(red_green_blue[[1]])[3],
-              maxColorValue = 255
-            )
-          } else {
-            color_file$X2[i] <- "black"
-          }
-        }
-        
+            color_file$X2[i] <- RgbToHex(my_hex = color_file$X2[i])
+          } 
+      # checks hex is a valid color
         if (!isColor(color_file$X2[i])) {
           color_file$X2[i] <- "black"
+          showModal(modalDialog(
+            title = "Information message",
+            paste("does not look like a color I know so setting", num, "to black", sep = " "),
+            size = "s",
+            easyClose = TRUE
+          ))
         }
-        
         list_data$gene_info[[gene_list]][[num]]['mycol'] <-
           color_file$X2[i]
-        
       }
-      
     }
-  }
   list_data
 }
 
@@ -518,7 +593,7 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
 CheckBoxOnOff <- function(check_box, list_data) {
   for (j in names(list_data)) {
     for (i in names(list_data[[j]])) {
-      # make function
+      # 0 = don't plot, name of file = plot
       if (!i %in% check_box[[j]]) {
         list_data[[j]][[i]]["onoff"] <- 0
       } else {
@@ -529,32 +604,43 @@ CheckBoxOnOff <- function(check_box, list_data) {
   list_data
 }
 
-# make normalized file ... devide one by the other
+# make a new normalized file by deviding one file by the other
 MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
+  # check 2 files have been selected
   if (nom != "" && dnom != "") {
     mynom <- list_data$table_file[[nom]]
     mydom <- list_data$table_file[[dnom]]
+    
+    # applies custome norm factor(s)
     if(list_data$gene_info[[1]][[nom]]["rnorm"] != 1){
       mynom <- mutate(mynom, score = score / as.numeric(list_data$gene_info[[1]][[nom]]["rnorm"]))
     }
     if(list_data$gene_info[[1]][[dnom]]["rnorm"] != 1){
       mydom <- mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
     }
-    myname <- "mean_of_bins"
+    
+    # record tool details
+    myname <- "bin_by_bin"
+   
     setProgress(1, detail = "Gathering data")
-    if (gbyg == "bin by bin") {
-      myname <- "bin_by_bin"
+    
+    # files numbers are replaced with mean of bins if applied 
+    if (gbyg != "bin by bin") {
+      myname <- "mean_of_bins"
       mynom <-
         group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
       mydom <-
         group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup() 
     }
-    # make gene list
+    
+    # record tool details
     if (divzerofix == "replace with 0") {
       myname <- paste0(myname, "_Inf->0")
     } else {
       myname <- paste0(myname, "_Inf_RM")
     }
+    
+    # make gene list
     new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
     legend_nickname <- paste0(nom, " / ", dnom, ": ", myname)
     new_gene_list <- transmute(
@@ -591,6 +677,7 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
       return(list_data)
     }
     
+    # adds data to list of lists
     color_safe <-
       (length(list_data$table_file) + 1) %% length(kListColorSet)
     if (color_safe == 0) {
@@ -676,12 +763,12 @@ RemoveGeneList <-
 # removes data file
 RemoveFile <- function(list_data, file_name, remove_all) {
   if (length(list_data$table_file) > 1 & !remove_all) {
-    # remove tool gene lists ? TODO
     sapply(names(list_data$gene_file), function(g) {
       list_data$gene_file[[g]][[file_name]] <<- NULL
       list_data$gene_info[[g]][[file_name]] <<- NULL
     })
     list_data$table_file[[file_name]] <- NULL
+    # builds new main in common gene lists
     list_data$gene_file[[1]]$use <-
       distinct(list_data$table_file[[1]], gene)
     sapply(list_data$table_file[-1], function(i) {
@@ -693,6 +780,7 @@ RemoveFile <- function(list_data, file_name, remove_all) {
     names(list_data$gene_file)[1] <- my_name
     names(list_data$gene_info)[1] <- my_name
     
+    # builds new gene in common other gene list
     sapply(seq_along(list_data$gene_file)[-1], function(g) {
       list_data$gene_file[[g]]$full <<-
         inner_join(list_data$gene_file[[g]]$full,
@@ -716,6 +804,7 @@ RemoveFile <- function(list_data, file_name, remove_all) {
       list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
     }
   } else {
+    # builds empty list of lists
     list_data <- list(
       table_file = list(),
       gene_file = list(),
@@ -1598,15 +1687,18 @@ LinesLablesList <- function(body1bin = 20,
       }
       if(any(near(LOCname2, 0, tol = everybp/2)) & length(LOCname2) > 2){
         LOC2[near(LOCname2, 0, tol = everybp/2)] <- tesbin + .5
-        LOCname2[near(LOCname2, 0, tol = everybp/2)] <- "TES"
+        LOCname2[near(LOCname2, 0, tol = everybp/2)] <- "pA"
       } else {
         LOC2 <- sort(c(LOC2, tesbin+.5))
-        LOCname2 <- append(LOCname2, "TES", 1)
+        LOCname2 <- append(LOCname2, "pA", 1)
       }
       use_plot_breaks <- c(LOC1, LOC2)
       use_plot_breaks_labels <- c(LOCname1, LOCname2)
       use_plot_breaks_labels <- use_plot_breaks_labels[1:length(use_plot_breaks)]
-      
+      mycolors <- rep("black", length(use_plot_breaks))
+      mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
+      mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
+        
       use_virtical_line <-
         c(tssbin, tesbin, body1bin, body2bin) + .5
     } else if (mytype == "5'") {
@@ -1622,6 +1714,8 @@ LinesLablesList <- function(body1bin = 20,
             length.out = length(use_plot_breaks))
       use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -
                                     1)] <- "TSS"
+      mycolors <- rep("black", length(use_plot_breaks))
+      mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
       use_virtical_line <- c(tssbin, NA, NA, NA) + .5
     } else if (mytype == "3'") {
       use_plot_breaks <-
@@ -1637,7 +1731,9 @@ LinesLablesList <- function(body1bin = 20,
           length.out = length(use_plot_breaks)
         ))
       use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -
-                                    1)] <- "TES"
+                                    1)] <- "pA"
+      mycolors <- rep("black", length(use_plot_breaks))
+      mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <- c(NA, tesbin, NA, NA) + .5
     } else if (mytype == "none") {
       use_plot_breaks <-
@@ -1648,21 +1744,29 @@ LinesLablesList <- function(body1bin = 20,
         seq(1,
             by = everybin,
             length.out = (totbins / everybin) + 1)
+      mycolors <- rep("black", length(use_plot_breaks))
       use_virtical_line <- c(NA, NA, NA, NA) + .5
     }
   } else {
     if (mytype == "543") {
       use_plot_breaks <- c(tssbin, tesbin, body1bin, body2bin) + .5
-      use_plot_breaks_labels <- c("TSS", "TES", "5|4", "4|3")
+      use_plot_breaks_labels <- c("TSS", "pA", "5|4", "4|3")
+      mycolors <- rep("black", length(use_plot_breaks))
+      mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
+      mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <-
         c(tssbin, tesbin, body1bin, body2bin) + .5
     } else if (mytype == "5'") {
       use_plot_breaks <- tssbin + .5
       use_plot_breaks_labels <- "TSS"
+      mycolors <- rep("black", length(use_plot_breaks))
+      mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
       use_virtical_line <- c(tssbin, NA, NA, NA) + .5
     } else if (mytype == "3'") {
       use_plot_breaks <- tesbin + .5
-      use_plot_breaks_labels <- "TES"
+      use_plot_breaks_labels <- "pA"
+      mycolors <- rep("black", length(use_plot_breaks))
+      mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <- c(NA, tesbin, NA, NA) + .5
     } else if (mytype == "none") {
       use_plot_breaks <- .5
@@ -1693,6 +1797,7 @@ LinesLablesList <- function(body1bin = 20,
       use_virtical_line_color,
       stringsAsFactors = FALSE
     ),
+    mycolors = mycolors,
     mybrakes = use_plot_breaks,
     mylables = use_plot_breaks_labels
   )
@@ -1700,7 +1805,7 @@ LinesLablesList <- function(body1bin = 20,
 
 # lines and labels preset helper
 LinesLablesPreSet <- function(mytype) {
-  # 5|4, 4|3, tss, tes, bp/bin, every bin
+  # 5|4, 4|3, tss, pA, bp/bin, every bin
   if (mytype == "543 bins 20,20,40") {
     tt <- c(20, 40, 15, 45, 100, 80, 5)
   } else if (mytype == "543 bins 10,10,10") {
@@ -1790,20 +1895,22 @@ GGplotLineDot <-
       theme_bw() +
       theme(panel.grid.minor = element_blank(),
             panel.grid.major = element_blank()) +
-      theme(axis.title.y = element_text(size =  15, margin = margin(2, 10, 2, 2))) +
+      theme(axis.title.y = element_text(size =  17, margin = margin(2, 10, 2, 2))) +
+      theme(axis.text.y = element_text(
+        size = 13,
+        face = 'bold'
+      )) +
       theme(axis.title.x = element_text(size =  10, vjust = .5)) +
       theme(axis.text.x = element_text(
-        size = 12,
-        angle = -45,
-        hjust = .1,
-        vjust = .9,
+        color = line_list$mycolors,
+        size = 20,
         face = 'bold'
       )) +
       theme(
         legend.title = element_blank(),
         legend.key = element_rect(size = 5, color = 'white'),
         legend.key.height = unit(legend_space, "line"),
-        legend.text = element_text(size = 10)
+        legend.text = element_text(size = 10, face = 'bold')
       )  +
       coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
     suppressMessages(print(gp))
@@ -5532,7 +5639,7 @@ ui <- dashboardPage(
                       style = "padding:2px; display:inline-block;",
                       numericInput(
                         "numerictes",
-                        "TES bin",
+                        "pA bin",
                         value = 45,
                         min = 0,
                         max = 100

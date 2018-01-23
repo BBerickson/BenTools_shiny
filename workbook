@@ -25,11 +25,11 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 #####
 
-go though functions and look for ways to clean up simplify and add notes
+go though functions and look for ways to clean up simplify and add notes ... IntersectGeneLists
+add notes as to what and why STATE is being uesed/changed
+remove file resets show gene lists/plots?
 
 update nickname fix STATE[4] plot tab 
-change plot asstecits to be inline with how David likes ...
-  don't tilt bin numbers, color TSS and TES, check size and bold, add slightly more room for y title
 
 sort and other tools no gene list generated produce a message
 more URL info like color and nickname ... and can make saved URL file
