@@ -25,15 +25,17 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 on off picker problems look at STATE[4] ... 
 #####
 
-go though functions and look for ways to clean up simplify and add notes ... IntersectGeneLists
-add notes as to what and why STATE is being uesed/changed
+change disable reactives for plotting to check state[2] == 1 first
+norm not a reactive but back under nickname action and update on tab switch
+intersect + nickname kills app ... no info created?
+
 remove file resets show gene lists/plots?
 
-update nickname fix STATE[4] plot tab 
-
+loading file ... use cleaning up nickname and number of bins as a way of setting lines and lables STATE[1]?
 sort and other tools no gene list generated produce a message
 more URL info like color and nickname ... and can make saved URL file
 update $sub info for xlab on all gene lists
+change color does not update picker... fix?
 
 add icons to buttons
 search TODO

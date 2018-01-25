@@ -57,15 +57,12 @@ LIST_DATA <<- list(
   clust = list(),
   # Cluster holder
   x_plot_range = c(0, 0),
-  STATE = c(0, "common", 0, 0, 0) # flow control,
+  STATE = c(0, 0) # flow control,
   # [1] 1 = at least on file has been loadded and lets reactives fill in info
-  #     2 = lets reactive change tab toggle plot button
-  # [2] name of most recent loaded gene list, for setting options select,
-  # [3] name of most recent deleted gene list, for resetting tool datatables
-  # [4] 1 = first time switching tab auto ploting
-  #     2 = on/off reactive can deactivate plot options until plot button is pressed
-  #     3 = picker(s) have been remade but no reploting is needed so don't show plot button
-  # [5] 1 = plot norm applymath has been run dont retrigger
+  #     
+  # [2] 0 = first time switching tab auto ploting
+  #     1 = hiden plot button, reatives for plot enabled
+  #     2 = on/off reactive picker changed, shows plot button, reatives for plot disabled
 )
 
 # types lines to be plotted ----
@@ -139,8 +136,7 @@ RgbToHex <- function(my_hex = NULL,
         as.numeric(red_green_blue)[3],
         maxColorValue = 255
       )
-    }
-    if (!isColor(my_hex)) {
+    } else {
       return("#FFFFFF")
     }
     return(my_hex)
@@ -297,7 +293,6 @@ LoadTableFile <-
                 onoff = 0,
                 rnorm = paste(list_data$gene_info[[1]][[i]]["rnorm"])
               ))
-          list_data$STATE[2] <- legend_nickname
           return(list_data)
       # data file 
       } else { 
@@ -442,7 +437,6 @@ LoadTableFile <-
         
         # sets master gene list name 
         my_name <- paste("common\nn =", n_distinct(gene_names$gene))
-        list_data$STATE[2] <- my_name
         if (file_count > 0) {
           names(list_data$gene_file)[1] <- my_name
           names(list_data$gene_info)[1] <- my_name
@@ -459,7 +453,7 @@ LoadTableFile <-
         setProgress(4, detail = "building data and adding to tools")
         
         # only have plot set to on if a plot has not been created yet for first 4 files
-        if (list_data$STATE[4] == 0 &
+        if (list_data$STATE[2] == 0 &
             length(list_data$table_file) < 5) {
           oo <- legend_nickname
         } else {
@@ -570,7 +564,7 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
         if (suppressWarnings(!is.na(as.numeric(substr(
           color_file$X2[1], 1, 1
         )))) == TRUE) {
-            color_file$X2[i] <- RgbToHex(my_hex = color_file$X2[i])
+            color_file$X2[i] <- RgbToHex(my_rgb = color_file$X2[i])
           } 
       # checks hex is a valid color
         if (!isColor(color_file$X2[i])) {
@@ -686,7 +680,6 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
     gene_names <-
       semi_join(list_data$gene_file[[1]]$use, new_gene_list, by = "gene")
     my_name <- paste("common\nn =", n_distinct(gene_names$gene))
-    list_data$STATE[2] <- my_name
     names(list_data$gene_file)[1] <- my_name
     names(list_data$gene_info)[1] <- my_name
     color_select <- kListColorSet[color_safe]
@@ -750,13 +743,9 @@ RemoveGeneList <-
   function(list_data, list_name) {
     list_data$gene_file[[list_name]] <- NULL
     list_data$gene_info[[list_name]] <- NULL
-    if (list_data$STATE[4] == 0) {
-      list_data$STATE[2] <- names(list_data$gene_file)[1]
-    } else{
-      list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 3)
+    if (list_data$STATE[2] != 0) {
+      list_data$STATE[2] <- 2
     }
-    list_data$STATE[3] <- strtrim(list_name, 6)
-    
     list_data
   }
 
@@ -798,10 +787,8 @@ RemoveFile <- function(list_data, file_name, remove_all) {
       names(list_data$gene_info)[g] <<- my_name_g
     })
     
-    if (list_data$STATE[4] == 0) {
-      list_data$STATE[2] <- names(list_data$gene_file)[1]
-    } else{
-      list_data$STATE[c(2, 4)] <- c(names(list_data$gene_file)[1], 2)
+    if (list_data$STATE[2] != 0) {
+      list_data$STATE[2] <- 2
     }
   } else {
     # builds empty list of lists
@@ -811,7 +798,7 @@ RemoveFile <- function(list_data, file_name, remove_all) {
       gene_info = list(),
       clust = list(),
       x_plot_range = c(0, 0),
-      STATE = c(0, "common", 0, 0)
+      STATE = c(0, 0)
     )
   }
   list_data
@@ -824,10 +811,13 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
   }
   setProgress(1, detail = paste("building list"))
   outlist <- NULL
+  # grab selected gene list(s)
   lapply(list_name, function(j) {
     outlist[[j]] <<- list_data$gene_file[[j]]$use
   })
+  # calapes into one list
   outlist <- bind_rows(outlist)
+  # remove any pre used data
   for (rr in grep("Gene_List_", names(LIST_DATA$gene_file), value = T)) {
     if (length(rr) > 0) {
       list_data$gene_file[[rr]] <- NULL
@@ -835,12 +825,16 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
     }
   }
   
+  # recored for info
   nick_name <- NULL
+  
   setProgress(2, detail = paste("building inclusive list"))
   inclusive <- distinct(outlist)
+  
   if (n_distinct(inclusive$gene) > 0) {
     nick_name1 <-
       paste("Gene_List_inclusive\nn =", n_distinct(inclusive$gene))
+    # recored for info
     nick_name <- c(nick_name, nick_name1)
     list_data$gene_file[[nick_name1]]$full <- inclusive
     list_data$gene_file[[nick_name1]]$use <- select(inclusive, gene)
@@ -852,11 +846,14 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
     list_data$gene_file[[nick_name1]]$sub <-
       paste(Sys.Date())
   }
+  
   setProgress(3, detail = paste("building intersect list"))
+  
   intersect <- filter(outlist, duplicated(gene))
   if (n_distinct(intersect$gene) > 0) {
     nick_name1 <-
       paste("Gene_List_intersect\nn =", n_distinct(intersect$gene))
+    # recored for info
     nick_name <- c(nick_name, nick_name1)
     list_data$gene_file[[nick_name1]]$full <- intersect
     list_data$gene_file[[nick_name1]]$use <- select(intersect, gene)
@@ -869,10 +866,12 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
       paste(Sys.Date())
     
     setProgress(4, detail = paste("building exclusive list"))
+    
     exclusive <- anti_join(inclusive, intersect, by = "gene")
     if (n_distinct(exclusive$gene) > 0) {
       nick_name1 <-
         paste("Gene_List_exclusive\nn =", n_distinct(exclusive$gene))
+      # recored for info
       nick_name <- c(nick_name, nick_name1)
       list_data$gene_file[[nick_name1]]$full <- exclusive
       list_data$gene_file[[nick_name1]]$use <-
@@ -928,10 +927,9 @@ SortTop <-
     outlist <- NULL
     lapply(file_names, function(j) {
       setProgress(lc + 1, detail = paste("sorting", j))
-      enesg <-
-        list_data$gene_file[[list_name]]$use
+      
       apply_bins <-
-        semi_join(list_data$table_file[[j]], enesg, by = 'gene')
+        semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene')
       apply_bins <- group_by(apply_bins, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE)) %>%
@@ -1014,7 +1012,6 @@ SortTop <-
                  onoff = 0,
                  rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
                ))
-    list_data$STATE[2] <- nick_name
     list_data
   }
 
@@ -1039,10 +1036,9 @@ CompareRatios <-
     lc <- 0
     outlist <- NULL
     lapply(c(ratio1file, ratio2file), function(j) {
-      enesg <-
-        list_data$gene_file[[list_name]]$use
+      
       df <-
-        semi_join(list_data$table_file[[j]], enesg, by = 'gene') 
+        semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') 
       if(list_data$gene_info[[list_name]][[j]]["rnorm"] != 1){
         df <- mutate(df, score = score / as.numeric(list_data$gene_info[[list_name]][[j]]["rnorm"]))
       }
@@ -1300,8 +1296,6 @@ ClusterNumList <- function(list_data,
           rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
         ))
   }
-  list_data$STATE[2] <-
-    grep(paste0(myname, "1"), names(list_data$gene_file), value = T)
   list_data
 }
 
@@ -1363,8 +1357,8 @@ CumulativeDistribution <-
       return()
     }
     outlist <- NULL
-    for(list_name in names(onoff)){
-      # setProgress(1, detail = paste("dividing one by the other"))
+    for (list_name in names(onoff)){
+      setProgress(1, detail = paste("dividing one by the other"))
       gene_count <-
         n_distinct(list_data$gene_file[[list_name]]$use$gene)
       num <-
@@ -1463,7 +1457,6 @@ CumulativeDistribution <-
                  myheader = use_header
                ))
     setProgress(5, detail = "finishing up")
-    list_data$STATE[2] <- nick_name1
     list_data
   }
 
@@ -1636,7 +1629,6 @@ YAxisLable <-
   }
 
 # Sets plot lines and lables fix
-
 LinesLablesList <- function(body1bin = 20,
                             body2bin = 40,
                             tssbin = 15,
@@ -1881,7 +1873,7 @@ GGplotLineDot <-
       scale_shape_manual(values = use_dot) +
       scale_linetype_manual(values = use_line) +
       xlab(paste(unique(plot_options$mysub), collapse = ", ")) +
-      ylab(use_y_label) +  # Set axis labels
+      ylab(use_y_label) +  
       scale_x_continuous(breaks = line_list$mybrakes,
                          labels = line_list$mylables) +
       
@@ -2170,7 +2162,7 @@ server <- function(input, output, session) {
       reactive_values$Picker_controler <-
         sapply(LIST_DATA, function(i)
           (names(i)))
-      if (LIST_DATA$STATE[4] == 0) {
+      if (LIST_DATA$STATE[2] == 0) {
         withProgress(message = 'Calculation in progress',
                      detail = 'This may take a while...',
                      value = 0,
@@ -2186,18 +2178,11 @@ server <- function(input, output, session) {
                      })
         if (!is.null(reactive_values$Apply_Math)) {
           reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-          enable("showmainplot")
           LIST_DATA$STATE[1] <<- 1
-          LIST_DATA$STATE[4] <<- 1
-        } else{
-          disable("showmainplot")
-        }
-      } else {
-        toggle(
-          "actionmyplotshow",
-          condition = (input$tabs == "mainplot" &
-                         LIST_DATA$STATE[1] == 2)
-        )
+        } 
+      } else if (LIST_DATA$STATE[2] == 2){
+        show("actionmyplotshow")
+        reactive_values$Apply_Math <- NULL
       }
     }
   })
@@ -2288,7 +2273,6 @@ server <- function(input, output, session) {
     print("load file")
     # add warnings for total size of LIST_DATA TODO
     disable("startoff")
-    disable("showmainplot")
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -2307,7 +2291,7 @@ server <- function(input, output, session) {
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = names(LIST_DATA$gene_info)[1]
     )
     
     if (LIST_DATA$STATE[1] == 0) {
@@ -2316,7 +2300,6 @@ server <- function(input, output, session) {
       show("downloadGeneList")
       show("checkboxsavesplit")
       show("filecolor")
-      show("showmainplot")
       show("startoff")
       print("1st slider and plot lines Ylable")
       reactive_values$Y_Axis_Lable <- YAxisLable()
@@ -2336,7 +2319,6 @@ server <- function(input, output, session) {
     }
     
     enable("startoff")
-    enable("showmainplot")
     reset("filetable")
     ff <- names(LIST_DATA$table_file)
     updateSelectInput(session,
@@ -2370,9 +2352,8 @@ server <- function(input, output, session) {
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = last(names(LIST_DATA$gene_info))
     )
-    
   })
   
   # loads color file ----
@@ -2384,8 +2365,8 @@ server <- function(input, output, session) {
     LIST_DATA <<- LoadColorFile(input$filecolor$datapath,
                                 LIST_DATA, my_list)
     updateColourInput(session, "colourhex", value = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["mycol"]))
-    if (LIST_DATA$STATE[1] == 1 &
-        !is.null(reactive_values$Apply_Math)) {
+    if (LIST_DATA$STATE[1] != 0 &
+        !is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
       reactive_values$Plot_controler <-
         GGplotLineDot(
@@ -2489,38 +2470,40 @@ server <- function(input, output, session) {
   # save norm factor ---- 
   observeEvent(input$normfactor, ignoreInit = TRUE, {
     print("norm")
-    if(!is.na(input$normfactor)){
-    if (input$normfactor == 1 | input$normfactor != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"]) {
-      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<-
-        as.character(input$normfactor)
-      LIST_DATA$STATE[4] <<- 0
-    } else if (input$normfactor == 0) {
-      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<- "1"
-      LIST_DATA$STATE[4] <<- 0
-      updateNumericInput(session,
-                         "normfactor",
-                         value = 1)
-    }
-      }
+    
   })
   
   # record new nickname  ---- 
   observeEvent(input$actionoptions, ignoreInit = TRUE, {
-    if (nchar(input$textnickname) > 0) {
+    # sets/resets nickname
+    if(input$textnickname != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"]){
       print("new nickname")
-     
-     for(i in names(LIST_DATA$gene_info)) 
-      LIST_DATA$gene_info[[i]][[input$selectdataoption]]["set"] <<-
-        input$textnickname
-      LIST_DATA$table_file[[input$selectdataoption]]["set"] <<-
-        input$textnickname
-    } else {
-      updateTextInput(session,
-                      "textnickname",
-                      value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"]))
+      if (nchar(input$textnickname) == 0) {
+        updateTextInput(session,
+                        "textnickname",
+                        value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"]))
+      }
+      for (i in names(LIST_DATA$gene_info)) { 
+        LIST_DATA$gene_info[[i]][[input$selectdataoption]]["set"] <<-
+          input$textnickname
+        LIST_DATA$table_file[[input$selectdataoption]]["set"] <<-
+          input$textnickname
+      }
+      if (LIST_DATA$STATE[2] != 0) {
+        LIST_DATA$STATE[2] <<- 2
+      }
     }
-    
-    LIST_DATA$STATE[4] <<- 0
+    #sets normfactor
+    if (!is.na(input$normfactor) & 
+        input$normfactor != 0 & 
+        input$normfactor != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] ) {
+      print("norm factor")
+      LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["rnorm"] <<-
+        as.character(input$normfactor)
+      if (LIST_DATA$STATE[2] != 0) {
+        LIST_DATA$STATE[2] <<- 2
+      }
+    } 
   })
   
   # records new dot options ----
@@ -2530,8 +2513,8 @@ server <- function(input, output, session) {
         print("new dot")
         LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mydot"] <<-
           input$selectdot
-        if (LIST_DATA$STATE[1] == 1 &
-            !is.null(reactive_values$Apply_Math)) {
+        if (LIST_DATA$STATE[1] != 0 &
+            !is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
           reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
           reactive_values$Plot_controler <-
             GGplotLineDot(
@@ -2555,8 +2538,8 @@ server <- function(input, output, session) {
         print("new line")
         LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["myline"] <<-
           input$selectline
-        if (LIST_DATA$STATE[1] == 1 &
-            !is.null(reactive_values$Apply_Math)) {
+        if (LIST_DATA$STATE[1] != 0 &
+            !is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
           reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
           reactive_values$Plot_controler <-
             GGplotLineDot(
@@ -2590,8 +2573,8 @@ server <- function(input, output, session) {
         print("color new")
         LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"] <<-
           input$colourhex
-        if (LIST_DATA$STATE[1] == 1 &
-            !is.null(reactive_values$Apply_Math)) {
+        if (LIST_DATA$STATE[1] != 0 &
+            !is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
           reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
           reactive_values$Plot_controler <-
             GGplotLineDot(
@@ -2622,8 +2605,7 @@ server <- function(input, output, session) {
                ignoreNULL = FALSE,
                ignoreInit = TRUE,
                {
-                 if (LIST_DATA$STATE[4] != 0) {
-                   print("checkbox on/off")
+                 print("checkbox on/off")
                    ttt <- reactive_values$picker
                    checkboxonoff <- list()
                    for (i in names(ttt)) {
@@ -2635,7 +2617,6 @@ server <- function(input, output, session) {
                      }
                    }
                    reactive_values$onoff <- checkboxonoff
-                 }
                })
   
   # sets and resets plot button on/off ----
@@ -2646,16 +2627,15 @@ server <- function(input, output, session) {
                  LIST_DATA$gene_info <<-
                    CheckBoxOnOff(reactive_values$onoff,
                                  LIST_DATA$gene_info)
-                 if (LIST_DATA$STATE[4] == 2) {
-                   LIST_DATA$STATE[1] <<- 2
+                 if (LIST_DATA$STATE[2] != 0) { # needs work
                    print("toggle on/off")
-                   toggle("actionmyplotshow",
-                          condition = (input$tabs == "mainplot"))
-                   # reactive_values$Plot_controler <- plot(0,type='n',axes=FALSE,ann=FALSE)
-                   reactive_values$Apply_Math <- NULL
-                   disable("showmainplot")
+                   show("actionmyplotshow")
+                   disable("numericYRangeHigh")
+                   disable("numericYRangeLow")
+                   disable("checkboxyrange")
+                   LIST_DATA$STATE[2] <<- 2
                  } else {
-                   LIST_DATA$STATE[4] <<- 2
+                   LIST_DATA$STATE[2] <<- 1
                  }
                })
   
@@ -2677,9 +2657,9 @@ server <- function(input, output, session) {
                  })
     if (!is.null(reactive_values$Apply_Math)) {
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-      enable("showmainplot")
+      LIST_DATA$STATE[2] <<- 1
     } else{
-      disable("showmainplot")
+      LIST_DATA$STATE[2] <<- 2
       text = paste("Nothing selected to plot.\n")
       reactive_values$Plot_controler <- ggplot() +
         annotate(
@@ -2693,7 +2673,9 @@ server <- function(input, output, session) {
       return()
     }
     hide("actionmyplotshow")
-    LIST_DATA$STATE[1] <<- 1
+    enable("numericYRangeHigh")
+    enable("numericYRangeLow")
+    enable("checkboxyrange")
   })
   
   # updates y axis limits
@@ -2710,8 +2692,9 @@ server <- function(input, output, session) {
     if (all(c(0, 100) == input$sliderplotYRange)) {
       reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
     }
-    updateNumericInput(session, "numericYRangeHigh", value = reactive_values$Y_Axis_numbers[2])
-    updateNumericInput(session, "numericYRangeLow", value = reactive_values$Y_Axis_numbers[1])
+    my_step <- (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers))/20
+    updateNumericInput(session, "numericYRangeHigh", value = round(max(reactive_values$Y_Axis_numbers), 4), step = my_step)
+    updateNumericInput(session, "numericYRangeLow", value = round(min(reactive_values$Y_Axis_numbers), 4), step = my_step)
   })
   
   # renders plot ----
@@ -2736,7 +2719,7 @@ server <- function(input, output, session) {
                      as.numeric(input$selectplotBinNorm),
                      input$checkboxsmooth
                    )
-                 if (LIST_DATA$STATE[1] == 1) {
+                 if (LIST_DATA$STATE[1] != 0 & LIST_DATA$STATE[2] != 2) {
                    print("apply math")
                    withProgress(message = 'Calculation in progress',
                                 detail = 'This may take a while...',
@@ -2756,19 +2739,22 @@ server <- function(input, output, session) {
   # y slider is trigger ----
   observeEvent(input$sliderplotYRange, ignoreInit = T, {
     print("y slider")
+    if (!is.null(reactive_values$Apply_Math)) {
     reactive_values$Y_Axis_numbers <-
       MyXSetValues(reactive_values$Apply_Math,
                    input$sliderplotBinRange,
                    input$sliderplotYRange)
-    updateNumericInput(session, "numericYRangeHigh", value = reactive_values$Y_Axis_numbers[2])
-    updateNumericInput(session, "numericYRangeLow", value = reactive_values$Y_Axis_numbers[1])
+    my_step <- (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers))/20
+    updateNumericInput(session, "numericYRangeHigh", value = round(max(reactive_values$Y_Axis_numbers), 4), step = my_step)
+    updateNumericInput(session, "numericYRangeLow", value = round(min(reactive_values$Y_Axis_numbers), 4), step = my_step)
     reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
+    }
   })
   
   # y box check box trigger
   observeEvent(input$checkboxyrange, ignoreInit = T,{
     print("y numierc plot")
-    if (!is.null(reactive_values$Apply_Math) & input$checkboxyrange) {
+    if (!is.null(reactive_values$Apply_Math) & input$checkboxyrange & LIST_DATA$STATE[2] != 2) {
       reactive_values$Y_Axis_numbers <- c(input$numericYRangeHigh, input$numericYRangeLow)
       reactive_values$Plot_controler <-
         GGplotLineDot(
@@ -2782,17 +2768,22 @@ server <- function(input, output, session) {
         )
     }
     updateCheckboxInput(session, "checkboxyrange", value = FALSE)
+    if (LIST_DATA$STATE[2] == 2) {
+      my_step <- (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers))/20
+      updateNumericInput(session, "numericYRangeHigh", value = round(max(reactive_values$Y_Axis_numbers), 4), step = my_step)
+      updateNumericInput(session, "numericYRangeLow", value = round(min(reactive_values$Y_Axis_numbers), 4), step = my_step)
+    }
   })
+  
   # plots when bin slider or other triggers is triggered ----
   observeEvent(
-    c(
-      reactive_values$Lines_Lables_List,
+    c(reactive_values$Lines_Lables_List,
       input$sliderplotBinRange,
       reactive_values$Y_Axis_plot
     ),
     ignoreInit = TRUE,
     {
-      if (!is.null(reactive_values$Apply_Math)) {
+      if (!is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
         print("bin slider or L&L making ggplot")
         reactive_values$Plot_controler <-
           GGplotLineDot(
@@ -2893,6 +2884,7 @@ server <- function(input, output, session) {
   
   # replot with smooth update ----
   observeEvent(input$checkboxsmooth, ignoreInit = TRUE, {
+    if (!is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
     reactive_values$Y_Axis_Lable <-
       YAxisLable(
         input$myMath,
@@ -2910,6 +2902,7 @@ server <- function(input, output, session) {
         input$checkboxsmooth,
         reactive_values$Y_Axis_Lable
       )
+    }
   })
   
   # quick color set change ----
@@ -2932,7 +2925,7 @@ server <- function(input, output, session) {
       })
       updateColourInput(session, "colourhex", value =
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
-      if (!is.null(reactive_values$Apply_Math)) {
+      if (!is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
           GGplotLineDot(
@@ -2961,7 +2954,7 @@ server <- function(input, output, session) {
         })
       updateColourInput(session, "colourhex", value =
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
-      if (!is.null(reactive_values$Apply_Math)) {
+      if (!is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
           GGplotLineDot(
@@ -3019,7 +3012,7 @@ server <- function(input, output, session) {
       RemoveFile(LIST_DATA,
                  input$selectdataoption,
                  input$checkboxremovefile)
-    if (LIST_DATA$STATE[1] > 0) {
+    if (LIST_DATA$STATE[1] != 0) {
       ff <- names(LIST_DATA$table_file)
       updateSelectInput(session,
                          "selectdataoption",
@@ -3028,7 +3021,7 @@ server <- function(input, output, session) {
         session,
         "selectgenelistoptions",
         choices = names(LIST_DATA$gene_info),
-        selected = LIST_DATA$STATE[2]
+        selected = names(LIST_DATA$gene_info)[1]
       )
       updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
     } else{
@@ -3043,7 +3036,6 @@ server <- function(input, output, session) {
       hide("downloadGeneList")
       hide("checkboxsavesplit")
       hide("filecolor")
-      hide("showmainplot")
       hide("startoff")
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
     }
@@ -3060,7 +3052,7 @@ server <- function(input, output, session) {
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = names(LIST_DATA$gene_info)[1]
     )
   })
   
@@ -3101,7 +3093,7 @@ server <- function(input, output, session) {
       session,
       "selectgenelistoptions",
       choices = names(LIST_DATA$gene_info),
-      selected = LIST_DATA$STATE[2]
+      selected = names(LIST_DATA$gene_info)[1]
     )
     output$valueboxnormfile <- renderValueBox({
       valueBox(
@@ -3532,22 +3524,16 @@ server <- function(input, output, session) {
   # sort tool gene list $use ----
   observeEvent(input$sorttable_rows_all, ignoreInit = TRUE, {
     newname <-
-      strtrim(gsub("(.{30})", "\\1... ", paste0(
-        sub(
-          "([0-9]+)",
-          length(input$sorttable_rows_all),
-          LIST_DATA$STATE[2]
-        )
-      )), 33)
+      paste("Sort n =",
+            length(input$sorttable_rows_all))
     oldname <- grep("Sort n =", names(LIST_DATA$gene_file))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("sort filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
       
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$sorttable_rows_all])
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$sorttable_rows_all])
       print("sort $use picker")
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
@@ -3611,11 +3597,10 @@ server <- function(input, output, session) {
       grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("ratio1 filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio1table_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$ratio1table_rows_all])
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
         glo <- names(LIST_DATA$gene_file)[1]
@@ -3651,11 +3636,10 @@ server <- function(input, output, session) {
       grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("ratio2 filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio2table_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$ratio2table_rows_all])
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
         glo <- names(LIST_DATA$gene_file)[1]
@@ -3690,11 +3674,10 @@ server <- function(input, output, session) {
       grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("no ratio filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$ratio3table_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$ratio3table_rows_all])
       glo <- input$selectgenelistoptions
       if (!glo %in% names(LIST_DATA$gene_file)) {
         glo <- names(LIST_DATA$gene_file)[1]
@@ -4076,11 +4059,10 @@ server <- function(input, output, session) {
            names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("cluster1 filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster1table_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$cluster1table_rows_all])
       LD <- LIST_DATA$gene_info
       
       sapply(names(LD), function(i)
@@ -4161,11 +4143,10 @@ server <- function(input, output, session) {
            names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("cluster2 filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster2table_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$cluster2table_rows_all])
       LD <- LIST_DATA$gene_info
       sapply(names(LD), function(i)
         sapply(names(LD[[i]]), function(j)
@@ -4245,11 +4226,10 @@ server <- function(input, output, session) {
            names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("cluster3 filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster3table_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$cluster3table_rows_all])
       LD <- LIST_DATA$gene_info
       sapply(names(LD), function(i)
         sapply(names(LD[[i]]), function(j)
@@ -4329,11 +4309,10 @@ server <- function(input, output, session) {
            names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("cluster4 filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cluster4table_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$cluster4table_rows_all])
       LD <- LIST_DATA$gene_info
       
       sapply(names(LD), function(i)
@@ -4908,10 +4887,9 @@ server <- function(input, output, session) {
     if (newname != names(LIST_DATA$gene_info)[oldname]) {
       hide('cdftable')
       show('actioncdfdatatable')
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<- gene_list
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<- gene_list
       df_options <-
         semi_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
@@ -5022,11 +5000,10 @@ server <- function(input, output, session) {
     oldname <- grep("CDF:", names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_info)[oldname]) {
       print("cdf filter $use")
-      LIST_DATA$STATE[2] <<- newname
-      names(LIST_DATA$gene_file)[oldname] <<- LIST_DATA$STATE[2]
-      names(LIST_DATA$gene_info)[oldname] <<- LIST_DATA$STATE[2]
-      LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[LIST_DATA$STATE[2]]]$full$gene[input$cdftable_rows_all])
+      names(LIST_DATA$gene_file)[oldname] <<- newname
+      names(LIST_DATA$gene_info)[oldname] <<- newname
+      LIST_DATA$gene_file[[newname]]$use <<-
+        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$cdftable_rows_all])
       df_options <-
         semi_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
@@ -5457,9 +5434,8 @@ ui <- dashboardPage(
                                     "remove all files and restart", value = FALSE)
                       )
                     ),
-                    textInput("textnickname", "Update Nickname"),
-                    actionButton("actionoptions", "Set Nickname"),
                     tags$hr(style="color: #2e6da4; background-color: #2e6da4; border-color: #2e6da4;"),
+                    textInput("textnickname", "Update Nickname"),
                     fluidRow(
                       column(4,
                     numericInput("normfactor", "Set norm factor, score/rpm", value = 1)
@@ -5467,7 +5443,9 @@ ui <- dashboardPage(
                     column(4, style = "padding-top:10%;",
                     helpText("Set to 1 to reset")
                     )
-                    )
+                    ),
+                    actionButton("actionoptions", "Set Nickname/norm factor"),
+                    helpText("Need to press to update")
                   )
                   )
                 ))
@@ -5532,7 +5510,7 @@ ui <- dashboardPage(
                   )
                 )
               )),
-              hidden(div(
+              div(
                 id = "showmainplot",  fluidRow(
                   box(
                     title = "Sliders",
@@ -5692,7 +5670,7 @@ ui <- dashboardPage(
                     )
                   )
                 )
-              ))),
+              )),
       # main gene lists tab ----
       tabItem(tabName = "genelists",
               div(

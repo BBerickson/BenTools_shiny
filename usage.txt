@@ -8,7 +8,7 @@ Load Data tab
       col_names = c("chr", "start", "end", "gene", "bin", "score")
       col_names = c("gene", "bin", "score")
       
-    can load a test file containg file names ... requres file end in .url.txt
+    can load a file containg a list of file names ... requres file end in .url.txt
       files can be local or remote
     
     trys to set some defalt plot options based on the first file loaded
@@ -34,7 +34,7 @@ Load Data tab
   select gene list and file
     select plot line and dot type
     select color by rgb or hex
-    plot legend label
+    plot legend label "nickname", to reset leave blank when button is pushed
     apply normilization factor that is applied as needed and passed on to children lists
     remove file from all gene lists
     
