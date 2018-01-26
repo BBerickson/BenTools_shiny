@@ -10,6 +10,8 @@ Load Data tab
       
     can load a file containg a list of file names ... requres file end in .url.txt
       files can be local or remote
+      can supply info, file, type, nickname, color
+        b.table 5 b #00FF00
     
     trys to set some defalt plot options based on the first file loaded
     only first 4 files are automaticly selected to plot

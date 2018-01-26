@@ -152,11 +152,17 @@ LoadTableFile <-
            list_data,
            load_gene_list = FALSE,
            convert = FALSE) {
+    
+    my_nickname <- NULL
+    my_color <- NULL
+    my_landl <- NULL
+    
     # tests if loading a file with a list of address to remote files, requirs .url.txt in file name
     if (length(file_name) == 1 &&
         length(grep(".url.txt", file_name)) == 1) {
       file_path <- read_lines(file_path)
       file_name <- NULL
+      file_path2 <- NULL
       # if is loaded as list of gene restricts to first entry
       if (load_gene_list) {
         file_path <- file_path[1]
@@ -167,10 +173,23 @@ LoadTableFile <-
           easyClose = TRUE
         ))
       }
+      
       # builds varible for reading in remote files
       for (i in file_path) {
-        file_name <- c(file_name, last(strsplit(i, "/")[[1]]))
+        if (length(strsplit(i, " ")[[1]]) > 1) {
+          file_path2 <- c(file_path2, strsplit(i, " ")[[1]][1])
+          file_name <- c(file_name, last(strsplit(strsplit(i, " ")[[1]][1], "/")[[1]]))
+          my_landl <- c(my_landl, strsplit(i, " ")[[1]][2])
+          my_nickname <- c(my_nickname, strsplit(i, " ")[[1]][3])
+          my_color <- c(my_color, strsplit(i, " ")[[1]][4])
+        } else {
+          file_name <- c(file_name, last(strsplit(i, "/")[[1]]))
+        }
       }
+      if (!is.null(file_path2)){
+        file_path <- file_path2
+      }
+      
     }
     
     # gets number of files loaded in master list of lists
@@ -192,8 +211,11 @@ LoadTableFile <-
       if (num_bins == 1 & load_gene_list) {
         
         # cleans up file name 
-        legend_nickname <- strsplit(as.character(file_name), '.txt')[[1]][1]
-        
+        if (is.null(my_nickname)) {
+          legend_nickname <- strsplit(as.character(file_name), '.txt')[[1]][1]
+        } else {
+          legend_nickname <- my_nickname[x]
+        }
         # checks if file with same name is in master list of lists
         if (any(grep(legend_nickname, names(list_data$gene_info)))) {
           showModal(modalDialog(
@@ -296,20 +318,29 @@ LoadTableFile <-
           return(list_data)
       # data file 
       } else { 
-        
-        # Auto clean's up name and sets nickname
-        legend_nickname <-
-          strsplit(strsplit(as.character(file_name[x]), '.tab')[[1]][1], '\\._')[[1]][1]
-        if(grepl("^543\\.", legend_nickname)){
-          legend_nickname <- strsplit(legend_nickname, "^543\\.")[[1]][2]
-        } else if (grepl("^5\\.", legend_nickname)){
-          legend_nickname <- strsplit(legend_nickname, "^5\\.")[[1]][2]
-        } else if (grepl("^4\\.", legend_nickname)){
-          legend_nickname <- strsplit(legend_nickname, "^4\\.")[[1]][2]
-        } else if (grepl("^3\\.", legend_nickname)){
-          legend_nickname <- strsplit(legend_nickname, "^3\\.")[[1]][2]
+        if (is.null(my_nickname)) {
+          # Auto clean's up name and sets nickname
+          legend_nickname <-
+            strsplit(strsplit(as.character(file_name[x]), '.tab')[[1]][1], '\\._')[[1]][1]
+          if(grepl("^543\\.", legend_nickname)){
+            landl <- '543'
+            legend_nickname <- strsplit(legend_nickname, "^543\\.")[[1]][2]
+          } else if (grepl("^5\\.", legend_nickname)){
+            landl <- '5'
+            legend_nickname <- strsplit(legend_nickname, "^5\\.")[[1]][2]
+          } else if (grepl("^4\\.", legend_nickname)){
+            landl <- '4'
+            legend_nickname <- strsplit(legend_nickname, "^4\\.")[[1]][2]
+          } else if (grepl("^3\\.", legend_nickname)){
+            landl <- '3'
+            legend_nickname <- strsplit(legend_nickname, "^3\\.")[[1]][2]
+          } else {
+            landl <- 'none'
+          }
+        } else {
+          legend_nickname <- my_nickname[x]
+          landl <- my_landl[x]
         }
-        
         # checks if file with same name is in master list of lists
         if (any(legend_nickname == names(list_data$table_file))) {
           showModal(modalDialog(
@@ -433,6 +464,7 @@ LoadTableFile <-
         } else {
           gene_names <- distinct(tablefile, gene)
           list_data$x_plot_range <- c(1, num_bins)
+          list_data$STATE[3] <- landl
         }
         
         # sets master gene list name 
@@ -442,13 +474,22 @@ LoadTableFile <-
           names(list_data$gene_info)[1] <- my_name
         }
         # recycles colors if number of items is more then number of colors
-        color_safe <-
-          (length(list_data$table_file) + 1) %% length(kListColorSet)
-        if (color_safe == 0) {
-          color_safe <- 1
+        if (is.null(my_color)) {
+          color_safe <-
+            (length(list_data$table_file) + 1) %% length(kListColorSet)
+          if (color_safe == 0) {
+            color_safe <- 1
+          }
+          color_select <- kListColorSet[color_safe]
+        } else {
+          # convert rgb to hex if needed
+          if (suppressWarnings(!is.na(as.numeric(substr(
+            my_color[x], 1, 1
+          )))) == TRUE) {
+            my_color[x] <- RgbToHex(my_rgb = my_color[x])
+          }
+          color_select <- my_color[x]
         }
-        color_select <- kListColorSet[color_safe]
-        
         # shiny progress bar
         setProgress(4, detail = "building data and adding to tools")
         
@@ -682,7 +723,6 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
     my_name <- paste("common\nn =", n_distinct(gene_names$gene))
     names(list_data$gene_file)[1] <- my_name
     names(list_data$gene_info)[1] <- my_name
-    color_select <- kListColorSet[color_safe]
     setProgress(2, detail = "building new data")
     list_data$table_file[[legend_nickname]] <- new_gene_list
     list_data$gene_file[[my_name]]$use <- gene_names
@@ -692,7 +732,7 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
         set = legend_nickname,
         mydot = kDotOptions[1],
         myline = kLineOptions[1],
-        mycol = color_select,
+        mycol = kListColorSet[color_safe],
         onoff = 0,
         rnorm = "1"
       )
@@ -723,15 +763,16 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
         )
       names(list_data$gene_file)[g] <<- my_name_g
       names(list_data$gene_info)[g] <<- my_name_g
-      list_data$gene_info[[g]][[legend_nickname]] <<-
+      list_data$gene_info[[my_name_g]][[legend_nickname]] <<-
         tibble(
           set = legend_nickname,
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
-          mycol = list_data$gene_info[[1]][[my_name_g]]$mycol,
+          mycol = kListColorSet[color_safe],
           onoff = 0,
           rnorm = "1"
         )
+      
     })
   }
   setProgress(5, detail = "Done")
@@ -899,12 +940,12 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
       ),
       function(i)
         tibble(
-          set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
+          set = paste(list_data$gene_info[[1]][[i]]["set"]),
           mydot = kDotOptions[1],
           myline = kLineOptions[1],
           mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nn)]][[i]]$mycol, tint = mytint),
           onoff = 0,
-          rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
+          rnorm = paste(list_data$gene_info[[1]][[i]]["rnorm"])
         ))
   }
   list_data
@@ -949,6 +990,9 @@ SortTop <-
         num2 <-
           c(ceiling((gene_count + 1) - (gene_count * (num / 100))), gene_count)
         topbottom <- paste(topbottom, paste0(num, "%"))
+      }
+      if (any(is.na(num2))){
+        num2 <- c(ceiling((gene_count) - (gene_count * max(.5, num / 100))), ceiling(gene_count * max(.5, num / 100)))
       }
       nickname <- list_data$gene_info[[1]][[j]]$set
       outlist2 <- mutate(apply_bins,!!nickname := myper) %>%
@@ -2058,8 +2102,23 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectsortfile]], "[[", 4)
         ), sep = ":"))
       )
-      if (sum(grepl("Sort n =", names(LIST_DATA$gene_file))) == 0) {
+      if (sum(grepl("Sort n =", names(LIST_DATA$gene_file))) > 0) {
+        output$valueboxsort <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$use), 
+            "Gene List Sort", icon = icon("list"),
+            color = "green"
+          )
+        })
+      } else {
         hide('actionsortdatatable')
+        output$valueboxsort <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List Sort", icon = icon("list"),
+            color = "green"
+          )
+        })
       }
     }
     
@@ -2094,6 +2153,58 @@ server <- function(input, output, session) {
       )
       if (sum(grepl("Ratio_", names(LIST_DATA$gene_file))) == 0) {
         hide('actionratiodatatable')
+      } 
+      
+      if (any(grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxratio1 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Ratio Up file1", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxratio1 <- renderValueBox({
+          valueBox(
+            0, 
+            "Ratio Up file1", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
+      if (any(grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxratio2 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Ratio Up file2", icon = icon("list"),
+            color = "blue"
+          )
+        })
+      } else{
+        output$valueboxratio2 <- renderValueBox({
+          valueBox(
+            0, 
+            "Ratio Up file2", icon = icon("list"),
+            color = "blue"
+          )
+        })
+      }
+      if (any(grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxratio3 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_No_Diff\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Ratio No Diff", icon = icon("list"),
+            color = "yellow"
+          )
+        })
+      } else{
+        output$valueboxratio3 <- renderValueBox({
+          valueBox(
+            0, 
+            "Ratio No Diff", icon = icon("list"),
+            color = "yellow"
+          )
+        })
       }
     }
     
@@ -2271,7 +2382,6 @@ server <- function(input, output, session) {
   # loads data file(s) ----
   observeEvent(input$filetable, {
     print("load file")
-    # add warnings for total size of LIST_DATA TODO
     disable("startoff")
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
@@ -2284,6 +2394,15 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
+      if (object.size(LIST_DATA$table_file) > 250e5) {
+        showModal(modalDialog(
+          title = "Information message",
+          paste("Amount of loaded data is getting big, consider removing some data files"),
+          size = "s",
+          easyClose = TRUE
+        ))
+        print(object.size(LIST_DATA$table_file), units = "auto")
+      }
     } else {
       return()
     }
@@ -2306,14 +2425,21 @@ server <- function(input, output, session) {
       reactive_values$Lines_Lables_List <- LinesLablesList()
       reactive_values$binset <- TRUE
       shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
+      # tries to guess lines and lables type
       num_bins <-
         collapse(summarise(LIST_DATA$table_file[[1]], max(bin)))[[1]]
-      if (num_bins == 80) {
+      if (num_bins == 80 & LIST_DATA$STATE[3] == '543') {
         updateSelectInput(session, "selectlineslables", selected = "543 bins 20,20,40")
-      } else if (num_bins <= 30) {
-        updateSelectInput(session, "selectlineslables", selected = "543 bins 10,10,10")
-      } else {
+      } else if (num_bins == 80 & LIST_DATA$STATE[3] == '5') {
         updateSelectInput(session, "selectlineslables", selected = "5' 1k 1k 80bins")
+      } else if (num_bins <= 60 & LIST_DATA$STATE[3] == '543') {
+        updateSelectInput(session, "selectlineslables", selected = "543 bins 10,10,10")
+      } else if (num_bins == 205 & LIST_DATA$STATE[3] == '5') {
+        updateSelectInput(session, "selectlineslables", selected = "5' .25k 10k 205bins")
+      } else if (LIST_DATA$STATE[3] == '3') {
+        updateSelectInput(session, "selectlineslables", selected = "3'")
+      } else {
+        updateSelectInput(session, "selectlineslables", selected = "4")
       }
       LIST_DATA$STATE[1] <<- 1
     }
@@ -2410,15 +2536,19 @@ server <- function(input, output, session) {
                    disable("actionremovegene")
                    hide("checkboxtint")
                    enable("kbrewer")
+                   enable("textnickname")
+                   enable("actionoptions")
                  } else {
                    disable("normfactor")
                    enable("actionremovegene")
                    show("checkboxtint")
                    disable("kbrewer")
+                   disable("textnickname")
+                   disable("actionoptions")
                  }
                })
   
-  # saves gene list ----
+  # save functions, gene list, color list ----
   output$downloadGeneList <- downloadHandler(
     filename = function() {
       if (input$checkboxsavecolor) {
@@ -2466,12 +2596,6 @@ server <- function(input, output, session) {
       write_lines(new_comments, file)
     }
   )
-  
-  # save norm factor ---- 
-  observeEvent(input$normfactor, ignoreInit = TRUE, {
-    print("norm")
-    
-  })
   
   # record new nickname  ---- 
   observeEvent(input$actionoptions, ignoreInit = TRUE, {
@@ -2799,7 +2923,7 @@ server <- function(input, output, session) {
     }
   )
   
-  # quick lines and lables preset change #TODO finish update ----
+  # quick lines and lables preset change ----
   observeEvent(input$selectlineslables, ignoreInit = TRUE, {
     if(input$selectlineslables == ""){
       return()
@@ -3194,6 +3318,27 @@ server <- function(input, output, session) {
         })
       }
     } else {
+      output$valueboxgene1 <- renderValueBox({
+        valueBox(
+          0, 
+          "Gene List intersect", icon = icon("list"),
+          color = "green"
+        )
+      })
+      output$valueboxgene2 <- renderValueBox({
+        valueBox(
+          0, 
+          "Gene List inclusive", icon = icon("list"),
+          color = "yellow"
+        )
+      })
+      output$valueboxgene3 <- renderValueBox({
+        valueBox(
+          0, 
+          "Gene List exclusive", icon = icon("list"),
+          color = "red"
+        )
+      })
       return()
     }
   })
@@ -3408,6 +3553,10 @@ server <- function(input, output, session) {
     print("sort tool")
     hide('actionsortdatatable')
     hide('sorttable')
+    
+    if (input$slidersortpercent < 50 & input$selectsorttop == "Middle%") {
+      updateSliderInput(session, "slidersortpercent", value = 50)
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -3467,6 +3616,13 @@ server <- function(input, output, session) {
         })
       }
     } else {
+      output$valueboxsort <- renderValueBox({
+        valueBox(
+          0, 
+          "Gene List Sort", icon = icon("list"),
+          color = "green"
+        )
+      })
       return()
     }
   })
@@ -3489,19 +3645,21 @@ server <- function(input, output, session) {
           scrollX = TRUE,
           scrollY = TRUE,
           autoWidth = FALSE,
+          width = 5,
           columnDefs = list(
             list(className = 'dt-center ', targets = "_all"),
             list(
               targets = 0,
               render = JS(
                 "function(data, type, row, meta) {",
-                "return type === 'display' && data.length > 24 ?",
-                "'<span title=\"' + data + '\">' + data.substr(0, 19) + '...</span>' : data;",
+                "return type === 'display' && data.length > 44 ?",
+                "'<span title=\"' + data + '\">' + data.substr(0, 39) + '...</span>' : data;",
                 "}"
               )
             )
           )
         )
+        
       ) %>% formatPercentage(names(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full)[-1])
     } else {
       dt <- datatable(
@@ -3852,6 +4010,27 @@ server <- function(input, output, session) {
         })
       }
     } else {
+      output$valueboxratio1 <- renderValueBox({
+        valueBox(
+          0, 
+          "Ratio Up file1", icon = icon("list"),
+          color = "green"
+        )
+      })
+      output$valueboxratio2 <- renderValueBox({
+        valueBox(
+          0, 
+          "Ratio Up file2", icon = icon("list"),
+          color = "blue"
+        )
+      })
+      output$valueboxratio3 <- renderValueBox({
+        valueBox(
+          0, 
+          "Ratio No Diff", icon = icon("list"),
+          color = "yellow"
+        )
+      })
       return()
     }
   })
@@ -4579,6 +4758,34 @@ server <- function(input, output, session) {
                      })
                    }
                  } else {
+                   output$valueboxcluster1 <- renderValueBox({
+                     valueBox(
+                       0, 
+                       "Gene List 1", icon = icon("list"),
+                       color = "green"
+                     )
+                   })
+                   output$valueboxcluster2 <- renderValueBox({
+                     valueBox(
+                       0, 
+                       "Gene List 2", icon = icon("list"),
+                       color = "green"
+                     )
+                   })
+                   output$valueboxcluster3 <- renderValueBox({
+                     valueBox(
+                       0, 
+                       "Gene List 3", icon = icon("list"),
+                       color = "green"
+                     )
+                   })
+                   output$valueboxcluster4 <- renderValueBox({
+                     valueBox(
+                       0, 
+                       "Gene List 4", icon = icon("list"),
+                       color = "green"
+                     )
+                   })
                    return()
                  }
                })
