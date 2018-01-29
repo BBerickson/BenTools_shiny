@@ -22,16 +22,17 @@ https://rstudio.github.io/DT/
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
 
-
-more remove all files tests and controls
-remove print statements
+use and test
 
 update $sub info for xlab on all gene lists
+cdf ploting color picker???
+change color does not update picker... fix?
+remove print statements
+
+
 plot tab pickers closer, and 2 scrolls bars?
     search uiOutput("DynamicGenePicker")
 move check box to left side of pickers?
-change color does not update picker... fix?
-cdf ploting color picker???
 add icons to buttons?
 
 

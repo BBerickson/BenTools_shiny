@@ -2228,6 +2228,74 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
         ), sep = ":"))
       )
+      if (any(grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxcluster1 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "1\nn ="), names(LIST_DATA$gene_info))]]$use), 
+            "Gene List 1", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxcluster1 <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List 1", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
+      if (any(grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxcluster2 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "2\nn ="), names(LIST_DATA$gene_info))]]$use), 
+            "Gene List 2", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxcluster2 <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List 2", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
+      if (any(grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxcluster3 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "3\nn ="), names(LIST_DATA$gene_info))]]$use), 
+            "Gene List 3", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxcluster3 <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List 3", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
+      if (any(grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info)) > 0)) {
+        output$valueboxcluster4 <- renderValueBox({
+          valueBox(
+            n_distinct(LIST_DATA$gene_file[[grep(paste0(reactive_values$clustergroups, "4\nn ="), names(LIST_DATA$gene_info))]]$use), 
+            "Gene List 4", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }else{
+        output$valueboxcluster4 <- renderValueBox({
+          valueBox(
+            0, 
+            "Gene List 4", icon = icon("list"),
+            color = "green"
+          )
+        })
+      }
     }
     #CDF
     if (input$tabs == "cdftool" & LIST_DATA$STATE[1] != 0) {
