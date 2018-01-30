@@ -23,7 +23,8 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 
 use and test
-
+  
+  
 update $sub info for xlab on all gene lists
 cdf ploting color picker???
 change color does not update picker... fix?
