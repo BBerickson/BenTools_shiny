@@ -1685,40 +1685,45 @@ LinesLablesList <- function(body1bin = 20,
   everybp <- everybin * binbp
   if (everybp > 0) {
     if (mytype == "543") {
-      LOCname1 <- seq(-tssbin * binbp, (body1bin-tssbin)* binbp, by = everybp)
+      # set up 5'
+      LOCname1 <- seq(-tssbin * binbp, (body1bin-tssbin) * binbp, by = everybp)
       LOC1 <- seq(1,  by = everybin, length.out = length(LOCname1))
-      
-      if(any(near(LOCname1, (body1bin-tssbin)* binbp, tol = everybp/2)) & length(LOCname1) > 1){
-        LOC1[near(LOCname1, (body1bin-tssbin)* binbp, tol = everybp/2)] <- body1bin+.5
-        LOCname1[near(LOCname1, (body1bin-tssbin)* binbp, tol = everybp/2)] <- (body1bin-tssbin)* binbp
+      # make sure body brake is included
+      if(any(near(LOCname1, (body1bin - tssbin) * binbp, tol = everybp/2)) & length(LOCname1) > 1){
+        LOC1[near(LOCname1, (body1bin - tssbin) * binbp, tol = everybp/2)] <- body1bin+.5
+        LOCname1[near(LOCname1, (body1bin-tssbin) * binbp, tol = everybp/2)] <- (body1bin-tssbin)* binbp
       } else {
         LOC1 <- sort(c(LOC1, body1bin+.5))
-        LOCname1 <- append(LOCname1, (body1bin-tssbin)* binbp, length(LOCname1))
+        LOCname1 <- append(LOCname1, (body1bin - tssbin) * binbp, length(LOCname1))
       }
-      if(any(near(LOCname1, 0, tol = everybp/2)) & length(LOCname1) > 2){
-        LOC1[near(LOCname1, 0, tol = everybp/2)] <- tssbin + .5
-        LOCname1[near(LOCname1, 0, tol = everybp/2)] <- "TSS"
+      # make sure TSS is included
+      if(any(LOCname1 == 0)){
+        LOC1[LOCname1 == 0] <- tssbin + .5
+        LOCname1[LOCname1 == 0] <- "TSS"
       } else {
         LOC1 <- sort(c(LOC1, tssbin+.5))
         LOCname1 <- append(LOCname1, "TSS", which(LOCname1 > 0)[1]-1)
       }
-      LOCname2 <-  seq(abs(-(tesbin - body2bin) * binbp), abs((body2bin*binbp)-everybp), by = everybp)
-      LOC2 <- seq(body2bin +.5, by = everybin, length.out = length(LOCname2))
-      
-      if(any(near(LOCname2, abs((body2bin*binbp)-everybp), tol = everybp/2)) & length(LOCname2) > 1){
-        LOC2[near(LOCname2, abs((body2bin*binbp)-everybp), tol = everybp/2)] <- totbins
-        LOCname2[near(LOCname2, abs((body2bin*binbp)-everybp), tol = everybp/2)] <- abs((body2bin*binbp)-everybp)
+      # set up 3'
+      LOCname2 <-  abs(seq((body2bin - tesbin) * binbp, (totbins-tesbin) * binbp, by = everybp))
+      LOC2 <- seq(body2bin + 0.5, by = everybin, length.out = length(LOCname2))
+      # make sure body brake is included
+      if(any(near(LOCname2, (totbins-tesbin) * binbp, tol = everybp/2)) & length(LOCname2) > 1){
+        LOC2[near(LOCname2, (totbins-tesbin) * binbp, tol = everybp/2)] <- totbins
+        LOCname2[near(LOCname2, (totbins-tesbin) * binbp, tol = everybp/2)] <- (totbins-tesbin) * binbp
       } else {
         LOC2 <- sort(c(LOC2, totbins))
-        LOCname2 <- append(LOCname2, abs((body2bin*binbp)-everybp), length(LOCname2))
+        LOCname2 <- append(LOCname2, (totbins-tesbin) * binbp, length(LOCname2))
       }
-      if(any(near(LOCname2, 0, tol = everybp/2)) & length(LOCname2) > 2){
-        LOC2[near(LOCname2, 0, tol = everybp/2)] <- tesbin + .5
-        LOCname2[near(LOCname2, 0, tol = everybp/2)] <- "pA"
+      # make sure TSS is included
+      if(any(LOCname2 == 0)){
+        LOC2[LOCname2 == 0] <- tesbin + .5
+        LOCname2[LOCname2 == 0] <- "pA"
       } else {
         LOC2 <- sort(c(LOC2, tesbin+.5))
         LOCname2 <- append(LOCname2, "pA", 1)
       }
+      
       use_plot_breaks <- c(LOC1, LOC2)
       use_plot_breaks_labels <- c(LOCname1, LOCname2)
       use_plot_breaks_labels <- use_plot_breaks_labels[1:length(use_plot_breaks)]
@@ -1834,7 +1839,7 @@ LinesLablesList <- function(body1bin = 20,
 LinesLablesPreSet <- function(mytype) {
   # 5|4, 4|3, tss, pA, bp/bin, every bin
   if (mytype == "543 bins 20,20,40") {
-    tt <- c(20, 40, 15, 45, 100, 80, 5)
+    tt <- c(20, 40, 15, 45, 100, 80, 10)
   } else if (mytype == "543 bins 10,10,10") {
     tt <- c(10, 20, 5, 25, 100, 30, 5)
   } else if (mytype == "5' 1k 1k 80bins") {
@@ -1955,7 +1960,7 @@ GGplotLineDot <-
       theme(axis.title.x = element_text(size =  10, vjust = .5)) +
       theme(axis.text.x = element_text(
         color = line_list$mycolors,
-        size = 20,
+        size = 13,
         face = 'bold'
       )) +
       theme(
@@ -2482,15 +2487,15 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
-      if (object.size(LIST_DATA$table_file) > 250e5) {
-        showModal(modalDialog(
-          title = "Information message",
-          paste("Amount of loaded data is getting big, consider removing some data files"),
-          size = "s",
-          easyClose = TRUE
-        ))
-        print(object.size(LIST_DATA$table_file), units = "auto")
-      }
+      # if (object.size(LIST_DATA$table_file) > 250e5) {
+      #   showModal(modalDialog(
+      #     title = "Information message",
+      #     paste("Amount of loaded data is getting big, consider removing some data files"),
+      #     size = "s",
+      #     easyClose = TRUE
+      #   ))
+      #   print(object.size(LIST_DATA$table_file), units = "auto")
+      # }
     } else {
       return()
     }
