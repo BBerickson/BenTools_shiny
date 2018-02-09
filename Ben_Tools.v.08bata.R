@@ -58,7 +58,7 @@ LIST_DATA <<- list(
   # Cluster holder
   x_plot_range = c(0, 0),
   STATE = c(0, 0) # flow control,
-  # [1] 1 = at least on file has been loadded and lets reactives fill in info
+  # [1] 1 = at least one file has been loaded and lets reactives fill in info
   #     
   # [2] 0 = first time switching tab auto ploting
   #     1 = hiden plot button, reatives for plot enabled
@@ -983,9 +983,14 @@ SortTop <-
         num2 <- c(1, ceiling(gene_count * (num / 100)))
         topbottom <- paste(topbottom, paste0(num, "%"))
       } else if (topbottom == "Middle%") {
-        num2 <-
-          c(count(apply_bins, myper >= max(.5, num / 100))[[2]][2],
-            count(apply_bins, myper <= min(.5, (100 - num) / 100))[[2]][1])
+        if (num == 100){
+          num2 <- c(1,gene_count)
+        } else {
+          med <- median(apply_bins$myper)
+          num2 <-
+            c(count(apply_bins, myper >= max(med, num / 100))[[2]][2],
+              count(apply_bins, myper <= min(med, (100 - num) / 100))[[2]][1])
+        }
       } else {
         num2 <-
           c(ceiling((gene_count + 1) - (gene_count * (num / 100))), gene_count)
@@ -1005,13 +1010,13 @@ SortTop <-
       }
       lc <<- lc + 1
     })
-    old_name <- grep("Sort", names(list_data$gene_file))
-    if (length(old_name) > 0) {
-      list_data$gene_file[[old_name]] <- NULL
-      list_data$gene_info[[old_name]] <- NULL
-    }
+    old_name <- grep("Sort", names(list_data$gene_file),value = T)
     if (length(outlist$gene) == 0) {
-      return(NULL)
+      if (length(old_name) > 0 ){
+          list_data$gene_file[[old_name]] <- NULL
+          list_data$gene_info[[old_name]] <- NULL
+      }
+      return(list_data)
     }
     setProgress(lc + 2, detail = "building list")
     nick_name <-
@@ -1047,15 +1052,30 @@ SortTop <-
     list_data$gene_info[[nick_name]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
                       names(list_data$gene_info[[1]])),
-             function(i)
+             function(i){
+               if (length(old_name) > 0){
+                 mycolor <- RgbToHex(my_hex = list_data$gene_info[[list_name]][[i]]$mycol, tint = mytint)
+               } else {
+                 mycolor <- RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol, tint = mytint)
+               }
                tibble(
                  set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
-                 mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name)]][[i]]$mycol, tint = mytint),
+                 mycol = mycolor,
                  onoff = 0,
                  rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
-               ))
+               )
+  }
+               )
+    if (length(old_name) > 0 ){
+      print(old_name)
+      print(nick_name)
+      if(old_name != nick_name) {
+      list_data$gene_file[[old_name]] <- NULL
+      list_data$gene_info[[old_name]] <- NULL
+      }
+    }
     list_data
   }
 
@@ -2059,6 +2079,16 @@ server <- function(input, output, session) {
     toggle("showgenelistspicker",
            condition = (input$tabs == "genelists" &
                           length(LIST_DATA$gene_file) > 1))
+    # load tab
+    if (input$tabs == "loaddata" & LIST_DATA$STATE[1] != 0) {
+      updateSelectInput(
+        session,
+        "selectgenelistoptions",
+        choices = names(LIST_DATA$gene_info),
+        selected = names(LIST_DATA$gene_info)[1]
+      )
+    }
+    # file norm tab
     if (input$tabs == "filenorm" & LIST_DATA$STATE[1] != 0) {
       updatePickerInput(
         session,
@@ -2377,7 +2407,6 @@ server <- function(input, output, session) {
                      })
         if (!is.null(reactive_values$Apply_Math)) {
           reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
-          LIST_DATA$STATE[1] <<- 1
         } 
       } else if (LIST_DATA$STATE[2] == 2){
         show("actionmyplotshow")
@@ -2514,13 +2543,10 @@ server <- function(input, output, session) {
       show("filecolor")
       show("startoff")
       print("1st slider and plot lines Ylable")
-      reactive_values$Y_Axis_Lable <- YAxisLable()
-      reactive_values$Lines_Lables_List <- LinesLablesList()
       reactive_values$binset <- TRUE
       shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
       # tries to guess lines and lables type
-      num_bins <-
-        collapse(summarise(LIST_DATA$table_file[[1]], max(bin)))[[1]]
+      num_bins <- LIST_DATA$x_plot_range[2]
       if (num_bins == 80 & LIST_DATA$STATE[3] == '543') {
         updateSelectInput(session, "selectlineslables", selected = "543 bins 20,20,40")
       } else if (num_bins == 80 & LIST_DATA$STATE[3] == '5') {
@@ -2812,7 +2838,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # reactive picker watcher (watches everything) ----
+  # reactive picker watcher (watches everything but graps only gene lists with white sapace fix) ----
   observeEvent(reactiveValuesToList(input)[gsub(" ", "-bensspace2-", gsub("\n", "-bensspace1-", names(LIST_DATA$gene_info)))],
                ignoreNULL = FALSE,
                ignoreInit = TRUE,
@@ -2826,6 +2852,7 @@ server <- function(input, output, session) {
                ignoreNULL = FALSE,
                ignoreInit = TRUE,
                {
+                 if (LIST_DATA$STATE[1] != 0) {
                  print("checkbox on/off")
                    ttt <- reactive_values$picker
                    checkboxonoff <- list()
@@ -2838,6 +2865,7 @@ server <- function(input, output, session) {
                      }
                    }
                    reactive_values$onoff <- checkboxonoff
+                   }
                })
   
   # sets and resets plot button on/off ----
@@ -3349,12 +3377,7 @@ server <- function(input, output, session) {
     updateSelectInput(session,
                        "selectdataoption",
                        choices = ff)
-    updateSelectInput(
-      session,
-      "selectgenelistoptions",
-      choices = names(LIST_DATA$gene_info),
-      selected = names(LIST_DATA$gene_info)[1]
-    )
+    
     output$valueboxnormfile <- renderValueBox({
       valueBox(
         "100%", "Done", icon = icon("thumbs-up", lib = "glyphicon"),
@@ -3379,16 +3402,6 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
       ol <- input$pickergenelists
       if (!any(ol %in% names(LIST_DATA$gene_file))) {
         ol <- grep("Gene_List_", names(LIST_DATA$gene_file), value = TRUE)
@@ -3711,29 +3724,6 @@ server <- function(input, output, session) {
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
       show('actionsortdatatable')
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
-      ol <- input$selectsortfile
-      if (!ol %in% names(LIST_DATA$gene_file)) {
-        ol <- grep("Sort n", names(LIST_DATA$gene_file), value = TRUE)
-        reactive_values$pickerfile_controler <- input$pickersortfile
-      } else {
-        reactive_values$pickerfile_controler <- ""
-      }
-      updateSelectInput(
-        session,
-        "selectsortfile",
-        choices = names(LIST_DATA$gene_file),
-        selected = ol
-      )
       if (any(grep("Sort n", names(LIST_DATA$gene_info)) > 0)) {
         output$valueboxsort <- renderValueBox({
           valueBox(
@@ -3742,7 +3732,7 @@ server <- function(input, output, session) {
             color = "green"
           )
         })
-      }else{
+      } else {
         output$valueboxsort <- renderValueBox({
           valueBox(
             0, 
@@ -3759,8 +3749,21 @@ server <- function(input, output, session) {
           color = "green"
         )
       })
-      return()
     }
+    # updating select and keeping track if sort on sort
+    ol <- input$selectsortfile
+    if (!ol %in% names(LIST_DATA$gene_file)) {
+      ol <- grep("Sort n", names(LIST_DATA$gene_file), value = TRUE)
+      reactive_values$pickerfile_controler <- input$pickersortfile
+    } else {
+      reactive_values$pickerfile_controler <- ""
+    }
+    updateSelectInput(
+      session,
+      "selectsortfile",
+      choices = names(LIST_DATA$gene_file),
+      selected = ol
+    )
   })
   
   # Sort gene list show data table ----
@@ -3816,7 +3819,7 @@ server <- function(input, output, session) {
   })
   
   # sort tool gene list $use ----
-  observeEvent(input$sorttable_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$sorttable_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
     newname <-
       paste("Sort n =",
             length(input$sorttable_rows_all))
@@ -3829,16 +3832,7 @@ server <- function(input, output, session) {
       LIST_DATA$gene_file[[newname]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$sorttable_rows_all])
       print("sort $use picker")
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_file),
-        selected = glo
-      )
+      
       ol <- input$selectsortfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -3852,6 +3846,13 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+        output$valueboxsort <- renderValueBox({
+          valueBox(
+            length(input$sorttable_rows_all), 
+            "Gene List Sort", icon = icon("list"),
+            color = "green"
+          )
+        })
     }
   })
   
@@ -3883,7 +3884,7 @@ server <- function(input, output, session) {
   })
   
   # ratio tool gene lists $use ----
-  observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
     newname <-
       paste("Ratio_Up_file1\nn =",
             length(input$ratio1table_rows_all))
@@ -3895,16 +3896,7 @@ server <- function(input, output, session) {
       names(LIST_DATA$gene_info)[oldname] <<- newname
       LIST_DATA$gene_file[[newname]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$ratio1table_rows_all])
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectratiofile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -3934,16 +3926,7 @@ server <- function(input, output, session) {
       names(LIST_DATA$gene_info)[oldname] <<- newname
       LIST_DATA$gene_file[[newname]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$ratio2table_rows_all])
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectratiofile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -3972,16 +3955,7 @@ server <- function(input, output, session) {
       names(LIST_DATA$gene_info)[oldname] <<- newname
       LIST_DATA$gene_file[[newname]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$ratio3table_rows_all])
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectratiofile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -4067,16 +4041,7 @@ server <- function(input, output, session) {
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
       show('actionratiodatatable')
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectratiofile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <-
@@ -4364,7 +4329,7 @@ server <- function(input, output, session) {
   })
   
   # cluster tool gene lists $use ----
-  observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
     newname <-
       paste0(reactive_values$clustergroups,
              "1\nn = ",
@@ -4424,16 +4389,7 @@ server <- function(input, output, session) {
             ))
           )
       }
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectclusterfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -4510,16 +4466,7 @@ server <- function(input, output, session) {
             ))
           )
       }
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectclusterfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -4596,16 +4543,7 @@ server <- function(input, output, session) {
             ))
           )
       }
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectclusterfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -4683,16 +4621,7 @@ server <- function(input, output, session) {
             ))
           )
       }
-      glo <- input$selectgenelistoptions
-      if (!glo %in% names(LIST_DATA$gene_file)) {
-        glo <- names(LIST_DATA$gene_file)[1]
-      }
-      updateSelectInput(
-        session,
-        "selectgenelistoptions",
-        choices = names(LIST_DATA$gene_info),
-        selected = glo
-      )
+      
       ol <- input$selectclusterfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -4809,16 +4738,7 @@ server <- function(input, output, session) {
                    LIST_DATA <<- LD
                    show('actionclusterdatatable')
                    show('actionclusterplot')
-                   glo <- input$selectgenelistoptions
-                   if (!glo %in% names(LIST_DATA$gene_file)) {
-                     glo <- names(LIST_DATA$gene_file)[1]
-                   }
-                   updateSelectInput(
-                     session,
-                     "selectgenelistoptions",
-                     choices = names(LIST_DATA$gene_info),
-                     selected = glo
-                   )
+                   
                    ol <- input$selectclusterfile
                    if (!ol %in% names(LIST_DATA$gene_file)) {
                      ol <-
@@ -5354,7 +5274,7 @@ server <- function(input, output, session) {
   
   
   # cdf tool gene lists $use ----
-  observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
     newname <- paste("CDF:", length(input$cdftable_rows_all))
     oldname <- grep("CDF:", names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_info)[oldname]) {
