@@ -1449,7 +1449,7 @@ CumulativeDistribution <-
             group_by(outlist[[paste0(list_name, "-", j)]], gene) %>%
             summarise(test = sum(value)) %>%
             filter(!is.na(test)) %>%
-            semi_join(list_data$gene_file[[list_name]]$use, ., by = "gene") %>%
+            semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
             arrange(desc(value)) %>%
             mutate(bin = row_number(), set = j, set2 = paste(sub("\n", " ", list_name), "-", j), value = value)
         }
@@ -2486,7 +2486,7 @@ server <- function(input, output, session) {
       max = LIST_DATA$x_plot_range[2],
       value = c(
         LIST_DATA$x_plot_range[1],
-        floor(LIST_DATA$x_plot_range[2] / 3)
+        floor(LIST_DATA$x_plot_range[2] / 4)
       )
     )
     updateSliderInput(
@@ -2495,7 +2495,7 @@ server <- function(input, output, session) {
       min = LIST_DATA$x_plot_range[1],
       max = LIST_DATA$x_plot_range[2],
       value = c(
-        ceiling(LIST_DATA$x_plot_range[2] / 3),
+        ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
         LIST_DATA$x_plot_range[2]
       )
     )

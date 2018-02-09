@@ -27,11 +27,10 @@ use and test
  move gene lists to reactive to fix picker update problems
  
   ratio tool working on one file and infoBox numbers
-  cluster name n= gives wrong total and infoBox numbers
+  cluster name n= gives wrong total if using a gene list? and infoBox numbers
   cluster plot math needs more room so can select easer
   redo cluster number auto plots
-  cdf remove 0's crashes on cant find objsect value and infoBox numbers
-  cdf defalt bins needs fixing
+  cdf infoBox numbers
   show cdf gene list hits checkbox on/off and remakes plot
   switching tabs to cdf hits checkbox on/off
   cdf crashes switching to plot ... didn't update picker name when filtering gene list?
