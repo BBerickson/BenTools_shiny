@@ -1093,12 +1093,55 @@ CompareRatios <-
            divzerofix,
            normbin = 0,
            mytint = FALSE) {
-    if (ratio1file == "" | ratio2file == "") {
+    if (ratio1file == "") {
+      showModal(modalDialog(
+        title = "Information message",
+        paste("No file selected to work on"),
+        size = "s",
+        easyClose = TRUE
+      ))
       return()
     }
     setProgress(1, detail = paste("dividing one by the other"))
-    lc <- 0
     outlist <- NULL
+    if(ratio2file == "None" | ratio2file == "") {
+      df <-
+        semi_join(list_data$table_file[[ratio1file]], list_data$gene_file[[list_name]]$use, by = 'gene') 
+      if(list_data$gene_info[[list_name]][[ratio1file]]["rnorm"] != 1){
+        df <- mutate(df, score = score / as.numeric(list_data$gene_info[[list_name]][[ratio1file]]["rnorm"]))
+      }
+      if (normbin > 0) {
+        df <- group_by(df, gene) %>%
+          arrange(bin) %>%
+          mutate(score = score / nth(score, normbin)) %>%
+          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+          ungroup()
+      } else {
+        df <- group_by(df, gene) %>%
+          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+          ungroup()
+      }
+      outlist[[1]] <-
+          transmute(df, gene = gene, Ratio = sum1 / sum2) %>%
+          na_if(Inf) %>% select(gene, Ratio)
+
+        if (divzerofix == "replace with 0") {
+          # find Inf and Na's replace 0s
+          outlist[[1]] <-
+            replace_na(outlist[[1]], list(Ratio = 0)) %>%
+            arrange(desc(Ratio))
+        } else {
+          outlist[[1]] <-
+            group_by(outlist[[1]], gene) %>%
+            summarise(test = sum(Ratio)) %>%
+            filter(!is.na(test)) %>%
+            semi_join(outlist[[1]], ., by = "gene") %>%
+            arrange(desc(Ratio))
+        }
+    } else {
+      lc <- 0
     lapply(c(ratio1file, ratio2file), function(j) {
       
       df <-
@@ -1147,7 +1190,7 @@ CompareRatios <-
         }
       }
     })
-    
+    }
     for (rr in grep("Ratio_", names(LIST_DATA$gene_file), value = T)) {
       if (length(rr) > 0) {
         list_data$gene_file[[rr]] <- NULL
@@ -2188,7 +2231,6 @@ server <- function(input, output, session) {
         session,
         "pickerratio1file",
         choices = names(LIST_DATA$table_file),
-        selected = "",
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
         ), sep = ":"))
@@ -2196,9 +2238,9 @@ server <- function(input, output, session) {
       updatePickerInput(
         session,
         "pickerratio2file",
-        choices = names(LIST_DATA$table_file),
-        selected = "",
-        choicesOpt = list(style = paste("color", c(
+        choices = c("None", names(LIST_DATA$table_file)),
+        selected = "None",
+        choicesOpt = list(style = paste("color", c("black",
           sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
         ), sep = ":"))
       )
@@ -2446,15 +2488,18 @@ server <- function(input, output, session) {
       session,
       "sliderbinratio1",
       min = LIST_DATA$x_plot_range[1],
-      max = LIST_DATA$x_plot_range[2],
-      value = LIST_DATA$x_plot_range
+      value = c(
+        LIST_DATA$x_plot_range[1],
+        floor(LIST_DATA$x_plot_range[2] / 4)
+      )
     )
     updateSliderInput(
       session,
       "sliderbinratio2",
-      min = 0,
-      max = LIST_DATA$x_plot_range[2],
-      value = c(0, 0)
+      value = c(
+        ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
+        LIST_DATA$x_plot_range[2]
+      )
     )
     updateSliderInput(
       session,
@@ -3874,9 +3919,9 @@ server <- function(input, output, session) {
     updatePickerInput(
       session,
       "pickerratio2file",
-      choices = names(LIST_DATA$table_file),
+      choices = c("None", names(LIST_DATA$table_file)),
       selected = reactive_values$pickerfile_controler[2],
-      choicesOpt = list(style = paste("color", c(
+      choicesOpt = list(style = paste("color", c("black",
         sapply(LIST_DATA$gene_info[[input$selectratiofile]], "[[", 4)
       ), sep = ":"))
     )
@@ -3986,33 +4031,34 @@ server <- function(input, output, session) {
     } else {
       updateNumericInput(session, "numericratio", value = 2)
     }
-    if(input$sliderbinratio2[1] == 0 & input$sliderbinratio2[2] > 0){
+    if (input$sliderbinratio2[1] == 0 & input$sliderbinratio2[2] > 0) {
       updateSliderInput(
         session,
         "sliderbinratio2",
         value = c(input$sliderbinratio2[2], input$sliderbinratio2[2])
       )
     }
-    if(input$sliderbinratio2[2] > 0 & input$sliderbinratio1[2] >= input$sliderbinratio2[1]){
-      showModal(modalDialog(
-        title = "Information message",
-        paste("Bins regions should not overlab, \nBins set to 1/3 2/3"),
-        size = "s",
-        easyClose = TRUE
-      ))
+    if (input$sliderbinratio2[2] > 0 & input$sliderbinratio1[2] >= input$sliderbinratio2[1] | 
+       input$pickerratio2file == "None") {
+      # showModal(modalDialog(
+      #   title = "Information message",
+      #   paste("Bins regions should not overlab, \nBins set to 1/4 3/4"),
+      #   size = "s",
+      #   easyClose = TRUE
+      # ))
       updateSliderInput(
         session,
         "sliderbinratio1",
         value = c(
           LIST_DATA$x_plot_range[1],
-          floor(LIST_DATA$x_plot_range[2] / 3)
+          floor(LIST_DATA$x_plot_range[2] / 4)
         )
       )
       updateSliderInput(
         session,
         "sliderbinratio2",
         value = c(
-          ceiling(LIST_DATA$x_plot_range[2] / 3),
+          ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
           LIST_DATA$x_plot_range[2]
         )
       )
@@ -5346,14 +5392,14 @@ server <- function(input, output, session) {
         "sliderbincdf1",
         value = c(
           LIST_DATA$x_plot_range[1],
-          floor(LIST_DATA$x_plot_range[2] / 3)
+          floor(LIST_DATA$x_plot_range[2] / 4)
         )
       )
       updateSliderInput(
         session,
         "sliderbincdf2",
         value = c(
-          ceiling(LIST_DATA$x_plot_range[2] / 3),
+          ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
           LIST_DATA$x_plot_range[2]
         )
       )
