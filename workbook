@@ -24,25 +24,16 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 use and test
  
- move gene lists to reactive to fix picker update problems
- 
-  ratio tool infoBox numbers testing all aspects 
-  cluster name n= gives wrong total if using a gene list? and infoBox numbers
-  cluster plot math needs more room so can select easer
-  redo cluster number auto plots
-  cdf infoBox numbers
-  show cdf gene list hits checkbox on/off and remakes plot
-  switching tabs to cdf hits checkbox on/off
-  cdf crashes switching to plot ... didn't update picker name when filtering gene list?
+  
   genelist and infoBox numbers 
   
 update $sub info for xlab on all gene lists
-cdf ploting color picker???
+cdf and cluster ploting color picker???
 change color does not update picker... fix?
 remove print statements
 
 
-plot tab pickers closer, and 2 scrolls bars?
+plot tab pickers closer
     search uiOutput("DynamicGenePicker")
 move check box to left side of pickers?
 add icons to buttons?

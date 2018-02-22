@@ -1337,7 +1337,7 @@ ClusterNumList <- function(list_data,
                            num,
                            myname,
                            mytint = FALSE) {
-  if (is_empty(list_data$clust)) {
+  if (is_empty(list_data$clust) | clusterfile == "") {
     return(NULL)
   }
   setProgress(3, detail = "spliting into clusters")
@@ -1416,6 +1416,7 @@ FindClusters <- function(list_data,
   if (clusterfile == "") {
     return(NULL)
   }
+  print(list_name)
   setProgress(1, detail = paste("gathering data"))
   df <- semi_join(list_data$table_file[[clusterfile]],
                   list_data$gene_file[[list_name]]$use, by = 'gene')
@@ -1432,8 +1433,7 @@ FindGroups <- function(list_data,
                        list_name,
                        clusterfile,
                        start_bin,
-                       end_bin,
-                       num) {
+                       end_bin) {
   if (clusterfile == "") {
     return(NULL)
   }
@@ -1465,7 +1465,7 @@ CumulativeDistribution <-
       return()
     }
     outlist <- NULL
-    for (list_name in names(onoff)){
+    for (list_name in names(onoff)) {
       setProgress(1, detail = paste("dividing one by the other"))
       gene_count <-
         n_distinct(list_data$gene_file[[list_name]]$use$gene)
@@ -2330,6 +2330,7 @@ server <- function(input, output, session) {
           )
         })
       }else{
+        hide("plotcluster")
         output$valueboxcluster1 <- renderValueBox({
           valueBox(
             0, 
@@ -2422,7 +2423,17 @@ server <- function(input, output, session) {
         })
         hide('plotcdf')
         hide('actioncdfdatatable')
+        my_count <- 0
+      } else {
+        my_count <- n_distinct(LIST_DATA$gene_file[[grep("CDF:", names(LIST_DATA$gene_info))]]$use$gene)
       }
+      output$valueboxcdf <- renderValueBox({
+        valueBox(
+          my_count, 
+          "Gene List", icon = icon("list"),
+          color = "green"
+        )
+      })
     }
     toggle(
       "selectlineslablesshow",
@@ -2431,9 +2442,7 @@ server <- function(input, output, session) {
     )
     # first time switch tab auto plot
     if (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0) {
-      reactive_values$Picker_controler <-
-        sapply(LIST_DATA, function(i)
-          (names(i)))
+      reactive_values$Picker_controler <- names(LIST_DATA$table_file)
       if (LIST_DATA$STATE[2] == 0) {
         withProgress(message = 'Calculation in progress',
                      detail = 'This may take a while...',
@@ -2879,6 +2888,9 @@ server <- function(input, output, session) {
               reactive_values$Y_Axis_Lable
             )
         }
+        reactive_values$Picker_controler <- paste("color", c(
+          sapply(LIST_DATA$gene_info[[1]], "[[", 4)
+        ), sep = ":")
       }
     }
   })
@@ -2921,6 +2933,7 @@ server <- function(input, output, session) {
                  LIST_DATA$gene_info <<-
                    CheckBoxOnOff(reactive_values$onoff,
                                  LIST_DATA$gene_info)
+                 
                  if (LIST_DATA$STATE[2] != 0) { # needs work
                    print("toggle on/off")
                    show("actionmyplotshow")
@@ -3271,6 +3284,9 @@ server <- function(input, output, session) {
           )
       }
       updateSelectInput(session, "kbrewer", selected = "select")
+      reactive_values$Picker_controler <- paste("color", c(
+        sapply(LIST_DATA$gene_info[[1]], "[[", 4)
+      ), sep = ":")
     }
   })
   
@@ -3864,7 +3880,7 @@ server <- function(input, output, session) {
   })
   
   # sort tool gene list $use ----
-  observeEvent(input$sorttable_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
+  observeEvent(input$sorttable_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
     newname <-
       paste("Sort n =",
             length(input$sorttable_rows_all))
@@ -3876,8 +3892,6 @@ server <- function(input, output, session) {
       
       LIST_DATA$gene_file[[newname]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$sorttable_rows_all])
-      print("sort $use picker")
-      
       ol <- input$selectsortfile
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- newname
@@ -3893,7 +3907,7 @@ server <- function(input, output, session) {
       )
         output$valueboxsort <- renderValueBox({
           valueBox(
-            length(input$sorttable_rows_all), 
+            n_distinct(LIST_DATA$gene_file[[newname]]$use), 
             "Gene List Sort", icon = icon("list"),
             color = "green"
           )
@@ -3929,7 +3943,7 @@ server <- function(input, output, session) {
   })
   
   # ratio tool gene lists $use ----
-  observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
+  observeEvent(input$ratio1table_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
     newname <-
       paste("Ratio_Up_file1\nn =",
             length(input$ratio1table_rows_all))
@@ -3956,10 +3970,17 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      output$valueboxratio1 <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Ratio Up file1", icon = icon("list"),
+          color = "green"
+        )
+      })
     }
   })
   
-  observeEvent(input$ratio2table_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$ratio2table_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
     newname <-
       paste("Ratio_Up_file2\nn =",
             length(input$ratio2table_rows_all))
@@ -3986,10 +4007,17 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      output$valueboxratio2 <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Ratio Up file2", icon = icon("list"),
+          color = "blue"
+        )
+      })
     }
   })
   
-  observeEvent(input$ratio3table_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$ratio3table_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
     newname <-
       paste("Ratio_No_Diff\nn =", length(input$ratio3table_rows_all))
     oldname <-
@@ -4015,6 +4043,13 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      output$valueboxratio3 <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Ratio Up file3", icon = icon("list"),
+          color = "yellow"
+        )
+      })
     }
   })
   
@@ -4362,6 +4397,11 @@ server <- function(input, output, session) {
   # cluster tool picker control ----
   observeEvent(input$selectclusterfile, ignoreInit = TRUE, {
     print("cluster picker update")
+    hide('plotcluster')
+    hide("cluster1table")
+    hide("cluster2table")
+    hide("cluster3table")
+    hide("cluster4table")
     updatePickerInput(
       session,
       "pickerclusterfile",
@@ -4375,14 +4415,15 @@ server <- function(input, output, session) {
   })
   
   # cluster tool gene lists $use ----
-  observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
+  observeEvent(input$cluster1table_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
+    
+    oldname <-
+      grep(paste0(reactive_values$clustergroups, "1\nn ="),
+           names(LIST_DATA$gene_info))
     newname <-
       paste0(reactive_values$clustergroups,
              "1\nn = ",
              length(input$cluster1table_rows_all))
-    oldname <-
-      grep(paste0(reactive_values$clustergroups, "1\nn ="),
-           names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_file)[oldname]) {
       print("cluster1 filter $use")
       names(LIST_DATA$gene_file)[oldname] <<- newname
@@ -4396,7 +4437,7 @@ server <- function(input, output, session) {
           if (i %in% grep(reactive_values$clustergroups, names(LD), value = T) &
               j == input$pickerclusterfile) {
             LD[[i]][[j]][5] <<- input$pickerclusterfile
-          } else{
+          } else {
             LD[[i]][[j]][5] <<- 0
           }))
       LIST_DATA$gene_info <- LD
@@ -4404,8 +4445,22 @@ server <- function(input, output, session) {
                    detail = 'This may take a while...',
                    value = 0,
                    {
+                     LD <- LIST_DATA
+                     count <- 0
+                     ListColorSet <- brewer.pal(4, "Dark2")
+                     sapply(names(LD$gene_info), function(i)
+                       sapply(names(LD$gene_info[[i]]), function(j)
+                         if (i %in% grep(reactive_values$clustergroups,
+                                         names(LD$gene_info),
+                                         value = T) & j == input$pickerclusterfile) {
+                           count <<- count + 1
+                           LD$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
+                           LD$gene_info[[i]][[j]][4] <<- ListColorSet[count]
+                         } else{
+                           LD$gene_info[[i]][[j]][5] <<- 0
+                         }))
       reactive_values$Apply_Cluster_Math <- ApplyMath(
-        LIST_DATA,
+        LD,
         input$myMathcluster,
         input$radioplotnromcluster,
         as.numeric(input$selectplotBinNormcluster)
@@ -4413,7 +4468,7 @@ server <- function(input, output, session) {
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
-          MakePlotOptionFrame(LIST_DATA)
+          MakePlotOptionFrame(LD)
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange,
@@ -4450,10 +4505,17 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      output$valueboxcluster1 <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Gene List 1", icon = icon("list"),
+          color = "green"
+        )
+      })
     }
   })
   
-  observeEvent(input$cluster2table_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$cluster2table_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
     newname <-
       paste0(reactive_values$clustergroups,
              "2\nn = ",
@@ -4481,16 +4543,30 @@ server <- function(input, output, session) {
                    detail = 'This may take a while...',
                    value = 0,
                    {
-      reactive_values$Apply_Cluster_Math <- ApplyMath(
-        LIST_DATA,
-        input$myMathcluster,
-        input$radioplotnromcluster,
-        as.numeric(input$selectplotBinNormcluster)
-      )
+                     LD <- LIST_DATA
+                     count <- 0
+                     ListColorSet <- brewer.pal(4, "Dark2")
+                     sapply(names(LD$gene_info), function(i)
+                       sapply(names(LD$gene_info[[i]]), function(j)
+                         if (i %in% grep(reactive_values$clustergroups,
+                                         names(LD$gene_info),
+                                         value = T) & j == input$pickerclusterfile) {
+                           count <<- count + 1
+                           LD$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
+                           LD$gene_info[[i]][[j]][4] <<- ListColorSet[count]
+                         } else{
+                           LD$gene_info[[i]][[j]][5] <<- 0
+                         }))
+                     reactive_values$Apply_Cluster_Math <- ApplyMath(
+                       LD,
+                       input$myMathcluster,
+                       input$radioplotnromcluster,
+                       as.numeric(input$selectplotBinNormcluster)
+                     )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
-          MakePlotOptionFrame(LIST_DATA)
+          MakePlotOptionFrame(LD)
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange,
@@ -4527,10 +4603,17 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      output$valueboxcluster2 <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Gene List 2", icon = icon("list"),
+          color = "green"
+        )
+      })
     }
   })
   
-  observeEvent(input$cluster3table_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$cluster3table_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
     newname <-
       paste0(reactive_values$clustergroups,
              "3\nn = ",
@@ -4558,16 +4641,30 @@ server <- function(input, output, session) {
                    detail = 'This may take a while...',
                    value = 0,
                    {
-      reactive_values$Apply_Cluster_Math <- ApplyMath(
-        LIST_DATA,
-        input$myMathcluster,
-        input$radioplotnromcluster,
-        as.numeric(input$selectplotBinNormcluster)
-      )
+                     LD <- LIST_DATA
+                     count <- 0
+                     ListColorSet <- brewer.pal(4, "Dark2")
+                     sapply(names(LD$gene_info), function(i)
+                       sapply(names(LD$gene_info[[i]]), function(j)
+                         if (i %in% grep(reactive_values$clustergroups,
+                                         names(LD$gene_info),
+                                         value = T) & j == input$pickerclusterfile) {
+                           count <<- count + 1
+                           LD$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
+                           LD$gene_info[[i]][[j]][4] <<- ListColorSet[count]
+                         } else{
+                           LD$gene_info[[i]][[j]][5] <<- 0
+                         }))
+                     reactive_values$Apply_Cluster_Math <- ApplyMath(
+                       LD,
+                       input$myMathcluster,
+                       input$radioplotnromcluster,
+                       as.numeric(input$selectplotBinNormcluster)
+                     )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
-          MakePlotOptionFrame(LIST_DATA)
+          MakePlotOptionFrame(LD)
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange,
@@ -4604,10 +4701,17 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      output$valueboxcluster3 <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Gene List 3", icon = icon("list"),
+          color = "green"
+        )
+      })
     }
   })
   
-  observeEvent(input$cluster4table_rows_all, ignoreInit = TRUE, {
+  observeEvent(input$cluster4table_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
     newname <-
       paste0(reactive_values$clustergroups,
              "4\nn = ",
@@ -4636,16 +4740,30 @@ server <- function(input, output, session) {
                    detail = 'This may take a while...',
                    value = 0,
                    {
-      reactive_values$Apply_Cluster_Math <- ApplyMath(
-        LIST_DATA,
-        input$myMathcluster,
-        input$radioplotnromcluster,
-        as.numeric(input$selectplotBinNormcluster)
-      )
+                     LD <- LIST_DATA
+                     count <- 0
+                     ListColorSet <- brewer.pal(4, "Dark2")
+                     sapply(names(LD$gene_info), function(i)
+                       sapply(names(LD$gene_info[[i]]), function(j)
+                         if (i %in% grep(reactive_values$clustergroups,
+                                         names(LD$gene_info),
+                                         value = T) & j == input$pickerclusterfile) {
+                           count <<- count + 1
+                           LD$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
+                           LD$gene_info[[i]][[j]][4] <<- ListColorSet[count]
+                         } else{
+                           LD$gene_info[[i]][[j]][5] <<- 0
+                         }))
+                     reactive_values$Apply_Cluster_Math <- ApplyMath(
+                       LD,
+                       input$myMathcluster,
+                       input$radioplotnromcluster,
+                       as.numeric(input$selectplotBinNormcluster)
+                     )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
-          MakePlotOptionFrame(LIST_DATA)
+          MakePlotOptionFrame(LD)
         Y_Axis_Cluster_numbers <-
           MyXSetValues(reactive_values$Apply_Cluster_Math,
                        input$sliderplotBinRange,
@@ -4682,6 +4800,13 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
+      output$valueboxcluster4 <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Gene List 4", icon = icon("list"),
+          color = "green"
+        )
+      })
     }
   })
   
@@ -4742,8 +4867,7 @@ server <- function(input, output, session) {
                        input$selectclusterfile,
                        input$pickerclusterfile,
                        input$sliderbincluster[1],
-                       input$sliderbincluster[2],
-                       input$selectclusternumber
+                       input$sliderbincluster[2]
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -4784,7 +4908,10 @@ server <- function(input, output, session) {
                    LIST_DATA <<- LD
                    show('actionclusterdatatable')
                    show('actionclusterplot')
-                   
+                   hide("cluster1table")
+                   hide("cluster2table")
+                   hide("cluster3table")
+                   hide("cluster4table")
                    ol <- input$selectclusterfile
                    if (!ol %in% names(LIST_DATA$gene_file)) {
                      ol <-
@@ -4870,6 +4997,56 @@ server <- function(input, output, session) {
                        )
                      })
                    }
+                   LD <- LIST_DATA
+                   count <- 0
+                   ListColorSet <- brewer.pal(4, "Dark2")
+                   sapply(names(LD$gene_info), function(i)
+                     sapply(names(LD$gene_info[[i]]), function(j)
+                       if (i %in% grep(reactive_values$clustergroups,
+                                       names(LD$gene_info),
+                                       value = T) & j == input$pickerclusterfile) {
+                         count <<- count + 1
+                         LD$gene_info[[i]][[j]][5] <<- input$pickerclusterfile
+                         LD$gene_info[[i]][[j]][4] <<- ListColorSet[count]
+                       } else{
+                         LD$gene_info[[i]][[j]][5] <<- 0
+                       }))
+                   withProgress(message = 'Calculation in progress',
+                                detail = 'This may take a while...',
+                                value = 0,
+                                {
+                                  reactive_values$Apply_Cluster_Math <- ApplyMath(
+                                    LD,
+                                    input$myMathcluster,
+                                    input$radioplotnromcluster,
+                                    as.numeric(input$selectplotBinNormcluster)
+                                  )
+                                })
+                   if (!is.null(reactive_values$Apply_Cluster_Math)) {
+                     reactive_values$Plot_Cluster_Options <-
+                       MakePlotOptionFrame(LD)
+                     Y_Axis_Cluster_numbers <-
+                       MyXSetValues(reactive_values$Apply_Cluster_Math,
+                                    input$sliderplotBinRange,
+                                    log_2 = input$checkboxlog2cluster)
+                     reactive_values$Plot_controler_cluster <- GGplotLineDot(
+                       reactive_values$Apply_Cluster_Math,
+                       input$sliderplotBinRange,
+                       reactive_values$Plot_Cluster_Options,
+                       Y_Axis_Cluster_numbers,
+                       reactive_values$Lines_Lables_List,
+                       input$checkboxsmoothcluster,
+                       input$checkboxlog2cluster,
+                       isolate(YAxisLable(
+                         input$myMathcluster,
+                         input$radioplotnromcluster,
+                         as.numeric(input$selectplotBinNorm),
+                         input$checkboxsmoothcluster,
+                         input$checkboxlog2cluster
+                       ))
+                     )
+                   }
+                   show('plotcluster')
                  } else {
                    output$valueboxcluster1 <- renderValueBox({
                      valueBox(
@@ -5191,7 +5368,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # CDF percent reactive
+  # CDF percent reactive ----
   observeEvent(input$slidercdfper, ignoreInit = TRUE, {
     oldname <- grep("CDF:", names(LIST_DATA$gene_info))
     if (is_empty(oldname)) {
@@ -5216,25 +5393,27 @@ server <- function(input, output, session) {
       names(LIST_DATA$gene_info)[oldname] <<- newname
       LIST_DATA$gene_file[[newname]]$use <<- gene_list
       df_options <-
-        semi_join(
+        inner_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
-          distinct(LIST_DATA$gene_file[[newname]]$full, set),
+          distinct(LIST_DATA$gene_file[[newname]]$full, set, set2),
           by = "set"
         ) %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set),
+          gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
+      if(any(duplicated(df_options$mycol))){
+        df_options$mycol <- brewer.pal(8, "Set1")[1:n_distinct(df_options$set)]
+      }
       df <- inner_join(LIST_DATA$gene_file[[newname]]$full,
                        LIST_DATA$gene_file[[newname]]$use,
                        by = "gene") %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set),
+          gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
-      
       use_header <- pull(distinct(df_options, myheader))
       if (n_groups(group_by(df_options, set)) == 2 &
           n_distinct(df$gene) > 1) {
@@ -5320,35 +5499,37 @@ server <- function(input, output, session) {
   
   
   # cdf tool gene lists $use ----
-  observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, ignoreNULL = FALSE, {
-    newname <- paste("CDF:", length(input$cdftable_rows_all))
+  observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
+    newname <- "CDF:"
     oldname <- grep("CDF:", names(LIST_DATA$gene_info))
-    if (newname != names(LIST_DATA$gene_info)[oldname]) {
+    if (newname != names(LIST_DATA$gene_info)[oldname] & length(input$cdftable_rows_all) != 0) {
       print("cdf filter $use")
       names(LIST_DATA$gene_file)[oldname] <<- newname
       names(LIST_DATA$gene_info)[oldname] <<- newname
       LIST_DATA$gene_file[[newname]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$cdftable_rows_all])
       df_options <-
-        semi_join(
+        inner_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
-          distinct(LIST_DATA$gene_file[[newname]]$full, set),
+          distinct(LIST_DATA$gene_file[[newname]]$full, set, set2),
           by = "set"
         ) %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set),
+          gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
+      if(any(duplicated(df_options$mycol))){
+        df_options$mycol <- brewer.pal(8, "Set1")[1:n_distinct(df_options$set)]
+      }
       df <- inner_join(LIST_DATA$gene_file[[newname]]$full,
                        LIST_DATA$gene_file[[newname]]$use,
                        by = "gene") %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set),
+          gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
-      
       use_header <- pull(distinct(df_options, myheader))
       if (n_groups(group_by(df_options, set)) == 2 &
           n_distinct(df$gene) > 1) {
@@ -5371,6 +5552,13 @@ server <- function(input, output, session) {
       }
       output$plotcdf <- renderPlot({
         GGplotC(df, df_options, use_header)
+      })
+      output$valueboxcdf <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use), 
+          "Gene List 1", icon = icon("list"),
+          color = "green"
+        )
       })
     }
   })
@@ -5449,9 +5637,8 @@ server <- function(input, output, session) {
           gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
-      ListColorSet <- brewer.pal(8, "Dark2")
       if(any(duplicated(df_options$mycol))){
-      df_options$mycol <- brewer.pal(8, "set1")[1:n_distinct(df_options$set)]
+      df_options$mycol <- brewer.pal(8, "Set1")[1:n_distinct(df_options$set)]
       }
       df <- inner_join(LIST_DATA$gene_file[[newname]]$full,
                        LIST_DATA$gene_file[[newname]]$use,
@@ -5483,6 +5670,13 @@ server <- function(input, output, session) {
       }
       output$plotcdf <- renderPlot({
         GGplotC(df, df_options, use_header)
+      })
+      output$valueboxcdf <- renderValueBox({
+        valueBox(
+          n_distinct(df$gene), 
+          "Gene List", icon = icon("list"),
+          color = "green"
+        )
       })
     } else {
       return()
@@ -6203,7 +6397,7 @@ ui <- dashboardPage(
                   )),
                   actionButton("actionclustertool", "Get clusters"),
                   actionButton("actiongroupstool", "Get groups"),
-                  checkboxInput("checkboxgrouptint", "tint gene list")
+                  checkboxInput("checkboxgrouptint", "tint gene list for main plot")
                 ),
                 box(
                   title = "Cluster Plot Options",
@@ -6211,21 +6405,21 @@ ui <- dashboardPage(
                   solidHeader = TRUE,
                   width = 6,
                   height = "250px",
-                  fluidRow(column(6, 
+                  fluidRow(column(5, 
+                                  awesomeRadio(
+                                    "myMathcluster",
+                                    label =
+                                      " ",
+                                    choices = c("mean", "sum"),
+                                    selected = "mean"
+                                  ),
                                   selectInput(
                       "selectplotBinNormcluster",
                       label = "Bin Norm:", 
                       choices = c(0:80), 
                       selected = 0
                     ),
-                      awesomeRadio(
-                        "myMathcluster",
-                        label =
-                          " ",
-                        choices = c("mean", "sum"),
-                        selected = "mean"
-                        ),
-                    actionButton("actionclusterplot", "plot")
+                    actionButton("actionclusterplot", "update plot")
                   ),
                     awesomeRadio(
                       "radioplotnromcluster",
@@ -6343,7 +6537,8 @@ ui <- dashboardPage(
                     helpText("All filtering applied to gene list usage elsewhere"),
                     DT::dataTableOutput('cdftable')
                   )
-                )
+                ),
+                valueBoxOutput("valueboxcdf")
               ))
     )
   )
