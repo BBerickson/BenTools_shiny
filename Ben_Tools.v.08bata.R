@@ -1898,13 +1898,13 @@ LinesLablesList <- function(body1bin = 20,
   )
 }
 
-# lines and labels preset helper
+# lines and labels preset helper ----
 LinesLablesPreSet <- function(mytype) {
   # 5|4, 4|3, tss, pA, bp/bin, every bin
   if (mytype == "543 bins 20,20,40") {
     tt <- c(20, 40, 15, 45, 100, 80, 10)
-  } else if (mytype == "543 bins 10,10,10") {
-    tt <- c(10, 20, 5, 25, 100, 30, 5)
+  } else if (mytype == "543 bins 10,10,20") {
+    tt <- c(10, 20, 5, 25, 100, 40, 5)
   } else if (mytype == "5' 1k 1k 80bins") {
     tt <- c(0, 0, 40, 0, 25, 80, 20)
   } else if (mytype == "5' .25k 10k 205bins") {
@@ -2398,7 +2398,7 @@ server <- function(input, output, session) {
       pickercdf <- list()
       for (i in names(LIST_DATA$gene_info)[grep("CDF:", names(LIST_DATA$gene_info), invert = T)]) {
         pickercdf[[i]] <-
-          list(
+          list(div(style = "margin-bottom: -20px;",
             pickerInput(
               inputId = gsub(" ", "-cdfspace2-", gsub("\n", "-cdfspace1-", i)),
               label = i,
@@ -2413,6 +2413,7 @@ server <- function(input, output, session) {
                 sapply(LIST_DATA$gene_info[[i]], "[[", 4)
               ), sep = ":"))
             )
+          )
           )
       }
       pickercdf
@@ -2442,7 +2443,7 @@ server <- function(input, output, session) {
     )
     # first time switch tab auto plot
     if (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0) {
-      reactive_values$Picker_controler <- names(LIST_DATA$table_file)
+      reactive_values$Picker_controler <- names(LIST_DATA$gene_file)
       if (LIST_DATA$STATE[2] == 0) {
         withProgress(message = 'Calculation in progress',
                      detail = 'This may take a while...',
@@ -3330,22 +3331,23 @@ server <- function(input, output, session) {
       pickerlist <- list()
       for (i in names(LIST_DATA$gene_info)) {
         pickerlist[[i]] <-
-          list(
-            pickerInput(
-              inputId = gsub(" ", "-bensspace2-", gsub("\n", "-bensspace1-", i)),
-              label = i,
-              width = "99%",
-              choices = names(LIST_DATA$table_file),
-              selected = names(LIST_DATA$table_file)[c(sapply(LIST_DATA$gene_info[[i]], "[[", 5) != 0)],
-              multiple = T,
-              options = list(
-                `actions-box` = TRUE,
-                `selected-text-format` = "count > 0"
-              ),
-              choicesOpt = list(style = paste("color", c(
-                sapply(LIST_DATA$gene_info[[i]], "[[", 4)
-              ), sep = ":"))
-            )
+          list(div(style = "margin-bottom: -20px;",
+                   pickerInput(
+                     inputId = gsub(" ", "-bensspace2-", gsub("\n", "-bensspace1-", i)),
+                     label = i,
+                     width = "99%",
+                     choices = names(LIST_DATA$table_file),
+                     selected = names(LIST_DATA$table_file)[c(sapply(LIST_DATA$gene_info[[i]], "[[", 5) != 0)],
+                     multiple = T,
+                     options = list(
+                       `actions-box` = TRUE,
+                       `selected-text-format` = "count > 0"
+                     ),
+                     choicesOpt = list(style = paste("color", c(
+                       sapply(LIST_DATA$gene_info[[i]], "[[", 4)
+                     ), sep = ":"))
+                   )
+          )
           )
       }
       output$DynamicGenePicker <- renderUI({  
@@ -5914,7 +5916,7 @@ ui <- dashboardPage(
                                 c(choices = "select", kBrewerList))
                            ),
                     column(4, style = "padding-top:5%;",
-                           checkboxInput("checkboxtint", "tint gene")
+                           checkboxInput("checkboxtint", "tint new gene list")
                     )
                     )
                   ),
@@ -6186,7 +6188,7 @@ ui <- dashboardPage(
                   solidHeader = T,
                   width = 12,
                   actionButton("actiongenelists", "Compare Gene lists"),
-                  checkboxInput("checkboxgenelists", "tint gene list"),
+                  checkboxInput("checkboxgenelists", "tint new gene list"),
                   helpText("Shows intersected, exlusive, and inclusive gene lists")
                 ),
                 box(
@@ -6266,7 +6268,7 @@ ui <- dashboardPage(
                     )
                   ),
                   actionButton("actionsorttool", "Sort"),
-                  checkboxInput("checkboxsorttool", "tint gene list")
+                  checkboxInput("checkboxsorttool", "tint new gene list")
                 ),
                 div(
                   id = "hidesorttable",
@@ -6328,7 +6330,7 @@ ui <- dashboardPage(
                   awesomeRadio("radioratiozero", label = "Handling #/0 = Inf", 
                                choices = c("replace with 0", "remove genes containing"),
                                selected = "remove genes containing"),
-                  checkboxInput("checkboxratiotint", "tint gene list"),
+                  checkboxInput("checkboxratiotint", "tint new gene list"),
                   sliderInput("sliderRatioBinNorm",
                                    label = "Bin Norm:",
                                    min = 0,
@@ -6397,7 +6399,7 @@ ui <- dashboardPage(
                   )),
                   actionButton("actionclustertool", "Get clusters"),
                   actionButton("actiongroupstool", "Get groups"),
-                  checkboxInput("checkboxgrouptint", "tint gene list for main plot")
+                  checkboxInput("checkboxgrouptint", "tint new gene list for main plot")
                 ),
                 box(
                   title = "Cluster Plot Options",
@@ -6516,7 +6518,7 @@ ui <- dashboardPage(
                   awesomeRadio("radiocdfzero", label = "Handling #/0 = Inf", 
                                choices = c("replace with 0", "remove genes containing"),
                                selected = "replace with 0"),
-                  checkboxInput("checkboxcdftint", "tint gene list")
+                  checkboxInput("checkboxcdftint", "tint new gene list")
                 ),
                 box(
                   title = "CDF Plot",

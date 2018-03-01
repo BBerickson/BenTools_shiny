@@ -23,18 +23,7 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 
 use and test
- 
-  
-  genelist and infoBox numbers 
-  
-update $sub info for xlab on all gene lists
-cdf and cluster ploting color picker???
-change color does not update picker... fix?
-remove print statements
 
-
-plot tab pickers closer
-    search uiOutput("DynamicGenePicker")
 move check box to left side of pickers?
 add icons to buttons?
 
