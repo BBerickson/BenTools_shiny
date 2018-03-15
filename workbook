@@ -24,8 +24,9 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 use and test
 
-move check box to left side of pickers?
-add icons to buttons?
+tint same color main plot ... test and add usage
+add no selected files message to all tools
+add plot all tools?
 
 
 # to revert to older libary

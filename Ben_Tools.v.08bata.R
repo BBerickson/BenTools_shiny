@@ -299,8 +299,7 @@ LoadTableFile <-
             paste("Loaded gene list from file",
                   legend_nickname,
                   Sys.Date())
-          list_data$gene_file[[legend_nickname]]$sub <-
-            paste(Sys.Date())
+          list_data$gene_file[[legend_nickname]]$sub <- " "
           list_data$gene_info[[legend_nickname]] <-
             lapply(setNames(
               names(list_data$gene_info[[1]]),
@@ -504,7 +503,7 @@ LoadTableFile <-
         # saves data in list of lists
         list_data$table_file[[legend_nickname]] <- tablefile
         list_data$gene_file[[my_name]]$use <- gene_names
-        list_data$gene_file[[my_name]]$sub <-  paste(Sys.Date())
+        list_data$gene_file[[my_name]]$sub <-  " "
         list_data$gene_info[[my_name]][[legend_nickname]] <-
           # don't change the order of postions
           tibble(
@@ -521,10 +520,19 @@ LoadTableFile <-
         
         # generate info from the new file for loaded gene list(s)
         sapply(seq_along(list_data$gene_file)[-1], function(g) {
-          enesg <-
-            inner_join(list_data$gene_file[[g]]$full,
-                       list_data$gene_file[[1]]$use,
-                       by = "gene")
+          oldname <- grep("CDF ", names(list_data$gene_info)[g])
+          if(!is_empty(oldname)){
+            dt <- select(list_data$gene_file[[g]]$full, -bin, -set) %>%
+              spread(., set2, value) %>% select(., gene)
+            enesg <- inner_join(dt,
+              list_data$gene_file[[1]]$use,
+              by = "gene")
+          } else {
+            enesg <-
+              inner_join(select(list_data$gene_file[[g]]$full, gene),
+                         list_data$gene_file[[1]]$use,
+                         by = "gene")
+          }
           if (n_distinct(enesg$gene) < 1) {
             showModal(
               modalDialog(
@@ -535,7 +543,7 @@ LoadTableFile <-
               )
             )
           }
-          list_data$gene_file[[g]]$use <<- select(enesg, gene)
+          list_data$gene_file[[g]]$use <<- enesg
           my_name_g <-
             sub(
               "([0-9]+)",
@@ -630,7 +638,7 @@ CheckBoxOnOff <- function(check_box, list_data) {
     for (i in names(list_data[[j]])) {
       # 0 = don't plot, name of file = plot
       if (!i %in% check_box[[j]]) {
-        list_data[[j]][[i]]["onoff"] <- 0
+        list_data[[j]][[i]]["onoff"] <- "0"
       } else {
         list_data[[j]][[i]]["onoff"] <- i
       }
@@ -845,7 +853,7 @@ RemoveFile <- function(list_data, file_name, remove_all) {
   list_data
 }
 
-# inclusive, exclusive and intersected gene lists
+# Total, exclusive and intersected gene lists
 IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
   if (is.null(list_name)) {
     return(NULL)
@@ -869,23 +877,23 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
   # recored for info
   nick_name <- NULL
   
-  setProgress(2, detail = paste("building inclusive list"))
-  inclusive <- distinct(outlist)
+  setProgress(2, detail = paste("building Total list"))
+  Total <- distinct(outlist)
   
-  if (n_distinct(inclusive$gene) > 0) {
+  if (n_distinct(Total$gene) > 0) {
     nick_name1 <-
-      paste("Gene_List_inclusive\nn =", n_distinct(inclusive$gene))
+      paste("Gene_List_Total\nn =", n_distinct(Total$gene))
     # recored for info
     nick_name <- c(nick_name, nick_name1)
-    list_data$gene_file[[nick_name1]]$full <- inclusive
-    list_data$gene_file[[nick_name1]]$use <- select(inclusive, gene)
+    list_data$gene_file[[nick_name1]]$full <- Total
+    list_data$gene_file[[nick_name1]]$use <- select(Total, gene)
     list_data$gene_file[[nick_name1]]$info <-
-      paste("Gene_List_inclusive",
+      paste("Gene_List_Total",
             "from",
             paste(list_name, collapse = " and "),
             Sys.Date())
     list_data$gene_file[[nick_name1]]$sub <-
-      paste(Sys.Date())
+      paste("Gene_List_Total")
   }
   
   setProgress(3, detail = paste("building intersect list"))
@@ -904,11 +912,11 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
             paste(list_name, collapse = " and "),
             Sys.Date())
     list_data$gene_file[[nick_name1]]$sub <-
-      paste(Sys.Date())
+      "Gene_List_intersect"
     
     setProgress(4, detail = paste("building exclusive list"))
     
-    exclusive <- anti_join(inclusive, intersect, by = "gene")
+    exclusive <- anti_join(Total, intersect, by = "gene")
     if (n_distinct(exclusive$gene) > 0) {
       nick_name1 <-
         paste("Gene_List_exclusive\nn =", n_distinct(exclusive$gene))
@@ -923,7 +931,7 @@ IntersectGeneLists <- function(list_data, list_name, mytint = FALSE) {
               paste(list_name, collapse = " and "),
               Sys.Date())
       list_data$gene_file[[nick_name1]]$sub <-
-        paste(Sys.Date())
+        "Gene_List_exclusive"
     }
   }
   setProgress(5, detail = "finishing up")
@@ -1038,12 +1046,17 @@ SortTop <-
         "from",
         list_name,
         paste(file_names, collapse = " "),
-        Sys.Date()
+        Sys.Date(),
+        list_data$gene_file[[list_name]]$info
       )
+    
     list_data$gene_file[[nick_name]]$sub <-
       paste(
         "Sort",
-        topbottom)
+        topbottom,
+        "from", 
+        list_data$gene_file[[list_name]]$sub
+        )
     if(mytint){
       mytint <- length(list_data$gene_file) * 0.1
     } else {
@@ -1232,7 +1245,9 @@ CompareRatios <-
         paste("Ratio_Up_file1",
           "fold change cut off",
           num,
-          divzerofix)
+          divzerofix,
+          "from", 
+          list_data$gene_file[[list_name]]$sub)
     }
     setProgress(3, detail = paste("building list", ratio2file))
     upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
@@ -1266,7 +1281,9 @@ CompareRatios <-
         paste("Ratio_Up_file2",
               "fold change cut off",
               num,
-              divzerofix)
+              divzerofix,
+              "from", 
+              list_data$gene_file[[list_name]]$sub)
     }
     setProgress(4, detail = paste("building list: no change"))
     upratio <- filter(outlist[[1]], Ratio <= num & Ratio >= 1 / num | Ratio == 0)
@@ -1301,7 +1318,9 @@ CompareRatios <-
         paste("Ratio_No_Diff",
               "fold change cut off",
               num,
-              divzerofix)
+              divzerofix,
+              "from", 
+              list_data$gene_file[[list_name]]$sub)
     }
     if(mytint){
       mytint <- length(list_data$gene_file) * 0.1
@@ -1360,6 +1379,9 @@ ClusterNumList <- function(list_data,
     gene_list <-
       mutate(list_data$clust$full, cm = ntile(cm, as.numeric(num)))
   }
+  if(is_empty(grep("Cluster_", list_name)) | is_empty(grep("Group_", list_name))){
+    list_name <- 1
+  }
   for (nn in 1:num) {
     outlist <- filter(gene_list, cm == nn)
     nick_name <-
@@ -1382,7 +1404,11 @@ ClusterNumList <- function(list_data,
         Sys.Date()
       )
     list_data$gene_file[[nick_name]]$sub <-
-      paste(Sys.Date())
+      paste(myname,
+            "by",
+            num,
+            "from", 
+            list_data$gene_file[[list_name]]$sub)
     setProgress(4, detail = paste("finishing cluster", nn))
     if(mytint){
       mytint <- length(list_data$gene_file) * 0.1
@@ -1500,7 +1526,7 @@ CumulativeDistribution <-
     }
     outlist <- bind_rows(outlist)
     
-    for (rr in grep("CDF:", names(LIST_DATA$gene_file), value = T)) {
+    for (rr in grep("CDF ", names(LIST_DATA$gene_file), value = T)) {
       if (length(rr) > 0) {
         list_data$gene_file[[rr]] <- NULL
         list_data$gene_info[[rr]] <- NULL
@@ -1513,7 +1539,7 @@ CumulativeDistribution <-
       distinct(gene) %>%
       ungroup()
     if (n_distinct(gene_list$gene) > 0) {
-      nick_name1 <- "CDF:"
+      nick_name1 <- paste0("CDF n = ", n_distinct(outlist$gene))
       list_data$gene_file[[nick_name1]]$full <- outlist
       list_data$gene_file[[nick_name1]]$use <- gene_list
       list_data$gene_file[[nick_name1]]$info <-
@@ -1539,7 +1565,9 @@ CumulativeDistribution <-
           Sys.Date()
         )
       list_data$gene_file[[nick_name1]]$sub <-
-        paste(Sys.Date())
+        paste("CDF",
+              "from", 
+              list_data$gene_file[[list_name]]$sub)
     }
     if (sum(start1_bin, end1_bin) > sum(start2_bin, end2_bin)) {
       use_header <- "Log2 EI Cumulative plot"
@@ -1687,7 +1715,15 @@ MakePlotOptionFrame <- function(list_data) {
     }
   }
   if (!is.null(names(list_data_frame))) {
-    return(bind_rows(list_data_frame))
+    list_data_frame <- bind_rows(list_data_frame)
+    # tint if same color is used more then once
+    ldf <- duplicated(list_data_frame$mycol)
+    for(i in seq_along(list_data_frame$mycol)){
+      if(ldf[i]){
+        list_data_frame$mycol[i] <- RgbToHex(my_hex = list_data_frame$mycol[i], tint = log10(i))
+      }
+    }
+    return(list_data_frame)
   } else {
     print("no options")
     return(NULL)
@@ -2000,7 +2036,7 @@ GGplotLineDot <-
       scale_color_manual(values = use_col) +
       scale_shape_manual(values = use_dot) +
       scale_linetype_manual(values = use_line) +
-      xlab(paste(unique(plot_options$mysub), collapse = ", ")) +
+      xlab(paste(Sys.Date(), paste(unique(plot_options$mysub), collapse = ", "), collapse = ", ")) +
       ylab(use_y_label) +  
       scale_x_continuous(breaks = line_list$mybrakes,
                          labels = line_list$mylables) +
@@ -2396,7 +2432,7 @@ server <- function(input, output, session) {
       #update cdf dynamic picker
       output$DynamicCDFPicker <- renderUI({
       pickercdf <- list()
-      for (i in names(LIST_DATA$gene_info)[grep("CDF:", names(LIST_DATA$gene_info), invert = T)]) {
+      for (i in names(LIST_DATA$gene_info)[grep("CDF ", names(LIST_DATA$gene_info), invert = T)]) {
         pickercdf[[i]] <-
           list(div(style = "margin-bottom: -20px;",
             pickerInput(
@@ -2418,7 +2454,7 @@ server <- function(input, output, session) {
       }
       pickercdf
       })
-      if (sum(grepl("CDF:", names(LIST_DATA$gene_file))) == 0) {
+      if (sum(grepl("CDF ", names(LIST_DATA$gene_file))) == 0) {
         output$plotcdf <- renderPlot({
           NULL
         })
@@ -2426,7 +2462,7 @@ server <- function(input, output, session) {
         hide('actioncdfdatatable')
         my_count <- 0
       } else {
-        my_count <- n_distinct(LIST_DATA$gene_file[[grep("CDF:", names(LIST_DATA$gene_info))]]$use$gene)
+        my_count <- n_distinct(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$use$gene)
       }
       output$valueboxcdf <- renderValueBox({
         valueBox(
@@ -2499,7 +2535,7 @@ server <- function(input, output, session) {
       "sliderbinratio1",
       min = LIST_DATA$x_plot_range[1],
       value = c(
-        LIST_DATA$x_plot_range[1],
+        floor(LIST_DATA$x_plot_range[1] / 8),
         floor(LIST_DATA$x_plot_range[2] / 4)
       )
     )
@@ -2508,7 +2544,7 @@ server <- function(input, output, session) {
       "sliderbinratio2",
       value = c(
         ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
-        LIST_DATA$x_plot_range[2]
+        floor(LIST_DATA$x_plot_range[2] / 2)
       )
     )
     updateSliderInput(
@@ -2540,7 +2576,7 @@ server <- function(input, output, session) {
       min = LIST_DATA$x_plot_range[1],
       max = LIST_DATA$x_plot_range[2],
       value = c(
-        LIST_DATA$x_plot_range[1],
+        floor(LIST_DATA$x_plot_range[1] / 8),
         floor(LIST_DATA$x_plot_range[2] / 4)
       )
     )
@@ -2551,7 +2587,7 @@ server <- function(input, output, session) {
       max = LIST_DATA$x_plot_range[2],
       value = c(
         ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
-        LIST_DATA$x_plot_range[2]
+        floor(LIST_DATA$x_plot_range[2] / 2)
       )
     )
   })
@@ -3374,8 +3410,7 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_info),
         selected = names(LIST_DATA$gene_info)[1]
       )
-      updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
-    } else{
+    } else {
       updateSelectInput(session,
                          "selectdataoption",
                          choices = '')
@@ -3388,7 +3423,24 @@ server <- function(input, output, session) {
       hide("checkboxsavesplit")
       hide("filecolor")
       hide("startoff")
+      hide('actiongenelistsdatatable')
+      hide('genelists1table')
+      hide('genelists2table')
+      hide('genelists3table')
+      hide('actionsortdatatable')
+      hide('sorttable')
+      hide('ratio1table')
+      hide('ratio2table')
+      hide('ratio3table')
+      hide('plotcluster')
+      hide("cluster1table")
+      hide("cluster2table")
+      hide("cluster3table")
+      hide("cluster4table")
+      hide('cdftable')
+      hide('plotcdf')
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
+      updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
     }
     reactive_values$binset <- FALSE
     reactive_values$Picker_controler <- names(LIST_DATA$table_file)
@@ -3495,11 +3547,11 @@ server <- function(input, output, session) {
           )
         })
       }
-      if (any(grep("Gene_List_inclusive\nn =", names(LIST_DATA$gene_info)) > 0)) {
+      if (any(grep("Gene_List_Total\nn =", names(LIST_DATA$gene_info)) > 0)) {
         output$valueboxgene2 <- renderValueBox({
           valueBox(
-            n_distinct(LIST_DATA$gene_file[[grep("Gene_List_inclusive\nn =", names(LIST_DATA$gene_info))]]$use), 
-            "Gene List inclusive", icon = icon("list"),
+            n_distinct(LIST_DATA$gene_file[[grep("Gene_List_Total\nn =", names(LIST_DATA$gene_info))]]$use), 
+            "Gene List Total", icon = icon("list"),
             color = "yellow"
           )
         })
@@ -3507,7 +3559,7 @@ server <- function(input, output, session) {
         output$valueboxgene2 <- renderValueBox({
           valueBox(
             0, 
-            "Gene List inclusive", icon = icon("list"),
+            "Gene List Total", icon = icon("list"),
             color = "yellow"
           )
         })
@@ -3540,7 +3592,7 @@ server <- function(input, output, session) {
       output$valueboxgene2 <- renderValueBox({
         valueBox(
           0, 
-          "Gene List inclusive", icon = icon("list"),
+          "Gene List Total", icon = icon("list"),
           color = "yellow"
         )
       })
@@ -3617,15 +3669,15 @@ server <- function(input, output, session) {
             options = list(searching = FALSE)
           )
         )
-      mytab <- "Inclusive Gene Lists"
+      mytab <- "Total Gene Lists"
     }
-    if (any(grep("Gene_List_inclusive\nn =", names(LIST_DATA$gene_info)) >
+    if (any(grep("Gene_List_Total\nn =", names(LIST_DATA$gene_info)) >
             0)) {
       newnames2 <-
         gsub("\n",
              " ",
              grep(
-               "Gene_List_inclusive\nn =",
+               "Gene_List_Total\nn =",
                names(LIST_DATA$gene_info),
                value = TRUE
              ))
@@ -3636,13 +3688,13 @@ server <- function(input, output, session) {
                      output$genelists2table <-
                        DT::renderDataTable(
                          datatable(
-                           LIST_DATA$gene_file[[grep("Gene_List_inclusive\nn =",
+                           LIST_DATA$gene_file[[grep("Gene_List_Total\nn =",
                                                      names(LIST_DATA$gene_info))]]$full,
                            rownames = FALSE,
                            colnames = newnames2,
                            class = 'cell-border stripe compact',
                            filter = 'top',
-                           caption = LIST_DATA$gene_file[[grep("Gene_List_inclusive\nn =",
+                           caption = LIST_DATA$gene_file[[grep("Gene_List_Total\nn =",
                                                                names(LIST_DATA$gene_info))]]$info,
                            options = list(
                              pageLength = 15,
@@ -3676,7 +3728,7 @@ server <- function(input, output, session) {
             options = list(searching = FALSE)
           )
         )
-      if (mytab == "Inclusive Gene Lists") {
+      if (mytab == "Total Gene Lists") {
         mytab <- "Exclusive Gene Lists"
       }
     }
@@ -3738,7 +3790,7 @@ server <- function(input, output, session) {
           )
         )
       if (mytab == "Exclusive Gene Lists") {
-        mytab <- "Inclusive Gene Lists"
+        mytab <- "Total Gene Lists"
       }
     }
     updateTabItems(session, "geneliststooltab", mytab)
@@ -3891,7 +3943,6 @@ server <- function(input, output, session) {
       print("sort filter $use")
       names(LIST_DATA$gene_file)[oldname] <<- newname
       names(LIST_DATA$gene_info)[oldname] <<- newname
-      
       LIST_DATA$gene_file[[newname]]$use <<-
         tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$sorttable_rows_all])
       ol <- input$selectsortfile
@@ -5372,7 +5423,7 @@ server <- function(input, output, session) {
   
   # CDF percent reactive ----
   observeEvent(input$slidercdfper, ignoreInit = TRUE, {
-    oldname <- grep("CDF:", names(LIST_DATA$gene_info))
+    oldname <- grep("CDF ", names(LIST_DATA$gene_info))
     if (is_empty(oldname)) {
       return()
     }
@@ -5387,7 +5438,7 @@ server <- function(input, output, session) {
       filter(all(between(bin, num[1], num[2]))) %>%
       distinct(gene) %>%
       ungroup()
-    newname <- paste("CDF:", n_distinct(gene_list$gene))
+    newname <- paste("CDF ", n_distinct(gene_list$gene))
     if (newname != names(LIST_DATA$gene_info)[oldname]) {
       hide('cdftable')
       show('actioncdfdatatable')
@@ -5445,14 +5496,14 @@ server <- function(input, output, session) {
   
   # CDF generate gene list ----
   observeEvent(input$actioncdfdatatable, ignoreInit = TRUE, {
-    if (any(grep("CDF:", names(LIST_DATA$gene_info)) > 0)) {
+    if (any(grep("CDF ", names(LIST_DATA$gene_info)) > 0)) {
       newnames1 <-
         gsub("\n", " ",
-             grep("CDF:",
+             grep("CDF ",
                names(LIST_DATA$gene_info),
                value = TRUE
              ))
-      df <- select(LIST_DATA$gene_file[[grep("CDF:", names(LIST_DATA$gene_info))]]$full, -bin, -set) %>% 
+      df <- select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$full, -bin, -set) %>% 
         mutate(value = round(value, 5)) %>% 
         spread(., set2, value)
       dt <- datatable(
@@ -5461,7 +5512,7 @@ server <- function(input, output, session) {
         rownames = FALSE,
         class = 'cell-border stripe compact',
         filter = 'top',
-        caption = LIST_DATA$gene_file[[grep("CDF:", names(LIST_DATA$gene_info))]]$info,
+        caption = LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$info,
         options = list(
           pageLength = 15,
           scrollX = TRUE,
@@ -5502,14 +5553,16 @@ server <- function(input, output, session) {
   
   # cdf tool gene lists $use ----
   observeEvent(input$cdftable_rows_all, ignoreInit = TRUE, ignoreNULL = TRUE, {
-    newname <- "CDF:"
-    oldname <- grep("CDF:", names(LIST_DATA$gene_info))
+    newname <- paste("CDF n =", length(input$cdftable_rows_all))
+    oldname <- grep("CDF ", names(LIST_DATA$gene_info))
     if (newname != names(LIST_DATA$gene_info)[oldname] & length(input$cdftable_rows_all) != 0) {
       print("cdf filter $use")
       names(LIST_DATA$gene_file)[oldname] <<- newname
       names(LIST_DATA$gene_info)[oldname] <<- newname
+      dt <- select(LIST_DATA$gene_file[[newname]]$full, -bin, -set) %>%
+        spread(., set2, value)
       LIST_DATA$gene_file[[newname]]$use <<-
-        tibble(gene = LIST_DATA$gene_file[[newname]]$full$gene[input$cdftable_rows_all])
+        tibble(gene = dt$gene[input$cdftable_rows_all])
       df_options <-
         inner_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
@@ -5604,6 +5657,9 @@ server <- function(input, output, session) {
           c(checkboxonoff[[selectgenelistonoff]], tt)
       }
     }
+    if(is_empty(checkboxonoff)){
+      return()
+    }
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -5627,7 +5683,7 @@ server <- function(input, output, session) {
       show('actioncdfdatatable')
       show('plotcdf')
       newname <-
-        grep("CDF:", names(LIST_DATA$gene_info), value = TRUE)
+        grep("CDF ", names(LIST_DATA$gene_info), value = TRUE)
       df_options <-
         inner_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
@@ -5866,7 +5922,7 @@ ui <- dashboardPage(
                                  div(style = "padding: 5px 15px;",
                                      hidden(
                                        fileInput("filegene1",
-                                                 label = "Load 1st gene list",
+                                                 label = "Load gene list",
                                                  accept = c('.txt')),
                                        checkboxInput("checkboxconvert",
                                                      "gene list partial matching", value = FALSE)
@@ -6189,7 +6245,7 @@ ui <- dashboardPage(
                   width = 12,
                   actionButton("actiongenelists", "Compare Gene lists"),
                   checkboxInput("checkboxgenelists", "tint new gene list"),
-                  helpText("Shows intersected, exlusive, and inclusive gene lists")
+                  helpText("Shows Intersected, Exlusive, and Total gene lists")
                 ),
                 box(
                   title = "Gene List Tables",
@@ -6207,7 +6263,7 @@ ui <- dashboardPage(
                       DT::dataTableOutput('genelists1table')
                     ),
                     tabPanel(
-                      "Inclusive Gene Lists",
+                      "Total Gene Lists",
                       helpText("All filtering applied to gene list usage elsewhere"),
                       DT::dataTableOutput('genelists2table')
                     ),
