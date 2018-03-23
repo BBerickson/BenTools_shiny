@@ -970,8 +970,15 @@ SortTop <-
            topbottom,
            mytint = FALSE) {
     if (is.null(file_names)) {
+      showModal(modalDialog(
+        title = "Information message",
+        paste("No file selected to work on"),
+        size = "s",
+        easyClose = TRUE
+      ))
       return(NULL)
     }
+    
     lc <- 0
     outlist <- NULL
     lapply(file_names, function(j) {
@@ -1357,6 +1364,12 @@ ClusterNumList <- function(list_data,
                            myname,
                            mytint = FALSE) {
   if (is_empty(list_data$clust) | clusterfile == "") {
+    showModal(modalDialog(
+      title = "Information message",
+      paste("No file selected to work on"),
+      size = "s",
+      easyClose = TRUE
+    ))
     return(NULL)
   }
   setProgress(3, detail = "spliting into clusters")
@@ -1440,6 +1453,12 @@ FindClusters <- function(list_data,
                          start_bin,
                          end_bin) {
   if (clusterfile == "") {
+    showModal(modalDialog(
+      title = "Information message",
+      paste("No file selected to work on"),
+      size = "s",
+      easyClose = TRUE
+    ))
     return(NULL)
   }
   print(list_name)
@@ -1461,6 +1480,12 @@ FindGroups <- function(list_data,
                        start_bin,
                        end_bin) {
   if (clusterfile == "") {
+    showModal(modalDialog(
+      title = "Information message",
+      paste("No file selected to work on"),
+      size = "s",
+      easyClose = TRUE
+    ))
     return(NULL)
   }
   setProgress(1, detail = paste("gathering data"))
@@ -1488,6 +1513,12 @@ CumulativeDistribution <-
            divzerofix,
            mytint = FALSE) {
     if (is.null(onoff)) {
+      showModal(modalDialog(
+        title = "Information message",
+        paste("No file selected to work on"),
+        size = "s",
+        easyClose = TRUE
+      ))
       return()
     }
     outlist <- NULL
@@ -3159,7 +3190,6 @@ server <- function(input, output, session) {
     updateNumericInput(session, "numericbinsize", value = myset[5])
     updateNumericInput(session, "numericlabelspaceing", value = myset[7])
     
-    
     reactive_values$Lines_Lables_List <-
       LinesLablesList(myset[1],
                       myset[2],
@@ -3190,6 +3220,7 @@ server <- function(input, output, session) {
         myset[i] <- 0
         } else if (i %in% c(1:4, 6) &
                    myset[i] > LIST_DATA$x_plot_range[2]) {
+          print("out of bounds")
           myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
           myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
           myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
@@ -3200,7 +3231,7 @@ server <- function(input, output, session) {
       myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
       myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
     }
-    if(myset[3] > 0 & myset[3] >= myset[4]){
+    if(myset[3] > 0 & myset[4] != 0 & myset[3] >= myset[4]){
       myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
       myset[3] <- floor(LIST_DATA$x_plot_range[2]*.25)
     }
@@ -6244,7 +6275,6 @@ ui <- dashboardPage(
                   solidHeader = T,
                   width = 12,
                   actionButton("actiongenelists", "Compare Gene lists"),
-                  checkboxInput("checkboxgenelists", "tint new gene list"),
                   helpText("Shows Intersected, Exlusive, and Total gene lists")
                 ),
                 box(
@@ -6323,8 +6353,7 @@ ui <- dashboardPage(
                       )
                     )
                   ),
-                  actionButton("actionsorttool", "Sort"),
-                  checkboxInput("checkboxsorttool", "tint new gene list")
+                  actionButton("actionsorttool", "Sort")
                 ),
                 div(
                   id = "hidesorttable",
@@ -6386,7 +6415,6 @@ ui <- dashboardPage(
                   awesomeRadio("radioratiozero", label = "Handling #/0 = Inf", 
                                choices = c("replace with 0", "remove genes containing"),
                                selected = "remove genes containing"),
-                  checkboxInput("checkboxratiotint", "tint new gene list"),
                   sliderInput("sliderRatioBinNorm",
                                    label = "Bin Norm:",
                                    min = 0,
@@ -6454,8 +6482,7 @@ ui <- dashboardPage(
                     )
                   )),
                   actionButton("actionclustertool", "Get clusters"),
-                  actionButton("actiongroupstool", "Get groups"),
-                  checkboxInput("checkboxgrouptint", "tint new gene list for main plot")
+                  actionButton("actiongroupstool", "Get groups")
                 ),
                 box(
                   title = "Cluster Plot Options",
@@ -6573,8 +6600,7 @@ ui <- dashboardPage(
                   actionButton("actioncdftool", "Plot CDF"),
                   awesomeRadio("radiocdfzero", label = "Handling #/0 = Inf", 
                                choices = c("replace with 0", "remove genes containing"),
-                               selected = "replace with 0"),
-                  checkboxInput("checkboxcdftint", "tint new gene list")
+                               selected = "replace with 0")
                 ),
                 box(
                   title = "CDF Plot",
