@@ -3544,7 +3544,7 @@ server <- function(input, output, session) {
                  value = 0,
                  {
                    LD <- IntersectGeneLists(LIST_DATA,
-                                            input$pickergenelists, input$checkboxgenelists)
+                                            input$pickergenelists)
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
@@ -3863,8 +3863,7 @@ server <- function(input, output, session) {
                      input$slidersortbinrange[1],
                      input$slidersortbinrange[2],
                      input$slidersortpercent,
-                     input$selectsorttop,
-                     input$checkboxsorttool
+                     input$selectsorttop
                    )
                  })
     if (!is_empty(LD$table_file)) {
@@ -4199,8 +4198,7 @@ server <- function(input, output, session) {
                        input$sliderbinratio2[2],
                        input$numericratio,
                        input$radioratiozero,
-                       input$sliderRatioBinNorm,
-                       input$checkboxratiotint
+                       input$sliderRatioBinNorm
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -4984,8 +4982,7 @@ server <- function(input, output, session) {
                                     input$sliderbincluster[1],
                                     input$sliderbincluster[2],
                                     input$selectclusternumber,
-                                    reactive_values$clustergroups,
-                                    input$checkboxgrouptint
+                                    reactive_values$clustergroups
                                   )
                               })
                  if (!is_empty(LD$table_file)) {
@@ -5705,8 +5702,7 @@ server <- function(input, output, session) {
                        input$sliderbincdf2[2],
                        input$slidercdfper[1],
                        input$slidercdfper[2],
-                       input$radiocdfzero,
-                       input$checkboxcdftint
+                       input$radiocdfzero
                      )
                  })
     if (!is_empty(LD$table_file)) {

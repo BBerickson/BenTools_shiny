@@ -24,6 +24,7 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 use and test
 
+reset color quick change crash ... probably trying to replot old ata
 tint same color main plot ... test and add usage
 
 add plot all tools?
