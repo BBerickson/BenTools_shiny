@@ -1510,7 +1510,6 @@ CumulativeDistribution <-
            end2_bin,
            bottom_per,
            top_per,
-           divzerofix,
            mytint = FALSE) {
     if (is.null(onoff)) {
       showModal(modalDialog(
@@ -1522,13 +1521,14 @@ CumulativeDistribution <-
       return()
     }
     outlist <- NULL
+    genelist <- NULL
     for (list_name in names(onoff)) {
       setProgress(1, detail = paste("dividing one by the other"))
       gene_count <-
         n_distinct(list_data$gene_file[[list_name]]$use$gene)
       num <-
-        c(ceiling(gene_count * bottom_per / 100),
-          ceiling(gene_count * top_per / 100))
+        c(ceiling(gene_count * top_per / 100),
+          ceiling(gene_count * bottom_per / 100))
       lapply(onoff[[list_name]], function(j) {
         df <-
           semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
@@ -1537,24 +1537,24 @@ CumulativeDistribution <-
                     sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>% ungroup()
         outlist[[paste0(list_name, "-", j)]] <<-
           transmute(df, gene = gene, value = sum1 / sum2) %>%
-          na_if(Inf)
-        if (divzerofix == "replace with 0") {
-          # find Inf and Na's replace 0s
-          outlist[[paste0(list_name, "-", j)]] <<-
-            replace_na(outlist[[paste0(list_name, "-", j)]], list(value = 0)) %>%
-            arrange(desc(value)) %>%
-            mutate(bin = row_number(), set = j, set2 = paste(sub("\n", " ", list_name), "-", j), value = value)
-        } else {
-          outlist[[paste0(list_name, "-", j)]] <<-
+          na_if(Inf) %>% na_if(0)
+        outlist[[paste0(list_name, "-", j)]] <<-
             group_by(outlist[[paste0(list_name, "-", j)]], gene) %>%
             summarise(test = sum(value)) %>%
             filter(!is.na(test)) %>%
             semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
             arrange(desc(value)) %>%
             mutate(bin = row_number(), set = j, set2 = paste(sub("\n", " ", list_name), "-", j), value = value)
+        if(n_distinct(outlist) > 1){
+          genelist <<- semi_join(genelist, outlist[[paste0(list_name, "-", j)]], by = "gene")
+        } else {
+          genelist <<- select(outlist[[paste0(list_name, "-", j)]], gene)
         }
       })
     }
+    lapply(names(outlist), function(p)
+      outlist[[p]] <<- inner_join(outlist[[p]], genelist, by = "gene")
+      )
     outlist <- bind_rows(outlist)
     
     for (rr in grep("CDF ", names(LIST_DATA$gene_file), value = T)) {
@@ -1588,7 +1588,6 @@ CumulativeDistribution <-
           bottom_per,
           "to",
           top_per,
-          divzerofix,
           "from",
           list_name,
           "gene list",
@@ -2104,7 +2103,7 @@ GGplotLineDot <-
     return(suppressMessages(gp))
   }
 
-# main ggplot function
+# CDG ggplot function
 GGplotC <-
   function(df2,
            plot_options,
@@ -3920,7 +3919,7 @@ server <- function(input, output, session) {
       dt <- datatable(
         LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full,
         rownames = FALSE,
-        colnames = strtrim(newnames, 24),
+        colnames = strtrim(newnames, 30),
         class = 'cell-border stripe compact',
         filter = 'top',
         caption = LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$info,
@@ -5178,7 +5177,7 @@ server <- function(input, output, session) {
                              names(LIST_DATA$gene_info)
                            )]]$full,
                            rownames = FALSE,
-                           colnames = strtrim(newnames, 24),
+                           colnames = gsub("(.{22})", "\\1\n", newnames),
                            class = 'cell-border stripe compact',
                            filter = 'top',
                            caption = LIST_DATA$gene_file[[grep(
@@ -5235,7 +5234,7 @@ server <- function(input, output, session) {
                              names(LIST_DATA$gene_info)
                            )]]$full,
                            rownames = FALSE,
-                           colnames = strtrim(newnames, 24),
+                           colnames = gsub("(.{22})", "\\1\n", newnames),
                            class = 'cell-border stripe compact',
                            filter = 'top',
                            caption = LIST_DATA$gene_file[[grep(
@@ -5292,7 +5291,7 @@ server <- function(input, output, session) {
                              names(LIST_DATA$gene_info)
                            )]]$full,
                            rownames = FALSE,
-                           colnames = strtrim(newnames, 24),
+                           colnames = gsub("(.{22})", "\\1\n", newnames),
                            class = 'cell-border stripe compact',
                            filter = 'top',
                            caption = LIST_DATA$gene_file[[grep(
@@ -5349,7 +5348,7 @@ server <- function(input, output, session) {
                              names(LIST_DATA$gene_info)
                            )]]$full,
                            rownames = FALSE,
-                           colnames = strtrim(newnames, 24),
+                           colnames = gsub("(.{22})", "\\1\n", newnames),
                            class = 'cell-border stripe compact',
                            filter = 'top',
                            caption = LIST_DATA$gene_file[[grep(
@@ -5507,16 +5506,15 @@ server <- function(input, output, session) {
             df, set == tt_name[2]
           ), value)))
         if (tt[[2]] == 0) {
-          ttt <- "< 2.2e-16"
+          use_header <- paste(use_header, "  p-value < 2.2e-16 ")
         } else {
-          ttt <- tt[[2]]
-          
           use_header <-
-            paste(use_header, paste("  p-value = ", format(ttt, scientific = TRUE)))
+            paste(use_header, paste("  p-value = ", format(tt[[2]], scientific = TRUE)))
         }
       }
+      mycdf <- GGplotC(df, df_options, use_header)
       output$plotcdf <- renderPlot({
-        GGplotC(df, df_options, use_header)
+        mycdf
       })
       show('plotcdf')
     }
@@ -5532,11 +5530,13 @@ server <- function(input, output, session) {
                value = TRUE
              ))
       df <- select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$full, -bin, -set) %>% 
-        mutate(value = round(value, 5)) %>% 
+        inner_join(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$use, by = "gene") %>% 
+        mutate(value = round(log2(value), 5)) %>% 
         spread(., set2, value)
+      df <- arrange(df, df[[names(df)[2]]])
       dt <- datatable(
         df,
-        colnames = strtrim(c(newnames1, names(df)[-1]), 24),
+        colnames = gsub("(.{22})", "\\1\n", c(newnames1, names(df)[-1])),
         rownames = FALSE,
         class = 'cell-border stripe compact',
         filter = 'top',
@@ -5625,16 +5625,15 @@ server <- function(input, output, session) {
             df, set == tt_name[2]
           ), value)))
         if (tt[[2]] == 0) {
-          ttt <- "< 2.2e-16"
+          use_header <- paste(use_header, "  p-value < 2.2e-16 ")
         } else {
-          ttt <- tt[[2]]
-          
           use_header <-
-            paste(use_header, paste("  p-value = ", format(ttt, scientific = TRUE)))
+            paste(use_header, paste("  p-value = ", format(tt[[2]], scientific = TRUE)))
         }
       }
+      mycdf <- GGplotC(df, df_options, use_header)
       output$plotcdf <- renderPlot({
-        GGplotC(df, df_options, use_header)
+        mycdf
       })
       output$valueboxcdf <- renderValueBox({
         valueBox(
@@ -5701,8 +5700,7 @@ server <- function(input, output, session) {
                        input$sliderbincdf2[1],
                        input$sliderbincdf2[2],
                        input$slidercdfper[1],
-                       input$slidercdfper[2],
-                       input$radiocdfzero
+                       input$slidercdfper[2]
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -5745,16 +5743,15 @@ server <- function(input, output, session) {
             df, set == tt_name[2]
           ), value)))
         if (tt[[2]] == 0) {
-          ttt <- "< 2.2e-16"
+          use_header <- paste(use_header, "  p-value < 2.2e-16 ")
         } else {
-          ttt <- tt[[2]]
-          
           use_header <-
-            paste(use_header, paste("  p-value = ", format(ttt, scientific = TRUE)))
+            paste(use_header, paste("  p-value = ", format(tt[[2]], scientific = TRUE)))
         }
       }
+      mycdf <- GGplotC(df, df_options, use_header)
       output$plotcdf <- renderPlot({
-        GGplotC(df, df_options, use_header)
+        mycdf
       })
       output$valueboxcdf <- renderValueBox({
         valueBox(
@@ -6593,10 +6590,7 @@ ui <- dashboardPage(
                       value = c(0, 100)
                     )
                   ),
-                  actionButton("actioncdftool", "Plot CDF"),
-                  awesomeRadio("radiocdfzero", label = "Handling #/0 = Inf", 
-                               choices = c("replace with 0", "remove genes containing"),
-                               selected = "replace with 0")
+                  actionButton("actioncdftool", "Plot CDF")
                 ),
                 box(
                   title = "CDF Plot",
