@@ -1509,8 +1509,7 @@ CumulativeDistribution <-
            start2_bin,
            end2_bin,
            bottom_per,
-           top_per,
-           mytint = FALSE) {
+           top_per) {
     if (is.null(onoff)) {
       showModal(modalDialog(
         title = "Information message",
@@ -1527,8 +1526,8 @@ CumulativeDistribution <-
       gene_count <-
         n_distinct(list_data$gene_file[[list_name]]$use$gene)
       num <-
-        c(ceiling(gene_count * top_per / 100),
-          ceiling(gene_count * bottom_per / 100))
+        c(ceiling(gene_count * bottom_per / 100),
+          ceiling(gene_count * top_per / 100))
       lapply(onoff[[list_name]], function(j) {
         df <-
           semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
@@ -1543,7 +1542,7 @@ CumulativeDistribution <-
             summarise(test = sum(value)) %>%
             filter(!is.na(test)) %>%
             semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
-            arrange(desc(value)) %>%
+            arrange((value)) %>%
             mutate(bin = row_number(), set = j, set2 = paste(sub("\n", " ", list_name), "-", j), value = value)
         if(n_distinct(outlist) > 1){
           genelist <<- semi_join(genelist, outlist[[paste0(list_name, "-", j)]], by = "gene")
@@ -1598,16 +1597,13 @@ CumulativeDistribution <-
         paste("CDF",
               "from", 
               list_data$gene_file[[list_name]]$sub)
+    } else {
+      nick_name1 <- paste("CDF n = 0")
     }
     if (sum(start1_bin, end1_bin) > sum(start2_bin, end2_bin)) {
       use_header <- "Log2 EI Cumulative plot"
     } else {
       use_header <- "Log2 PI Cumulative plot"
-    }
-    if(mytint){
-      mytint <- length(list_data$gene_file) * 0.1
-    } else {
-      mytint <- 0
     }
     list_data$gene_info[[nick_name1]] <-
       lapply(setNames(names(list_data$gene_info[[1]]),
@@ -1617,7 +1613,7 @@ CumulativeDistribution <-
                  set = paste(list_data$gene_info[[list_name]][[i]]["set"]),
                  mydot = kDotOptions[1],
                  myline = kLineOptions[1],
-                 mycol = RgbToHex(my_hex = list_data$gene_info[[sum(names(list_data$gene_info) != nick_name1)]][[i]]$mycol, tint = mytint),
+                 mycol = paste(list_data$gene_info[[list_name]][[i]]$mycol),
                  onoff = 0,
                  rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"]),
                  myheader = use_header
@@ -3001,7 +2997,7 @@ server <- function(input, output, session) {
                    CheckBoxOnOff(reactive_values$onoff,
                                  LIST_DATA$gene_info)
                  
-                 if (LIST_DATA$STATE[2] != 0) { # needs work
+                 if (LIST_DATA$STATE[2] != 0) {
                    print("toggle on/off")
                    show("actionmyplotshow")
                    disable("numericYRangeHigh")
@@ -3336,7 +3332,7 @@ server <- function(input, output, session) {
       })
       updateColourInput(session, "colourhex", value =
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
-      if (!is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] != 2) {
+      if (!is.null(reactive_values$Apply_Math) & LIST_DATA$STATE[2] == 1) {
         reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         reactive_values$Plot_controler <-
           GGplotLineDot(
