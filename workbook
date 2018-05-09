@@ -30,7 +30,6 @@ fix cdf slider to zoom plot?
 add compare PI tool
 ratio remove 0 not working right
 
-protection for same names ... including auto nickname
 add plot all tools?
 
 

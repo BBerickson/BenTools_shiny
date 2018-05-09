@@ -2837,12 +2837,18 @@ server <- function(input, output, session) {
   # record new nickname  ---- 
   observeEvent(input$actionoptions, ignoreInit = TRUE, {
     # sets/resets nickname
+    if (nchar(input$textnickname) == 0) {
+      updateTextInput(session,
+                      "textnickname",
+                      value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"]))
+    } else {
     if(input$textnickname != LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"]){
       print("new nickname")
-      if (nchar(input$textnickname) == 0) {
+      if(any(input$textnickname == sapply(LIST_DATA$gene_info[[1]], "[[", "set"))){
         updateTextInput(session,
                         "textnickname",
-                        value = paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["set"]))
+                        value = paste0(input$textnickname, 
+                                       "-dup", sum(any(input$textnickname == names(LIST_DATA$table_file)))))
       }
       for (i in names(LIST_DATA$gene_info)) { 
         LIST_DATA$gene_info[[i]][[input$selectdataoption]]["set"] <<-
@@ -2853,6 +2859,7 @@ server <- function(input, output, session) {
       if (LIST_DATA$STATE[2] != 0) {
         LIST_DATA$STATE[2] <<- 2
       }
+    }
     }
     #sets normfactor
     if (!is.na(input$normfactor) & 
