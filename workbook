@@ -22,7 +22,15 @@ https://rstudio.github.io/DT/
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
 
-use and test
+use and test:
+
+reset and load new files crashs on quick color change ... remove all plot varibles? and set not to plot
+LinesLablesList brake up into each section
+lines and lables add box with output like v7 that can be edited, if only 3' make like 5prim except no negitive numbers
+RF looks and norm number????
+add norm number to URL?
+
+file fail to load protection
 
 cdf replot have progress bar or spining wheel
 add sub to cdf plot

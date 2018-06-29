@@ -650,92 +650,141 @@ CheckBoxOnOff <- function(check_box, list_data) {
 # make a new normalized file by deviding one file by the other
 MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
   # check 2 files have been selected
-  if (nom != "" && dnom != "") {
-    mynom <- list_data$table_file[[nom]]
-    mydom <- list_data$table_file[[dnom]]
-    
-    # applies custome norm factor(s)
-    if(list_data$gene_info[[1]][[nom]]["rnorm"] != 1){
-      mynom <- mutate(mynom, score = score / as.numeric(list_data$gene_info[[1]][[nom]]["rnorm"]))
-    }
-    if(list_data$gene_info[[1]][[dnom]]["rnorm"] != 1){
-      mydom <- mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
-    }
-    
-    # record tool details
-    myname <- "bin_by_bin"
-   
-    setProgress(1, detail = "Gathering data")
-    
-    # files numbers are replaced with mean of bins if applied 
-    if (gbyg != "bin by bin") {
-      myname <- "mean_of_bins"
-      mynom <-
-        group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
-      mydom <-
-        group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup() 
-    }
-    
-    # record tool details
-    if (divzerofix == "replace with 0") {
-      myname <- paste0(myname, "_Inf->0")
+  if (nom == "" | dnom == "") {
+    return(NULL)
+  }
+  
+  # set up tool info and progress bar
+  myname <- "bin_by_bin"
+  setProgress(1, detail = "Gathering data")
+  
+  # get data files
+  mynom <- list_data$table_file[[nom]] %>% na_if(., 0)
+  mydom <- list_data$table_file[[dnom]] %>% na_if(., 0)
+  
+  # applies custome norm factor(s)
+  if(list_data$gene_info[[1]][[nom]]["rnorm"] != 1){
+    mynom <- mutate(mynom, score = score / as.numeric(list_data$gene_info[[1]][[nom]]["rnorm"]))
+  }
+  if(list_data$gene_info[[1]][[dnom]]["rnorm"] != 1){
+    mydom <- mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
+  }
+  
+  # if min/2 find Na's and 0's, and replace
+  if (divzerofix == "replace with min/2") {
+    myname <- paste0(myname, "_0->min/2")
+    new_min_for_nom <-
+      min(mynom$score, na.rm = TRUE) / 2
+    new_min_for_dom <-
+      min(mydom$score, na.rm = TRUE) / 2
+    mynom <-
+      replace_na(mynom, list(score = new_min_for_nom))
+    mydom <-
+      replace_na(mydom, list(score = new_min_for_dom))
+  } else {
+    myname <- paste0(myname, "_Inf_RM")
+  }
+  
+  # files numbers are replaced with mean of bins if applied 
+  if (gbyg != "bin by bin") {
+    myname <- "mean_of_bins"
+    if (divzerofix == "replace with min/2") {
+      myname <- paste0(myname, "_0->min/2")
     } else {
       myname <- paste0(myname, "_Inf_RM")
     }
+    mynom <-
+      group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
+    mydom <-
+      group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup() 
+  }
     
-    # make gene list
-    new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
-    legend_nickname <- paste0(nom, " / ", dnom, ": ", myname)
-    new_gene_list <- transmute(
-      new_gene_list,
-      gene = gene,
-      bin = bin,
+  # inner join
+  new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
+    
+  # make gene list and do math
+  legend_nickname <- paste0(nom, " / ", dnom, ": ", myname)
+  new_gene_list <- transmute(
+    new_gene_list,
+    gene = gene,
+    bin = bin,
+    set = legend_nickname,
+    score = score.x / score.y
+  ) %>% na_if(Inf)
+    
+  # remove all NA's (if min/2 should not be any but as a safty do anyway)
+  new_gene_list <-
+    group_by(new_gene_list, gene) %>%
+    summarise(test = sum(score)) %>%
+    filter(!is.na(test)) %>%
+    semi_join(new_gene_list, ., by = "gene")
+  
+  # output test
+  gene_names <- 
+    semi_join(list_data$gene_file[[1]]$use, new_gene_list, by = "gene")  
+  if (n_distinct(gene_names) < 1) {
+    showModal(
+      modalDialog(
+        title = "Information message",
+        " No genes in left, try replacing Inf and/or bin by bin",
+        size = "s",
+        easyClose = TRUE
+      )
+    )
+    setProgress(5, detail = "Done")
+    return(NULL)
+  }
+    
+  # adds data to list of lists
+  setProgress(2, detail = "building new data")
+  color_safe <-
+    (length(list_data$table_file) + 1) %% length(kListColorSet)
+  if (color_safe == 0) {
+    color_safe <- 1
+  }
+  my_name <- paste("common\nn =", n_distinct(gene_names$gene))
+  names(list_data$gene_file)[1] <- my_name
+  names(list_data$gene_info)[1] <- my_name
+  list_data$table_file[[legend_nickname]] <- new_gene_list
+  list_data$gene_file[[my_name]]$use <- gene_names
+  list_data$gene_info[[my_name]][[legend_nickname]] <-
+    # don't change the order of postions
+    tibble(
       set = legend_nickname,
-      score = score.x / score.y
-    ) %>% na_if(Inf)
+      mydot = kDotOptions[1],
+      myline = kLineOptions[1],
+      mycol = kListColorSet[color_safe],
+      onoff = 0,
+      rnorm = "1"
+    )
     
-    if (divzerofix == "replace with 0") {
-      # find Inf and Na's replace 0s
-      new_gene_list <-
-        replace_na(new_gene_list,
-                   list(score = 0))
-    } else {
-      new_gene_list <-
-        group_by(new_gene_list, gene) %>%
-        summarise(test = sum(score)) %>%
-        filter(!is.na(test)) %>%
-        semi_join(new_gene_list, ., by = "gene")
-    }
-    
-    if (n_distinct(new_gene_list$gene) < 1) {
+  # generate info for new file for loaded gene list(s)
+  setProgress(3, detail = "building gene lists info")
+  sapply(seq_along(list_data$gene_file)[-1], function(g) {
+    enesg <-
+      inner_join(list_data$gene_file[[g]]$full,
+                 list_data$gene_file[[1]]$use,
+                 by = "gene")
+    if (n_distinct(enesg$gene) < 1) {
       showModal(
         modalDialog(
           title = "Information message",
-          " No genes in left, try replacing Inf and/or bin by bin",
+          " No genes in common, need to remove gene file",
           size = "s",
           easyClose = TRUE
         )
       )
-      setProgress(5, detail = "Done")
-      return(list_data)
     }
-    
-    # adds data to list of lists
-    color_safe <-
-      (length(list_data$table_file) + 1) %% length(kListColorSet)
-    if (color_safe == 0) {
-      color_safe <- 1
-    }
-    gene_names <-
-      semi_join(list_data$gene_file[[1]]$use, new_gene_list, by = "gene")
-    my_name <- paste("common\nn =", n_distinct(gene_names$gene))
-    names(list_data$gene_file)[1] <- my_name
-    names(list_data$gene_info)[1] <- my_name
-    setProgress(2, detail = "building new data")
-    list_data$table_file[[legend_nickname]] <- new_gene_list
-    list_data$gene_file[[my_name]]$use <- gene_names
-    list_data$gene_info[[my_name]][[legend_nickname]] <-
-      # don't change the order of postions
+    list_data$gene_file[[g]]$use <<- select(enesg, gene)
+    my_name_g <-
+      sub(
+        "([0-9]+)",
+        n_distinct(list_data$gene_file[[g]]$full$gene),
+        names(list_data$gene_file)[g]
+      )
+    names(list_data$gene_file)[g] <<- my_name_g
+    names(list_data$gene_info)[g] <<- my_name_g
+    list_data$gene_info[[my_name_g]][[legend_nickname]] <<-
       tibble(
         set = legend_nickname,
         mydot = kDotOptions[1],
@@ -744,47 +793,9 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
         onoff = 0,
         rnorm = "1"
       )
-    
-    # generate info for new file for loaded gene list(s)
-    setProgress(3, detail = "building gene lists info")
-    sapply(seq_along(list_data$gene_file)[-1], function(g) {
-      enesg <-
-        inner_join(list_data$gene_file[[g]]$full,
-                   list_data$gene_file[[1]]$use,
-                   by = "gene")
-      if (n_distinct(enesg$gene) < 1) {
-        showModal(
-          modalDialog(
-            title = "Information message",
-            " No genes in common, need to remove gene file",
-            size = "s",
-            easyClose = TRUE
-          )
-        )
-      }
-      list_data$gene_file[[g]]$use <<- select(enesg, gene)
-      my_name_g <-
-        sub(
-          "([0-9]+)",
-          n_distinct(list_data$gene_file[[g]]$full$gene),
-          names(list_data$gene_file)[g]
-        )
-      names(list_data$gene_file)[g] <<- my_name_g
-      names(list_data$gene_info)[g] <<- my_name_g
-      list_data$gene_info[[my_name_g]][[legend_nickname]] <<-
-        tibble(
-          set = legend_nickname,
-          mydot = kDotOptions[1],
-          myline = kLineOptions[1],
-          mycol = kListColorSet[color_safe],
-          onoff = 0,
-          rnorm = "1"
-        )
-      
     })
-  }
   setProgress(5, detail = "Done")
-  list_data
+  return(list_data)
 }
 
 # removes gene list
@@ -1147,7 +1158,7 @@ CompareRatios <-
           transmute(df, gene = gene, Ratio = sum1 / sum2) %>%
           na_if(Inf) %>% select(gene, Ratio)
 
-        if (divzerofix == "replace with 0") {
+        if (divzerofix == "replace with min/2") {
           # find Inf and Na's replace 0s
           outlist[[1]] <-
             replace_na(outlist[[1]], list(Ratio = 0)) %>%
@@ -1195,7 +1206,7 @@ CompareRatios <-
           inner_join(outlist[[1]], outlist[[lc]], by = 'gene') %>%
           transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
           na_if(Inf)  %>% select(gene, Ratio)
-        if (divzerofix == "replace with 0") {
+        if (divzerofix == "replace with min/2") {
           # find Inf and Na's replace 0s
           outlist[[1]] <<-
             replace_na(outlist[[1]], list(Ratio = 0)) %>%
@@ -1862,7 +1873,7 @@ LinesLablesList <- function(body1bin = 20,
       use_plot_breaks <-
         seq(1,
             by = everybin,
-            length.out = (totbins / everybin) + 1)
+            length.out = (totbins / everybin) + 1)+.5
       use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin - 1)] <-
         tssbin + .5
       use_plot_breaks_labels <-
@@ -1882,8 +1893,7 @@ LinesLablesList <- function(body1bin = 20,
       use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin - 1)] <-
         tesbin + .5
       use_plot_breaks_labels <-
-        abs(seq(
-          -(tesbin - totbins) * binbp,
+        abs(seq(-tesbin * binbp,
           by = everybp,
           length.out = length(use_plot_breaks)
         ))
@@ -3509,7 +3519,7 @@ server <- function(input, output, session) {
                  detail = 'This may take a while...',
                  value = 0,
                  {
-    LIST_DATA <<- MakeNormFile(
+    LD <- MakeNormFile(
       LIST_DATA,
       input$pickernumerator,
       input$pickerdenominator,
@@ -3517,21 +3527,33 @@ server <- function(input, output, session) {
       input$radionormzero
     )
                  })
-    updatePickerInput(session,
-                      "pickernumerator", selected = "")
-    updatePickerInput(session,
-                      "pickerdenominator", selected = "")
-    ff <- names(LIST_DATA$table_file)
-    updateSelectInput(session,
-                       "selectdataoption",
-                       choices = ff)
-    
-    output$valueboxnormfile <- renderValueBox({
-      valueBox(
-        "100%", "Done", icon = icon("thumbs-up", lib = "glyphicon"),
-        color = "green"
-      )
-    })
+    if (!is_empty(LD$table_file)) {
+      LIST_DATA <<- LD
+      updatePickerInput(session,
+                        "pickernumerator", selected = "")
+      updatePickerInput(session,
+                        "pickerdenominator", selected = "")
+      output$valueboxnormfile <- renderValueBox({
+        valueBox(
+          "Done", paste("Common n =", n_distinct(LIST_DATA$gene_file[[1]]$use)), icon = icon("thumbs-up", lib = "glyphicon"),
+          color = "green"
+        )
+      })
+      ff <- names(LIST_DATA$table_file)
+      updateSelectInput(session,
+                        "selectdataoption",
+                        choices = ff)
+      # update main plot picker with new file name trigger
+      reactive_values$Picker_controler <- names(LIST_DATA$table_file)
+    } else {
+      #no new data file created
+      output$valueboxnormfile <- renderValueBox({
+        valueBox(
+          "0%", "Done", icon = icon("cogs"),
+          color = "red"
+        )
+      })
+    }
   })
   
   # Gene action ----
@@ -5905,7 +5927,7 @@ ui <- dashboardPage(
             choices = c(
               "Choose one" = "",
               "543 bins 20,20,40",
-              "543 bins 10,10,10",
+              "543 bins 10,10,20",
               "5' 1k 1k 80bins",
               "5' .25k 10k 205bins",
               "3'",
@@ -6091,8 +6113,8 @@ ui <- dashboardPage(
                        choices = c("mean of bins by mean of bins", "bin by bin"),
                        selected = "mean of bins by mean of bins"),
           awesomeRadio("radionormzero", label = "Handling #/0 = Inf", 
-                       choices = c("replace with 0", "remove genes containing"),
-                       selected = "replace with 0"),
+                       choices = c("replace with min/2", "remove genes containing"),
+                       selected = "replace with min/2"),
           valueBoxOutput("valueboxnormfile")
         )
       ),
@@ -6409,7 +6431,7 @@ ui <- dashboardPage(
                   ),
                   actionButton("actionratiotool", "Get fold changes"),
                   awesomeRadio("radioratiozero", label = "Handling #/0 = Inf", 
-                               choices = c("replace with 0", "remove genes containing"),
+                               choices = c("replace with min/2", "remove genes containing"),
                                selected = "remove genes containing"),
                   sliderInput("sliderRatioBinNorm",
                                    label = "Bin Norm:",
