@@ -1808,101 +1808,108 @@ LinesLablesList <- function(body1bin = 20,
                             totbins = 80,
                             everybin = 5) {
   print("lines and lables fun")
-  if (tssbin == 0 & tesbin > 0) {
-    mytype <- "3'"
-  } else if (tesbin == 0 & tssbin > 0) {
-    mytype <- "5'"
-  } else if (tssbin > 0 &
-             tesbin > 0 & body1bin > 0 & body2bin > 0) {
-    mytype <- "543"
-  } else {
-    mytype <- "none"
-  }
   everybp <- everybin * binbp
   if (everybp > 0) {
-    if (mytype == "543") {
-      # set up 5'
-      LOCname1 <- seq(-tssbin * binbp, (body1bin-tssbin) * binbp, by = everybp)
+    if (tssbin > 0) {
+      # set up 1 to TSS'
+      LOCname1 <- seq(-tssbin * binbp, 0, by = everybp)
       LOC1 <- seq(1,  by = everybin, length.out = length(LOCname1))
-      # make sure body brake is included
-      if(any(near(LOCname1, (body1bin - tssbin) * binbp, tol = everybp/2)) & length(LOCname1) > 1){
-        LOC1[near(LOCname1, (body1bin - tssbin) * binbp, tol = everybp/2)] <- body1bin+.5
-        LOCname1[near(LOCname1, (body1bin-tssbin) * binbp, tol = everybp/2)] <- (body1bin-tssbin)* binbp
-      } else {
-        LOC1 <- sort(c(LOC1, body1bin+.5))
-        LOCname1 <- append(LOCname1, (body1bin - tssbin) * binbp, length(LOCname1))
-      }
       # make sure TSS is included
       if(any(LOCname1 == 0)){
         LOC1[LOCname1 == 0] <- tssbin + .5
         LOCname1[LOCname1 == 0] <- "TSS"
       } else {
         LOC1 <- sort(c(LOC1, tssbin+.5))
-        LOCname1 <- append(LOCname1, "TSS", which(LOCname1 > 0)[1]-1)
+        LOCname1 <- append(LOCname1, "TSS")
       }
-      # set up 3'
-      LOCname2 <-  abs(seq((body2bin - tesbin) * binbp, (totbins-tesbin) * binbp, by = everybp))
-      LOC2 <- seq(body2bin + 0.5, by = everybin, length.out = length(LOCname2))
-      # make sure body brake is included
-      if(any(near(LOCname2, (totbins-tesbin) * binbp, tol = everybp/2)) & length(LOCname2) > 1){
-        LOC2[near(LOCname2, (totbins-tesbin) * binbp, tol = everybp/2)] <- totbins
-        LOCname2[near(LOCname2, (totbins-tesbin) * binbp, tol = everybp/2)] <- (totbins-tesbin) * binbp
-      } else {
-        LOC2 <- sort(c(LOC2, totbins))
-        LOCname2 <- append(LOCname2, (totbins-tesbin) * binbp, length(LOCname2))
-      }
-      # make sure TSS is included
-      if(any(LOCname2 == 0)){
-        LOC2[LOCname2 == 0] <- tesbin + .5
-        LOCname2[LOCname2 == 0] <- "pA"
-      } else {
-        LOC2 <- sort(c(LOC2, tesbin+.5))
-        LOCname2 <- append(LOCname2, "pA", 1)
-      }
-      
-      use_plot_breaks <- c(LOC1, LOC2)
-      use_plot_breaks_labels <- c(LOCname1, LOCname2)
-      use_plot_breaks_labels <- use_plot_breaks_labels[1:length(use_plot_breaks)]
-      mycolors <- rep("black", length(use_plot_breaks))
-      mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
-      mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
+      # tss to body
+      if(tssbin < body1bin & body1bin < body2bin & body2bin < tesbin & tesbin < totbins) {
+        if(everybp < (body1bin-tssbin)*binbp){
+          LOCname1a <- seq(abs(as.numeric(LOCname1[which(LOCname1 == "TSS")-1])), (body1bin-tssbin)*binbp, by = everybp)
+          LOC1a <- seq(tssbin - LOC1[which(LOCname1 == "TSS")-1] + tssbin + 1,  by = everybin, length.out = length(LOCname1a))
+        } else {
+          LOCname1a <- NULL
+        }
+        # make sure body brake is included
+        if(any(near(LOCname1a, (body1bin - tssbin) * binbp, tol = everybp/2)) & length(LOCname1a) > 0){
+          LOC1a[near(LOCname1a, (body1bin - tssbin) * binbp, tol = everybp/2)] <- body1bin+.5
+          LOCname1a[near(LOCname1a, (body1bin-tssbin) * binbp, tol = everybp/2)] <- (body1bin-tssbin)* binbp
+          LOC1 <- sort(c(LOC1, LOC1a))
+          LOCname1 <- append(LOCname1, LOCname1a)
+        } else {
+          LOC1 <- sort(c(LOC1, body1bin+.5))
+          LOCname1 <- append(LOCname1, (body1bin - tssbin) * binbp)
+        }
+        # body to TES'
+        LOCname2 <-  abs(seq((body2bin - tesbin) * binbp, 0, by = everybp))
+        LOC2 <- seq(body2bin, by = everybin, length.out = length(LOCname2))
+        LOC2[1] <- LOC2[1] + .5
+        # make sure TES is included
+        if(any(LOCname2 == 0)){
+          LOC2[LOCname2 == 0] <- tesbin + .5
+          LOCname2[LOCname2 == 0] <- "pA"
+        } else {
+          LOC2 <- sort(c(LOC2, tesbin+.5))
+          LOCname2 <- append(LOCname2, "pA")
+        }
+        # TES to end
+        LOCname2a <- seq(abs(as.numeric(LOCname2[which(LOCname2 == "pA")-1])), (totbins-tesbin)*binbp, by = everybp)
+        LOC2a <- seq(tesbin +.5 - LOC2[which(LOCname2 == "pA")-1] + tesbin,  by = everybin, length.out = length(LOCname2a))
+        LOC2 <- sort(c(LOC2, LOC2a))
+        LOCname2 <- append(LOCname2, LOCname2a)
         
-      use_virtical_line <-
+        use_plot_breaks <- c(LOC1, LOC2)
+        use_plot_breaks_labels <- c(LOCname1, LOCname2)
+        use_plot_breaks_labels <- use_plot_breaks_labels[1:length(use_plot_breaks)]
+        mycolors <- rep("black", length(use_plot_breaks))
+        mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
+        mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
+      
+        use_virtical_line <-
         c(tssbin, tesbin, body1bin, body2bin) + .5
-    } else if (mytype == "5'") {
-      use_plot_breaks <-
-        seq(1,
-            by = everybin,
-            length.out = (totbins / everybin) + 1)+.5
-      use_plot_breaks[near(use_plot_breaks, tssbin, tol = everybin - 1)] <-
-        tssbin + .5
-      use_plot_breaks_labels <-
-        seq(-tssbin * binbp,
-            by = everybp,
-            length.out = length(use_plot_breaks))
-      use_plot_breaks_labels[near(use_plot_breaks, tssbin, tol = everybin -
-                                    1)] <- "TSS"
-      mycolors <- rep("black", length(use_plot_breaks))
-      mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
-      use_virtical_line <- c(tssbin, NA, NA, NA) + .5
-    } else if (mytype == "3'") {
-      use_plot_breaks <-
-        seq(1,
-            by = everybin,
-            length.out = (totbins / everybin) + 1)
-      use_plot_breaks[near(use_plot_breaks, tesbin, tol = everybin - 1)] <-
-        tesbin + .5
-      use_plot_breaks_labels <-
-        abs(seq(-tesbin * binbp,
-          by = everybp,
-          length.out = length(use_plot_breaks)
-        ))
-      use_plot_breaks_labels[near(use_plot_breaks, tesbin, tol = everybin -
-                                    1)] <- "pA"
+      } else {
+        # TSS to end
+        if(everybp < (totbins-tssbin)*binbp){
+          LOCname1a <- seq(abs(as.numeric(LOCname1[which(LOCname1 == "TSS")-1])), (totbins-tssbin)*binbp, by = everybp)
+          LOC1a <- seq(tssbin - LOC1[which(LOCname1 == "TSS")-1] + tssbin +1 ,  by = everybin, length.out = length(LOCname1a))
+        } else {
+          LOCname1a <- NULL
+          LOC1a <- NULL
+        }
+        use_plot_breaks <- sort(c(LOC1, LOC1a))
+        use_plot_breaks_labels <- append(LOCname1, LOCname1a)
+        mycolors <- rep("black", length(use_plot_breaks))
+        mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
+        use_virtical_line <- c(tssbin, NA, NA, NA) + .5
+      }
+    } else if (tesbin > 0) {
+      # set up 1 to TES'
+      LOCname1 <- abs(seq(-tesbin * binbp, 0, by = everybp))
+      LOC1 <- seq(1,  by = everybin, length.out = length(LOCname1))
+      # make sure TES is included
+      if(any(LOCname1 == 0)){
+        LOC1[LOCname1 == 0] <- tesbin + .5
+        LOCname1[LOCname1 == 0] <- "pA"
+      } else {
+        LOC1 <- sort(c(LOC1, tesbin+.5))
+        LOCname1 <- append(LOCname1, "pA")
+      }
+      # TES to end
+      if(everybp < (totbins-tesbin)*binbp){
+      LOCname1a <- seq(abs(as.numeric(LOCname1[which(LOCname1 == "pA")-1])), (totbins-tesbin)*binbp, by = everybp)
+      LOC1a <- seq(tesbin - LOC1[which(LOCname1 == "pA")-1] + tesbin +1 ,  by = everybin, length.out = length(LOCname1a))
+      } else {
+        LOCname1a <- NULL
+        LOC1a <- NULL
+      }
+      use_plot_breaks <- sort(c(LOC1, LOC1a))
+      use_plot_breaks_labels <- append(LOCname1, LOCname1a)
       mycolors <- rep("black", length(use_plot_breaks))
       mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <- c(NA, tesbin, NA, NA) + .5
-    } else if (mytype == "none") {
+    
+    } else {
+      # just print bin numbers
       use_plot_breaks <-
         seq(1,
             by = everybin,
@@ -1915,7 +1922,7 @@ LinesLablesList <- function(body1bin = 20,
       use_virtical_line <- c(NA, NA, NA, NA) + .5
     }
   } else {
-    if (mytype == "543") {
+    if (tssbin > 0 & tesbin > 0) {
       use_plot_breaks <- c(tssbin, tesbin, body1bin, body2bin) + .5
       use_plot_breaks_labels <- c("TSS", "pA", "5|4", "4|3")
       mycolors <- rep("black", length(use_plot_breaks))
@@ -1923,35 +1930,32 @@ LinesLablesList <- function(body1bin = 20,
       mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <-
         c(tssbin, tesbin, body1bin, body2bin) + .5
-    } else if (mytype == "5'") {
+    } else if (tssbin > 0 & tesbin <= 0) {
       use_plot_breaks <- tssbin + .5
       use_plot_breaks_labels <- "TSS"
       mycolors <- rep("black", length(use_plot_breaks))
       mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
       use_virtical_line <- c(tssbin, NA, NA, NA) + .5
-    } else if (mytype == "3'") {
+    } else if (tesbin > 0) {
       use_plot_breaks <- tesbin + .5
       use_plot_breaks_labels <- "pA"
       mycolors <- rep("black", length(use_plot_breaks))
       mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <- c(NA, tesbin, NA, NA) + .5
-    } else if (mytype == "none") {
+    } else {
       use_plot_breaks <- .5
       use_plot_breaks_labels <- "none"
       use_virtical_line <- c(NA, NA, NA, NA) + .5
     }
   }
-  
+  # virtical line set up
   use_virtical_line_color <- c("green", "red", "black", "black")
-  
   use_virtical_line_type <- c("dotted", "dotted", "solid", "solid")
   use_plot_breaks <- na_if(use_plot_breaks, 0.5)
   use_virtical_line <- na_if(use_virtical_line, 0.5)
   use_plot_breaks_labels <-
     use_plot_breaks_labels[!is.na(use_plot_breaks)]
   use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
-  
-  
   use_virtical_line_type <-
     use_virtical_line_type[!is.na(use_virtical_line)]
   use_virtical_line_color <-
@@ -3201,17 +3205,47 @@ server <- function(input, output, session) {
     updateNumericInput(session, "numerictes", value = myset[4])
     updateNumericInput(session, "numericbinsize", value = myset[5])
     updateNumericInput(session, "numericlabelspaceing", value = myset[7])
+    updateSelectInput(session, "selectlineslables", selected = "")
     
-    reactive_values$Lines_Lables_List <-
-      LinesLablesList(myset[1],
-                      myset[2],
-                      myset[3],
-                      myset[4],
-                      myset[5],
-                      myset[6],
-                      myset[7])
-  updateSelectInput(session, "selectlineslables", selected = "")
+  })
+  
+  # Update lines and lables 
+  observeEvent(c(input$numericbody1,
+    input$numericbody2,
+    input$numerictss,
+    input$numerictes,
+    input$numericbinsize,
+    input$numericlabelspaceing
+  ), ignoreInit = TRUE, {
     
+    print("observe line and lables")
+    reactive_values$Lines_Lables_List <- LinesLablesList(input$numericbody1,
+                                         input$numericbody2,
+                                         input$numerictss,
+                                         input$numerictes,
+                                         input$numericbinsize,
+                    LIST_DATA$x_plot_range[2],
+                    input$numericlabelspaceing)
+    
+    updateTextInput(session, "landlnames", value = paste(reactive_values$Lines_Lables_List$mylables, collapse = " "))
+    updateTextInput(session, "landlposition", value = paste(reactive_values$Lines_Lables_List$mybrakes ,collapse = " "))
+  })
+  
+  # checks that number of names == position
+  observeEvent(c(input$landlnames, input$landlposition), ignoreInit = TRUE,{
+    my_pos <- suppressWarnings(as.numeric(unlist(strsplit(input$landlposition, split = " "))))
+    my_label <- unlist(strsplit(input$landlnames, split = " "))
+    if(any(is.na(my_pos))){
+      my_pos <- my_pos[is.na(my_pos)]
+      updateTextInput(session, "landlposition", value = my_pos)
+    }
+    if(length(my_pos) == length(my_label)){
+      enable("actionlineslabels")
+      updateActionButton(session, "actionlineslabels", label = "Plot with new Lines and Labels")
+    } else {
+      updateActionButton(session, "actionlineslabels", label = "Labels must equel # of positions")
+      disable("actionlineslabels")
+    }
   })
   
   # action button update lines and lables ----
@@ -3268,6 +3302,8 @@ server <- function(input, output, session) {
                       myset[5],
                       LIST_DATA$x_plot_range[2],
                       myset[6])
+    updateTextInput(session, "landlnames", value = paste(reactive_values$Lines_Lables_List$mylables, collapse = " "))
+    updateTextInput(session, "landlposition", value = paste(reactive_values$Lines_Lables_List$mybrakes ,collapse = " "))
     
   })
   
@@ -6228,6 +6264,26 @@ ui <- dashboardPage(
                     div(
                       style = "padding:2px; display:inline-block;",
                       numericInput(
+                        "numericbody1",
+                        "5|4 bin",
+                        value = 20,
+                        min = 0,
+                        max = 100
+                      )
+                    ),
+                    div(
+                      style = "padding:2px; display:inline-block;",
+                      numericInput(
+                        "numericbody2",
+                        "4|3 bin",
+                        value = 40,
+                        min = 0,
+                        max = 100
+                      )
+                    ),
+                    div(
+                      style = "padding:2px; display:inline-block;",
+                      numericInput(
                         "numerictes",
                         "pA bin",
                         value = 45,
@@ -6249,26 +6305,6 @@ ui <- dashboardPage(
                     div(
                       style = "padding:2px; display:inline-block;",
                       numericInput(
-                        "numericbody1",
-                        "5|4 bin",
-                        value = 20,
-                        min = 0,
-                        max = 100
-                      )
-                    ),
-                    div(
-                      style = "padding:2px; display:inline-block;",
-                      numericInput(
-                        "numericbody2",
-                        "4|3 bin",
-                        value = 40,
-                        min = 0,
-                        max = 100
-                      )
-                    ),
-                    div(
-                      style = "padding:2px; display:inline-block;",
-                      numericInput(
                         "numericlabelspaceing",
                         "every bin",
                         value = 5,
@@ -6276,9 +6312,14 @@ ui <- dashboardPage(
                         max = 100
                       )
                     ),
+                    helpText("For 543 style 0 > TSS < 5|4 < 4|3 < pA < max bin"),
+                    div(
+                    textInput("landlnames", "", label = "Yaxis lables"),
+                    textInput("landlposition", "", label = "Yaxis lable position (numbers only)")
+                    ),
                     div(
                       style = "padding-left:33%;",
-                      actionButton("actionlineslabels", "Update Lines and Lables")
+                      actionButton("actionlineslabels", "Plot with new Lines and Lables")
                     )
                   )
                 )
