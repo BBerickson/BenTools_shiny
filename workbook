@@ -21,12 +21,16 @@ https://rstudio.github.io/DT/
 
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
+###landl###
+
+landl fun (need to add tss and pa only and body1 and body2 only to fuction)
+empty lable and pos boxes behavure 
+fix ablity to color custom TSS and pA label
 
 use and test:
 
 reset and load new files crashs on quick color change ... remove all plot varibles? and set not to plot
-LinesLablesList brake up into each section
-lines and lables add box with output like v7 that can be edited, if only 3' make like 5prim except no negitive numbers
+
 RF looks and norm number????
 add norm number to URL?
 

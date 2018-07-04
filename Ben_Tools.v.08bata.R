@@ -1799,8 +1799,8 @@ YAxisLable <-
     use_y_label
   }
 
-# Sets plot lines and lables fix
-LinesLablesList <- function(body1bin = 20,
+# Sets lines and lables
+LinesLablesListset <- function(body1bin = 20,
                             body2bin = 40,
                             tssbin = 15,
                             tesbin = 45,
@@ -1861,12 +1861,8 @@ LinesLablesList <- function(body1bin = 20,
         use_plot_breaks <- c(LOC1, LOC2)
         use_plot_breaks_labels <- c(LOCname1, LOCname2)
         use_plot_breaks_labels <- use_plot_breaks_labels[1:length(use_plot_breaks)]
-        mycolors <- rep("black", length(use_plot_breaks))
-        mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
-        mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
-      
-        use_virtical_line <-
-        c(tssbin, tesbin, body1bin, body2bin) + .5
+        myset <- c(body1bin, body2bin, tssbin, tesbin, binbp, everybin)
+        
       } else {
         # TSS to end
         if(everybp < (totbins-tssbin)*binbp){
@@ -1878,9 +1874,8 @@ LinesLablesList <- function(body1bin = 20,
         }
         use_plot_breaks <- sort(c(LOC1, LOC1a))
         use_plot_breaks_labels <- append(LOCname1, LOCname1a)
-        mycolors <- rep("black", length(use_plot_breaks))
-        mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
-        use_virtical_line <- c(tssbin, NA, NA, NA) + .5
+        myset <- c(0, 0, tssbin, 0, binbp, everybin)
+        
       }
     } else if (tesbin > 0) {
       # set up 1 to TES'
@@ -1904,9 +1899,7 @@ LinesLablesList <- function(body1bin = 20,
       }
       use_plot_breaks <- sort(c(LOC1, LOC1a))
       use_plot_breaks_labels <- append(LOCname1, LOCname1a)
-      mycolors <- rep("black", length(use_plot_breaks))
-      mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
-      use_virtical_line <- c(NA, tesbin, NA, NA) + .5
+      myset <- c(0, 0, 0, tesbin, binbp, everybin)
     
     } else {
       # just print bin numbers
@@ -1918,27 +1911,81 @@ LinesLablesList <- function(body1bin = 20,
         seq(1,
             by = everybin,
             length.out = (totbins / everybin) + 1)
-      mycolors <- rep("black", length(use_plot_breaks))
-      use_virtical_line <- c(NA, NA, NA, NA) + .5
+      myset <- c(0, 0, 0, 0, binbp, everybin)
     }
   } else {
     if (tssbin > 0 & tesbin > 0) {
       use_plot_breaks <- c(tssbin, tesbin, body1bin, body2bin) + .5
       use_plot_breaks_labels <- c("TSS", "pA", "5|4", "4|3")
+      myset <- c(body1bin, body2bin, tssbin, tesbin, binbp, everybin)
+    } else if (tssbin > 0 & tesbin <= 0) {
+      use_plot_breaks <- tssbin + .5
+      use_plot_breaks_labels <- "TSS"
+      myset <- c(0, 0, tssbin, 0, binbp, everybin)
+    } else if (tesbin > 0) {
+      use_plot_breaks <- tesbin + .5
+      use_plot_breaks_labels <- "pA"
+      myset <- c(0, 0, 0, tesbin, binbp, everybin)
+    } else {
+      use_plot_breaks <- .5
+      use_plot_breaks_labels <- "none"
+      myset <- c(0, 0, 0, 0, binbp, everybin)
+    }
+  }
+  # virtical line set up
+  use_plot_breaks <- na_if(use_plot_breaks, 0.5)
+  use_plot_breaks_labels <-
+    use_plot_breaks_labels[!is.na(use_plot_breaks)]
+  use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
+  list(
+    myset = myset,
+    mybrakes = use_plot_breaks,
+    mylables = use_plot_breaks_labels
+  )
+}
+
+# Sets plot lines and lables colors
+LinesLablesListPlot <- function(body1bin, body2bin, tssbin, tesbin, use_plot_breaks_labels, use_plot_breaks) {
+  print("lines and lables plot fun")
+  if (length(use_plot_breaks_labels) > 0) {
+    if (tssbin > 0) {
+      # tss to body
+      if(tssbin < body1bin & body1bin < body2bin & body2bin < tesbin) {
+        mycolors <- rep("black", length(use_plot_breaks))
+        mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
+        mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
+        use_virtical_line <-
+          c(tssbin, tesbin, body1bin, body2bin) + .5
+      } else {
+        # TSS to end
+        mycolors <- rep("black", length(use_plot_breaks))
+        mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
+        use_virtical_line <- c(tssbin, NA, NA, NA) + .5
+      }
+    } else if (tesbin > 0) {
+      # set up 1 to TES'
+      # TES to end
+      mycolors <- rep("black", length(use_plot_breaks))
+      mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
+      use_virtical_line <- c(NA, tesbin, NA, NA) + .5
+      
+    } else {
+      # just print bin numbers
+      mycolors <- rep("black", length(use_plot_breaks))
+      use_virtical_line <- c(NA, NA, NA, NA) + .5
+    }
+  } else {
+    if (tssbin > 0 & tesbin > 0) {
       mycolors <- rep("black", length(use_plot_breaks))
       mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
       mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <-
         c(tssbin, tesbin, body1bin, body2bin) + .5
     } else if (tssbin > 0 & tesbin <= 0) {
-      use_plot_breaks <- tssbin + .5
-      use_plot_breaks_labels <- "TSS"
       mycolors <- rep("black", length(use_plot_breaks))
       mycolors[which(use_plot_breaks_labels == "TSS")] <- "green"
       use_virtical_line <- c(tssbin, NA, NA, NA) + .5
     } else if (tesbin > 0) {
-      use_plot_breaks <- tesbin + .5
-      use_plot_breaks_labels <- "pA"
       mycolors <- rep("black", length(use_plot_breaks))
       mycolors[which(use_plot_breaks_labels == "pA")] <- "red"
       use_virtical_line <- c(NA, tesbin, NA, NA) + .5
@@ -3209,7 +3256,7 @@ server <- function(input, output, session) {
     
   })
   
-  # Update lines and lables 
+  # Update lines and lables ----
   observeEvent(c(input$numericbody1,
     input$numericbody2,
     input$numerictss,
@@ -3219,16 +3266,46 @@ server <- function(input, output, session) {
   ), ignoreInit = TRUE, {
     
     print("observe line and lables")
-    reactive_values$Lines_Lables_List <- LinesLablesList(input$numericbody1,
-                                         input$numericbody2,
-                                         input$numerictss,
-                                         input$numerictes,
-                                         input$numericbinsize,
-                    LIST_DATA$x_plot_range[2],
-                    input$numericlabelspaceing)
+    myset <- c(
+      input$numericbody1,
+      input$numericbody2,
+      input$numerictss,
+      input$numerictes,
+      input$numericbinsize,
+      input$numericlabelspaceing
+    )
+    # keep bin positions in bounds > 0 and < max bin number
+    myset[is.na(myset)] <- 0
+    for (i in seq_along(myset)) {
+      if (myset[i] < 1) {
+        myset[i] <- 0
+      } else if (i %in% c(1:4, 6) &
+                 myset[i] > LIST_DATA$x_plot_range[2]) {
+        print("543 best guess")
+        myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
+        myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
+        myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
+        myset[3] <- floor(LIST_DATA$x_plot_range[2]*.25)
+        myset[6] <- floor(LIST_DATA$x_plot_range[2]*.1)
+      }
+    }
     
-    updateTextInput(session, "landlnames", value = paste(reactive_values$Lines_Lables_List$mylables, collapse = " "))
-    updateTextInput(session, "landlposition", value = paste(reactive_values$Lines_Lables_List$mybrakes ,collapse = " "))
+    Lines_Lables_List <- LinesLablesListset(myset[1],
+                                         myset[2],
+                                         myset[3],
+                                         myset[4],
+                                         myset[5],
+                                         LIST_DATA$x_plot_range[2],
+                                         myset[6])
+    # set fixed numbers
+    updateNumericInput(session, "numericbody1", value = Lines_Lables_List$myset[1])
+    updateNumericInput(session, "numericbody2", value = Lines_Lables_List$myset[2])
+    updateNumericInput(session, "numerictss", value = Lines_Lables_List$myset[3])
+    updateNumericInput(session, "numerictes", value = Lines_Lables_List$myset[4])
+    updateNumericInput(session, "numericlabelspaceing", value = Lines_Lables_List$myset[6])
+    # set lable and posistion numbers
+    updateTextInput(session, "landlnames", value = paste(Lines_Lables_List$mylables, collapse = " "))
+    updateTextInput(session, "landlposition", value = paste(Lines_Lables_List$mybrakes ,collapse = " "))
   })
   
   # checks that number of names == position
@@ -3246,65 +3323,35 @@ server <- function(input, output, session) {
       updateActionButton(session, "actionlineslabels", label = "Labels must equel # of positions")
       disable("actionlineslabels")
     }
+    if(LIST_DATA$STATE[2] == 0){
+      reactive_values$Lines_Lables_List <- 
+        LinesLablesListPlot(
+          input$numericbody1,
+          input$numericbody2,
+          input$numerictss,
+          input$numerictes,
+          my_label,
+          my_pos
+        )
+    }
   })
   
   # action button update lines and lables ----
   observeEvent(input$actionlineslabels, ignoreInit = TRUE, {
     print("action lines and lables")
-    myset <- c(
-      input$numericbody1,
-      input$numericbody2,
-      input$numerictss,
-      input$numerictes,
-      input$numericbinsize,
-      input$numericlabelspaceing
-    )
-    myset[is.na(myset)] <- 0
-    
-    for (i in seq_along(myset)) {
-      if (myset[i] < 1) {
-        myset[i] <- 0
-        } else if (i %in% c(1:4, 6) &
-                   myset[i] > LIST_DATA$x_plot_range[2]) {
-          print("out of bounds")
-          myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
-          myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
-          myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
-          myset[3] <- floor(LIST_DATA$x_plot_range[2]*.25)
-      }
+    my_pos <- suppressWarnings(as.numeric(unlist(strsplit(input$landlposition, split = " "))))
+    my_label <- unlist(strsplit(input$landlnames, split = " "))
+    if(length(my_pos) > 0){ # 
+      reactive_values$Lines_Lables_List <- 
+        LinesLablesListPlot(
+          input$numericbody1,
+          input$numericbody2,
+          input$numerictss,
+          input$numerictes,
+          my_label,
+          my_pos
+        )
     }
-    if(myset[1] > 0 & myset[1] >= myset[2]){
-      myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
-      myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
-    }
-    if(myset[3] > 0 & myset[4] != 0 & myset[3] >= myset[4]){
-      myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
-      myset[3] <- floor(LIST_DATA$x_plot_range[2]*.25)
-    }
-    if(myset[1] > 0 & myset[3] > 0 & myset[1] <= myset[3]){
-      myset[1] <- myset[3] + 1
-    }
-    if(myset[2] > 0 & myset[4] > 0 & myset[2] >= myset[4]){
-      myset[2] <- myset[4] - 1
-    }
-    updateNumericInput(session, "numericbody1", value = myset[1])
-    updateNumericInput(session, "numericbody2", value = myset[2])
-    updateNumericInput(session, "numerictss", value = myset[3])
-    updateNumericInput(session, "numerictes", value = myset[4])
-    updateNumericInput(session, "numericbinsize", value = myset[5])
-    updateNumericInput(session, "numericlabelspaceing", value = myset[6])
-    
-    reactive_values$Lines_Lables_List <-
-      LinesLablesList(myset[1],
-                      myset[2],
-                      myset[3],
-                      myset[4],
-                      myset[5],
-                      LIST_DATA$x_plot_range[2],
-                      myset[6])
-    updateTextInput(session, "landlnames", value = paste(reactive_values$Lines_Lables_List$mylables, collapse = " "))
-    updateTextInput(session, "landlposition", value = paste(reactive_values$Lines_Lables_List$mybrakes ,collapse = " "))
-    
   })
   
   # replot with smooth update ----
