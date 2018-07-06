@@ -23,7 +23,9 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 ###landl###
 
-landl fun (need to add tss and pa only and body1 and body2 only to fuction)
+landl fun 5 and 3 not working 
+quick double plot 
+(don't worry about too many bins?)
 empty lable and pos boxes behavure 
 fix ablity to color custom TSS and pA label
 
