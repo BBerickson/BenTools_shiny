@@ -23,11 +23,10 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 ###landl###
 
-landl fun 5 and 3 not working 
-quick double plot 
-(don't worry about too many bins?)
-empty lable and pos boxes behavure 
-fix ablity to color custom TSS and pA label
+
+empty lable and pos boxes ... hiden pos off of plot? 
+zoom plot does not keep colors straight
+
 
 use and test:
 

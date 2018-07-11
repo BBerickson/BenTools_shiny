@@ -1810,105 +1810,95 @@ LinesLablesListset <- function(body1bin = 20,
   print("lines and lables fun")
   everybp <- everybin * binbp
   if (everybp > 0) {
+    my_5prim <- NULL
+    my_3prim <- NULL
     if (tssbin > 0) {
       # set up 1 to TSS'
-      LOCname1 <- seq(-tssbin * binbp, 0, by = everybp)
-      LOC1 <- seq(1,  by = everybin, length.out = length(LOCname1))
+      TSSname <- seq(-tssbin * binbp, 0, by = everybp)
+      TSSloc <- seq(1,  by = everybin, length.out = length(TSSname))
       # make sure TSS is included
-      if(any(LOCname1 == 0)){
-        LOC1[LOCname1 == 0] <- tssbin + .5
-        LOCname1[LOCname1 == 0] <- "TSS"
+      if(any(TSSname == 0)){
+        TSSloc[TSSname == 0] <- tssbin + .5
+        TSSname[TSSname == 0] <- "TSS"
       } else {
-        LOC1 <- sort(c(LOC1, tssbin + .5))
-        LOCname1 <- append(LOCname1, "TSS")
+        TSSloc <- sort(c(TSSloc, tssbin + .5))
+        TSSname <- append(TSSname, "TSS")
       }
-      # 543 lines and lables
-      if(tssbin < body1bin & body1bin < body2bin & body2bin < tesbin & tesbin < totbins) {
-        # tss to body
-        if(everybp < (tssbin-tssbin)*binbp){
-          LOCname1a <- seq(everybp, (body1bin-tssbin)*binbp, by = everybp)
-          LOC1a <- seq(tssbin + everybin,  by = everybin, length.out = length(LOCname1a))
-        } else {
-          LOCname1a <- NULL
-          LOC1a <- NULL
-        }
+      my_5prim <- data_frame(lloc = TSSloc, lname = as.character(TSSname))
+      # tss to next
+      nextStart <- tssbin + everybin
+      if(body1bin > 0 & tesbin > 0 & body2bin > 0){
+        nextEnd <- body1bin
+      } else if(tesbin == 0){
+        nextEnd <- totbins
+      } else {
+        nextEnd <- 0
+      }
+      if(nextStart <= nextEnd) {
+        TSSname1 <- seq(everybp, (nextEnd-tssbin)*binbp, by = everybp)
+        TSSloc1 <- seq(nextStart,  by = everybin, length.out = length(TSSname1))
         # make sure body brake is included
-          LOC1a <- sort(c(LOC1a, body1bin))
-          LOCname1a <- append(LOCname1a, (body1bin - tssbin) * binbp)
-          LOC1 <- unique(c(LOC1, LOC1a))
-          LOCname1 <- append(LOCname1, unique(LOCname1a))
-        # body to TES'
-        LOCname2 <-  abs(seq((body2bin - tesbin) * binbp, 0, by = everybp))
-        LOC2 <- seq(body2bin, by = everybin, length.out = length(LOCname2))
-        # make sure TES is included
-        if(any(LOCname2 == 0)){
-          LOC2[LOCname2 == 0] <- tesbin + .5
-          LOCname2[LOCname2 == 0] <- "pA"
-        } else {
-          LOC2 <- sort(c(LOC2, tesbin + .5))
-          LOCname2 <- append(LOCname2, "pA")
+        if(!any(TSSloc1 == nextEnd)){
+          TSSname1 <- append(TSSname1, (nextEnd-tssbin)*binbp)
+          TSSloc1 <- c(TSSloc1, nextEnd)
         }
+        my_5prim2 <- data_frame(lloc = TSSloc1, lname = as.character(TSSname1))
+        my_5prim <- full_join(my_5prim, my_5prim2, by = c("lloc","lname"))
+      } else if (nextEnd > 0){
+        my_5prim2 <- data_frame(lloc = nextEnd, lname = as.character((nextEnd-tssbin)*binbp))
+        my_5prim <- full_join(my_5prim, my_5prim2, by = c("lloc","lname"))
+        } 
+    }
+    if(tesbin > 0){
+      # next to TES'
+      if(body1bin > 0 & tssbin > 0 & body2bin > 0){
+        nextStart <- body2bin
+      } else if(tssbin == 0){
+        nextStart <- 1
+      } else {
+        nextStart <- totbins
+      }
+      if(nextStart <= tesbin){
+        TESname <-  abs(seq((nextStart - tesbin) * binbp, 0, by = everybp))
+        TESloc <- seq(nextStart, by = everybin, length.out = length(TESname))
+        # make sure TES is included
+        if(any(TESname == 0)){
+          TESloc[TESname == 0] <- tesbin + .5
+          TESname[TESname == 0] <- "pA"
+        } else {
+          TESloc <- sort(c(TESloc, tesbin + .5))
+          TESname <- append(TESname, "pA")
+        }
+        my_3prim <- data_frame(lloc = TESloc, lname = as.character(TESname))
+      } else {
+        my_3prim <- data_frame(lloc = tesbin + .5, lname = "pA")
+      }
         # TES to end
-        LOCname2a <- seq(everybp, (totbins-tesbin)*binbp, by = everybp)
-        LOC2a <- seq(tesbin + everybin,  by = everybin, length.out = length(LOCname2a))
-        LOC2 <- sort(c(LOC2, LOC2a))
-        LOCname2 <- append(LOCname2, LOCname2a)
-        
-        use_plot_breaks <- c(LOC1, LOC2)
-        use_plot_breaks_labels <- c(LOCname1, LOCname2)
-        use_plot_breaks_labels <- use_plot_breaks_labels[1:length(use_plot_breaks)]
-      # TSS to TES
-      } else if(0 < tesbin & tesbin < totbins) {
-        # tes to end
-        LOCname2 <-  abs(seq(0, (totbins - tesbin) * binbp, by = everybp))
-        LOC2 <- seq(totbins, by = everybin, length.out = length(LOCname2))
-        # make sure TES is included
-        if(any(LOCname2 == 0)){
-          LOC2[LOCname2 == 0] <- tesbin + .5
-          LOCname2[LOCname2 == 0] <- "pA"
-        } else {
-          LOC2 <- sort(c(LOC2, tesbin + .5))
-          LOCname2 <- append(LOCname2, "pA")
+        nextStart <- tesbin + everybin
+        if(nextStart < totbins) {
+          TESname1 <- seq(everybp, (totbins-tesbin)*binbp, by = everybp)
+          TESloc1 <- seq(nextStart,  by = everybin, length.out = length(TESname1))
+          if(!any(TESloc1 == totbins)){
+            TESname1 <- append(TESname1, (totbins-tesbin)*binbp)
+            TESloc1 <- c(TESloc1, totbins)
+          }
+          my_3prim2 <- data_frame(lloc = TESloc1, lname = as.character(TESname1))
+          my_3prim <- full_join(my_3prim, my_3prim2, by = c("lloc","lname"))
         }
-        use_plot_breaks <- LOC2
-        use_plot_breaks_labels <- LOCname2
-      } else {
-        # 5 only TSS to end
-        if(everybp < (totbins-tssbin)*binbp){
-          LOCname1a <- seq(everybp, (totbins-tssbin)*binbp, by = everybp)
-          LOC1a <- seq(tssbin + everybin ,  by = everybin, length.out = length(LOCname1a))
-        } else {
-          LOCname1a <- NULL
-          LOC1a <- NULL
-        }
-        use_plot_breaks <- sort(c(LOC1, LOC1a))
-        use_plot_breaks_labels <- append(LOCname1, LOCname1a)
-        
-      }
-    # 3' only
-    } else if (tesbin > 0) {
-      # set up 1 to TES'
-      LOCname1 <- abs(seq(-tesbin * binbp, 0, by = everybp))
-      LOC1 <- seq(1,  by = everybin, length.out = length(LOCname1))
-      # make sure TES is included
-      if(any(LOCname1 == 0)){
-        LOC1[LOCname1 == 0] <- tesbin + .5
-        LOCname1[LOCname1 == 0] <- "pA"
-      } else {
-        LOC1 <- sort(c(LOC1, tesbin+.5))
-        LOCname1 <- append(LOCname1, "pA")
-      }
-      # TES to end
-      if(everybp < (totbins-tesbin)*binbp){
-      LOCname1a <- seq(everybp, (totbins-tesbin)*binbp, by = everybp)
-      LOC1a <- seq(tesbin + everybin ,  by = everybin, length.out = length(LOCname1a))
-      } else {
-        LOCname1a <- NULL
-        LOC1a <- NULL
-      }
-      use_plot_breaks <- sort(c(LOC1, LOC1a))
-      use_plot_breaks_labels <- append(LOCname1, LOCname1a)
-    
+    }
+    if(!is.null(my_5prim) & !is.null(my_3prim)){
+      my_53prim <- arrange(full_join(my_5prim, my_3prim, by = c("lloc","lname")),lloc)
+      use_plot_breaks <- my_53prim$lloc
+      use_plot_breaks_labels <- my_53prim$lname
+      use_plot_breaks_labels <- use_plot_breaks_labels[seq_along(use_plot_breaks)]
+    } else if(!is.null(my_5prim)){
+      use_plot_breaks <- my_5prim$lloc
+      use_plot_breaks_labels <- my_5prim$lname
+      use_plot_breaks_labels <- use_plot_breaks_labels[seq_along(use_plot_breaks)]
+    } else if(!is.null(my_3prim)){
+      use_plot_breaks <- my_3prim$lloc
+      use_plot_breaks_labels <- my_3prim$lname
+      use_plot_breaks_labels <- use_plot_breaks_labels[seq_along(use_plot_breaks)]
     } else {
       # just print bin numbers
       use_plot_breaks <-
@@ -1920,16 +1910,17 @@ LinesLablesListset <- function(body1bin = 20,
             by = everybin,
             length.out = (totbins / everybin) + 1)
     }
+    # no bp bin lables
   } else {
-    if (tssbin > 0 & tesbin > 0) {
-      use_plot_breaks <- c(tssbin + .5, tesbin + .5, body1bin, body2bin) 
-      use_plot_breaks_labels <- c("TSS", "pA", "5|4", "4|3")
-    } else if (tssbin > 0 & tesbin <= 0) {
-      use_plot_breaks <- tssbin + .5
-      use_plot_breaks_labels <- "TSS"
-    } else if (tesbin > 0) {
-      use_plot_breaks <- tesbin + .5
-      use_plot_breaks_labels <- "pA"
+    if (everybin > 0) {
+      use_plot_breaks <-
+        seq(1,
+            by = everybin,
+            length.out = (totbins / everybin) + 1)
+      use_plot_breaks_labels <-
+        seq(1,
+            by = everybin,
+            length.out = (totbins / everybin) + 1)
     } else {
       use_plot_breaks <- .5
       use_plot_breaks_labels <- "none"
@@ -1999,13 +1990,13 @@ LinesLablesListPlot <- function(body1bin, body2bin, tssbin, tesbin, use_plot_bre
 LinesLablesPreSet <- function(mytype) {
   # 5|4, 4|3, tss, pA, bp/bin, every bin
   if (mytype == "543 bins 20,20,40") {
-    tt <- c(20, 40, 15, 45, 100, 80, 10)
+    tt <- c(20, 40, 15, 45, 100, LIST_DATA$x_plot_range[2], 10)
   } else if (mytype == "543 bins 10,10,20") {
-    tt <- c(10, 20, 5, 25, 100, 40, 5)
+    tt <- c(10, 20, 5, 25, 100, LIST_DATA$x_plot_range[2], 5)
   } else if (mytype == "5' 1k 1k 80bins") {
-    tt <- c(0, 0, 40, 0, 25, 80, 20)
+    tt <- c(0, 0, 40, 0, 25, LIST_DATA$x_plot_range[2], 20)
   } else if (mytype == "5' .25k 10k 205bins") {
-    tt <- c(0, 0, 5, 0, 50, 205, 6)
+    tt <- c(0, 0, 5, 0, 50, LIST_DATA$x_plot_range[2], 6)
   } else if (mytype == "3'") {
     tt <- c(0, 0, 0, 40, 25, LIST_DATA$x_plot_range[2], 20)
   } else if (mytype == "4'"){
@@ -2013,7 +2004,7 @@ LinesLablesPreSet <- function(mytype) {
   } else {
     tt <- c(ceiling(LIST_DATA$x_plot_range[2]*.33), floor(LIST_DATA$x_plot_range[2]*.66),
             floor(LIST_DATA$x_plot_range[2]*.25), ceiling(LIST_DATA$x_plot_range[2]*.75), 
-            100, LIST_DATA$x_plot_range[2], floor(LIST_DATA$x_plot_range[2]*.1))
+            100, LIST_DATA$x_plot_range[2], ceiling(LIST_DATA$x_plot_range[2]*.1))
   }
   tt
 }
@@ -2123,7 +2114,7 @@ GGplotLineDot <-
       )) +
       theme(axis.title.x = element_text(size =  10, vjust = .5)) +
       theme(axis.text.x = element_text(
-        color = line_list$mycolors,
+        color = line_list$mycolors, #[xBinRange[1]:xBinRange[2]],
         size = 13,
         face = 'bold'
       )) +
@@ -3254,25 +3245,30 @@ server <- function(input, output, session) {
       input$numericlabelspaceing
     )
     # keep bin positions in bounds > 0 and < max bin number
-    myset[is.na(myset)] <- 0
     for (i in seq_along(myset)) {
-      if (myset[i] < 1) {
+      if (is.na(myset[i]) | myset[i] < 0) {
         myset[i] <- 0
-      } else if (i %in% c(1:4, 6) &
-                 myset[i] > LIST_DATA$x_plot_range[2]) {
-        print("543 best guess")
-        myset[1] <- ceiling(LIST_DATA$x_plot_range[2]*.33)
-        myset[2] <- floor(LIST_DATA$x_plot_range[2]*.66)
-        myset[4] <- ceiling(LIST_DATA$x_plot_range[2]*.75)
-        myset[3] <- floor(LIST_DATA$x_plot_range[2]*.25)
-        myset[6] <- floor(LIST_DATA$x_plot_range[2]*.1)
-      }
+        updateNumericInput(session, "numericbody1", value = myset[1])
+        updateNumericInput(session, "numericbody2", value = myset[2])
+        updateNumericInput(session, "numerictss", value = myset[3])
+        updateNumericInput(session, "numerictes", value = myset[4])
+        updateNumericInput(session, "numericbinsize", value = myset[5])
+        updateNumericInput(session, "numericlabelspaceing", value = myset[6])
+      } 
+      # else if (i %in% c(1:4, 6) &
+      #            myset[i] > LIST_DATA$x_plot_range[2]) {
+      #   print("543 best guess")
+      #   # myset <- LinesLablesPreSet("none")
+      #   updateNumericInput(session, "numericbody1", value = myset[1])
+      #   updateNumericInput(session, "numericbody2", value = myset[2])
+      #   updateNumericInput(session, "numerictss", value = myset[3])
+      #   updateNumericInput(session, "numerictes", value = myset[4])
+      #   updateNumericInput(session, "numericbinsize", value = myset[5])
+      #   updateNumericInput(session, "numericlabelspaceing", value = myset[6])
+      # }
     }
-    updateNumericInput(session, "numericbody1", value = myset[1])
-    updateNumericInput(session, "numericbody2", value = myset[2])
-    updateNumericInput(session, "numerictss", value = myset[3])
-    updateNumericInput(session, "numerictes", value = myset[4])
-    updateNumericInput(session, "numericlabelspaceing", value = myset[6])
+   
+    
     Lines_Lables_List <- LinesLablesListset(myset[1],
                                          myset[2],
                                          myset[3],
@@ -3282,8 +3278,8 @@ server <- function(input, output, session) {
                                          myset[6])
     if(input$selectlineslables != "" & LIST_DATA$STATE[2] != 0){
       updateSelectInput(session, "selectlineslables", selected = "")
-      my_pos <- suppressWarnings(as.numeric(unlist(strsplit(input$landlposition, split = " "))))
-      my_label <- unlist(strsplit(input$landlnames, split = " "))
+      my_pos <- suppressWarnings(as.numeric((Lines_Lables_List$mybrakes)))
+      my_label <- Lines_Lables_List$mylables
       if(length(my_pos) > 0){  
         reactive_values$Lines_Lables_List <- 
           LinesLablesListPlot(
@@ -3296,7 +3292,6 @@ server <- function(input, output, session) {
           )
       }
     }
-    
     # set lable and posistion numbers
     updateTextInput(session, "landlnames", value = paste(Lines_Lables_List$mylables, collapse = " "))
     updateTextInput(session, "landlposition", value = paste(Lines_Lables_List$mybrakes ,collapse = " "))
