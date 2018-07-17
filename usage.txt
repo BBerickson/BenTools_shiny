@@ -63,7 +63,7 @@ Plot tab
   set math and normalization to data for plotting
   quick color setting
   cusome set x axis bin lables
-  lines and labels tool will reset to a defalt if bins are outof bounds or regions in the wrong order
+  lines and labels tool helps place proper, can edit lable and posistion pairs
 
 Gene tool
 
@@ -124,7 +124,7 @@ Cumulative Distribution Function (CDF) tool
   select upper and lower percentages to exclude
   
   plots results
-    if 2 files are use a ks test p value is returned
+    if 2 files are use a ks test p value is returned and the diffrence between the two in the data table
     reactive to upper and lower percentages and updates gene list
     if same file from differnt gene lists is used cdf plot colors will be auto replaced
     

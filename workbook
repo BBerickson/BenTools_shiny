@@ -21,29 +21,10 @@ https://rstudio.github.io/DT/
 
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
-###landl###
-
-
-empty lable and pos boxes ... hiden pos off of plot? 
-zoom plot does not keep colors straight
-
 
 use and test:
 
-reset and load new files crashs on quick color change ... remove all plot varibles? and set not to plot
-
-RF looks and norm number????
-add norm number to URL?
-
-file fail to load protection
-
-cdf replot have progress bar or spining wheel
-add sub to cdf plot
-fix cdf slider to zoom plot?
-add compare PI tool
-ratio remove 0 not working right
-
-add plot all tools?
+add plot all tools, for using DT for gene list filtering??
 
 
 # to revert to older libary

@@ -158,7 +158,7 @@ LoadTableFile <-
     my_landl <- NULL
     
     # tests if loading a file with a list of address to remote files, requirs .url.txt in file name
-    if (length(file_name) == 1 &&
+    if (length(file_name) == 1 &
         length(grep(".url.txt", file_name)) == 1) {
       file_path <- read_lines(file_path)
       file_name <- NULL
@@ -200,7 +200,7 @@ LoadTableFile <-
       
       # shiny progress bar
       setProgress(1, detail = "start wroking on file")
-    
+      
       #gets number of columns in file, used to guess how to deal with file
       num_bins <-
         count_fields(file_path[x],
@@ -1511,7 +1511,7 @@ FindGroups <- function(list_data,
   list_data
 }
 
-# Cumulative Distribution data prep
+# Cumulative Distribution data prep "EI"
 CumulativeDistribution <-
   function(list_data,
            onoff,
@@ -2094,8 +2094,9 @@ GGplotLineDot <-
       scale_linetype_manual(values = use_line) +
       xlab(paste(Sys.Date(), paste(unique(plot_options$mysub), collapse = ", "), collapse = ", ")) +
       ylab(use_y_label) +  
-      scale_x_continuous(breaks = line_list$mybrakes,
-                         labels = line_list$mylables) +
+      #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
+      scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+                         labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
       
       geom_vline(
         data = line_list$myline,
@@ -2112,10 +2113,14 @@ GGplotLineDot <-
         size = 13,
         face = 'bold'
       )) +
-      theme(axis.title.x = element_text(size =  10, vjust = .5)) +
+      theme(axis.title.x = element_text(size =  13, vjust = .5)) +
       theme(axis.text.x = element_text(
-        color = line_list$mycolors, #[xBinRange[1]:xBinRange[2]],
+        #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
+        color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
         size = 13,
+        angle = -45,
+        hjust = .1,
+        vjust = .9,
         face = 'bold'
       )) +
       theme(
@@ -3244,7 +3249,7 @@ server <- function(input, output, session) {
       input$numericbinsize,
       input$numericlabelspaceing
     )
-    # keep bin positions in bounds > 0 and < max bin number
+    # keep bin positions in bounds > 0 
     for (i in seq_along(myset)) {
       if (is.na(myset[i]) | myset[i] < 0) {
         myset[i] <- 0
@@ -3255,17 +3260,6 @@ server <- function(input, output, session) {
         updateNumericInput(session, "numericbinsize", value = myset[5])
         updateNumericInput(session, "numericlabelspaceing", value = myset[6])
       } 
-      # else if (i %in% c(1:4, 6) &
-      #            myset[i] > LIST_DATA$x_plot_range[2]) {
-      #   print("543 best guess")
-      #   # myset <- LinesLablesPreSet("none")
-      #   updateNumericInput(session, "numericbody1", value = myset[1])
-      #   updateNumericInput(session, "numericbody2", value = myset[2])
-      #   updateNumericInput(session, "numerictss", value = myset[3])
-      #   updateNumericInput(session, "numerictes", value = myset[4])
-      #   updateNumericInput(session, "numericbinsize", value = myset[5])
-      #   updateNumericInput(session, "numericlabelspaceing", value = myset[6])
-      # }
     }
    
     
@@ -3313,6 +3307,10 @@ server <- function(input, output, session) {
       disable("actionlineslabels")
     }
     if(LIST_DATA$STATE[2] == 0){
+      if (length(my_pos) == 0){
+        my_label <- "none"
+        my_pos <- LIST_DATA$x_plot_range[2]*2
+      }
       reactive_values$Lines_Lables_List <- 
         LinesLablesListPlot(
           input$numericbody1,
@@ -3330,7 +3328,10 @@ server <- function(input, output, session) {
     print("action lines and lables")
     my_pos <- suppressWarnings(as.numeric(unlist(strsplit(input$landlposition, split = " "))))
     my_label <- unlist(strsplit(input$landlnames, split = " "))
-    if(length(my_pos) > 0){  
+      if (length(my_pos) == 0){
+        my_label <- "none"
+        my_pos <- LIST_DATA$x_plot_range[2]*2
+      }  
       reactive_values$Lines_Lables_List <- 
         LinesLablesListPlot(
           input$numericbody1,
@@ -3340,7 +3341,6 @@ server <- function(input, output, session) {
           my_label,
           my_pos
         )
-    }
   })
   
   # replot with smooth update ----
@@ -3554,6 +3554,7 @@ server <- function(input, output, session) {
       hide("cluster4table")
       hide('cdftable')
       hide('plotcdf')
+      reactive_values$Apply_Math <- NULL
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
       updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
     }
@@ -5630,6 +5631,10 @@ server <- function(input, output, session) {
         inner_join(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$use, by = "gene") %>% 
         mutate(value = round(log2(value), 5)) %>% 
         spread(., set2, value)
+      # PI EI differenc tool
+      if(length(names(df)) == 3){
+        df[paste("\'",names(df[2]),"\'"," By ","\'",names(df[3]),"\'",sep = "")] <- df[2]-df[3]
+      }
       df <- arrange(df, df[[names(df)[2]]])
       dt <- datatable(
         df,
@@ -5817,6 +5822,7 @@ server <- function(input, output, session) {
           gsub("(.{17})", "\\1\n", set2),
           sep = '\n'
         ))
+      # fix same color problems
       if(any(duplicated(df_options$mycol))){
       df_options$mycol <- brewer.pal(8, "Set1")[1:n_distinct(df_options$set)]
       }
