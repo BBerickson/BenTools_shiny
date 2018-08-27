@@ -26,7 +26,7 @@ use and test:
 
 add plot all tools, for using DT for gene list filtering??
 
-
+# if showing gene list replots remove inner join on creating the DT
 # to revert to older libary
 require(devtools)
 install_version(“tidyverse”, version = “1.1.1”)
