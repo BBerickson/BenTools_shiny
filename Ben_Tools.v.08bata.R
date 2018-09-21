@@ -2629,6 +2629,7 @@ server <- function(input, output, session) {
       session,
       "sliderbinratio1",
       min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
       value = c(
         floor(LIST_DATA$x_plot_range[1] / 8),
         floor(LIST_DATA$x_plot_range[2] / 4)
@@ -2636,6 +2637,8 @@ server <- function(input, output, session) {
     )
     updateSliderInput(session,
                       "sliderbinratio2",
+                      min = LIST_DATA$x_plot_range[1],
+                      max = LIST_DATA$x_plot_range[2],
                       value = c(
                         ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
                         floor(LIST_DATA$x_plot_range[2] / 2)
