@@ -2425,7 +2425,7 @@ server <- function(input, output, session) {
           sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
         ), sep = ":"))
       )
-      if (any(grep(
+      if (!is.null(reactive_values$clustergroups) & any(grep(
         paste0(reactive_values$clustergroups, "1\nn ="),
         names(LIST_DATA$gene_info)
       ) > 0)) {
@@ -2435,21 +2435,22 @@ server <- function(input, output, session) {
               paste0(reactive_values$clustergroups, "1\nn ="),
               names(LIST_DATA$gene_info)
             )]]$use),
-            "Gene List 1",
+            "Cluster 1",
             icon = icon("list"),
             color = "green"
           )
         })
       } else{
         hide("plotcluster")
+        hide('actionclusterdatatable')
         output$valueboxcluster1 <- renderValueBox({
           valueBox(0,
-                   "Gene List 1",
+                   "Cluster 1",
                    icon = icon("list"),
                    color = "green")
         })
       }
-      if (any(grep(
+      if (!is.null(reactive_values$clustergroups) & any(grep(
         paste0(reactive_values$clustergroups, "2\nn ="),
         names(LIST_DATA$gene_info)
       ) > 0)) {
@@ -2459,7 +2460,7 @@ server <- function(input, output, session) {
               paste0(reactive_values$clustergroups, "2\nn ="),
               names(LIST_DATA$gene_info)
             )]]$use),
-            "Gene List 2",
+            "Cluster 2",
             icon = icon("list"),
             color = "green"
           )
@@ -2467,12 +2468,12 @@ server <- function(input, output, session) {
       } else{
         output$valueboxcluster2 <- renderValueBox({
           valueBox(0,
-                   "Gene List 2",
+                   "Cluster 2",
                    icon = icon("list"),
                    color = "green")
         })
       }
-      if (any(grep(
+      if (!is.null(reactive_values$clustergroups) & any(grep(
         paste0(reactive_values$clustergroups, "3\nn ="),
         names(LIST_DATA$gene_info)
       ) > 0)) {
@@ -2490,12 +2491,12 @@ server <- function(input, output, session) {
       } else{
         output$valueboxcluster3 <- renderValueBox({
           valueBox(0,
-                   "Gene List 3",
+                   "Cluster 3",
                    icon = icon("list"),
                    color = "green")
         })
       }
-      if (any(grep(
+      if (!is.null(reactive_values$clustergroups) & any(grep(
         paste0(reactive_values$clustergroups, "4\nn ="),
         names(LIST_DATA$gene_info)
       ) > 0)) {
@@ -2505,7 +2506,7 @@ server <- function(input, output, session) {
               paste0(reactive_values$clustergroups, "4\nn ="),
               names(LIST_DATA$gene_info)
             )]]$use),
-            "Gene List 4",
+            "Cluster 4",
             icon = icon("list"),
             color = "green"
           )
@@ -3661,6 +3662,22 @@ server <- function(input, output, session) {
   # Remove gene list ----
   observeEvent(input$actionremovegene, ignoreInit = TRUE, {
     print("remove gene list")
+    hide('actiongenelistsdatatable')
+    hide('genelists1table')
+    hide('genelists2table')
+    hide('genelists3table')
+    hide('actionsortdatatable')
+    hide('sorttable')
+    hide('ratio1table')
+    hide('ratio2table')
+    hide('ratio3table')
+    hide('plotcluster')
+    hide("cluster1table")
+    hide("cluster2table")
+    hide("cluster3table")
+    hide("cluster4table")
+    hide('cdftable')
+    hide('plotcdf')
     LIST_DATA <<-
       RemoveGeneList(LIST_DATA, input$selectgenelistoptions)
     updateSelectInput(
@@ -4807,7 +4824,7 @@ server <- function(input, output, session) {
                    output$valueboxcluster1 <- renderValueBox({
                      valueBox(
                        n_distinct(LIST_DATA$gene_file[[newname]]$use),
-                       "Gene List 1",
+                       "Cluster 1",
                        icon = icon("list"),
                        color = "green"
                      )
@@ -4917,7 +4934,7 @@ server <- function(input, output, session) {
                    output$valueboxcluster2 <- renderValueBox({
                      valueBox(
                        n_distinct(LIST_DATA$gene_file[[newname]]$use),
-                       "Gene List 2",
+                       "Cluster 2",
                        icon = icon("list"),
                        color = "green"
                      )
@@ -5027,7 +5044,7 @@ server <- function(input, output, session) {
                    output$valueboxcluster3 <- renderValueBox({
                      valueBox(
                        n_distinct(LIST_DATA$gene_file[[newname]]$use),
-                       "Gene List 3",
+                       "Cluster 3",
                        icon = icon("list"),
                        color = "green"
                      )
@@ -5138,7 +5155,7 @@ server <- function(input, output, session) {
                    output$valueboxcluster4 <- renderValueBox({
                      valueBox(
                        n_distinct(LIST_DATA$gene_file[[newname]]$use),
-                       "Gene List 4",
+                       "Cluster 4",
                        icon = icon("list"),
                        color = "green"
                      )
@@ -5264,7 +5281,7 @@ server <- function(input, output, session) {
                      choices = names(LIST_DATA$gene_file),
                      selected = ol
                    )
-                   if (any(grep(
+                   if (!is.null(reactive_values$clustergroups) & any(grep(
                      paste0(reactive_values$clustergroups, "1\nn ="),
                      names(LIST_DATA$gene_info)
                    ) > 0)) {
@@ -5274,7 +5291,7 @@ server <- function(input, output, session) {
                            paste0(reactive_values$clustergroups, "1\nn ="),
                            names(LIST_DATA$gene_info)
                          )]]$use),
-                         "Gene List 1",
+                         "Group 1",
                          icon = icon("list"),
                          color = "green"
                        )
@@ -5282,12 +5299,12 @@ server <- function(input, output, session) {
                    } else{
                      output$valueboxcluster1 <- renderValueBox({
                        valueBox(0,
-                                "Gene List 1",
+                                "Group 1",
                                 icon = icon("list"),
                                 color = "green")
                      })
                    }
-                   if (any(grep(
+                   if (!is.null(reactive_values$clustergroups) & any(grep(
                      paste0(reactive_values$clustergroups, "2\nn ="),
                      names(LIST_DATA$gene_info)
                    ) > 0)) {
@@ -5297,7 +5314,7 @@ server <- function(input, output, session) {
                            paste0(reactive_values$clustergroups, "2\nn ="),
                            names(LIST_DATA$gene_info)
                          )]]$use),
-                         "Gene List 2",
+                         "Group 2",
                          icon = icon("list"),
                          color = "green"
                        )
@@ -5305,12 +5322,12 @@ server <- function(input, output, session) {
                    } else{
                      output$valueboxcluster2 <- renderValueBox({
                        valueBox(0,
-                                "Gene List 2",
+                                "Group 2",
                                 icon = icon("list"),
                                 color = "green")
                      })
                    }
-                   if (any(grep(
+                   if (!is.null(reactive_values$clustergroups) & any(grep(
                      paste0(reactive_values$clustergroups, "3\nn ="),
                      names(LIST_DATA$gene_info)
                    ) > 0)) {
@@ -5320,7 +5337,7 @@ server <- function(input, output, session) {
                            paste0(reactive_values$clustergroups, "3\nn ="),
                            names(LIST_DATA$gene_info)
                          )]]$use),
-                         "Gene List 3",
+                         "Group 3",
                          icon = icon("list"),
                          color = "green"
                        )
@@ -5328,12 +5345,12 @@ server <- function(input, output, session) {
                    } else{
                      output$valueboxcluster3 <- renderValueBox({
                        valueBox(0,
-                                "Gene List 3",
+                                "Group 3",
                                 icon = icon("list"),
                                 color = "green")
                      })
                    }
-                   if (any(grep(
+                   if (!is.null(reactive_values$clustergroups) & any(grep(
                      paste0(reactive_values$clustergroups, "4\nn ="),
                      names(LIST_DATA$gene_info)
                    ) > 0)) {
@@ -5343,7 +5360,7 @@ server <- function(input, output, session) {
                            paste0(reactive_values$clustergroups, "4\nn ="),
                            names(LIST_DATA$gene_info)
                          )]]$use),
-                         "Gene List 4",
+                         "Group 4",
                          icon = icon("list"),
                          color = "green"
                        )
@@ -5351,7 +5368,7 @@ server <- function(input, output, session) {
                    } else{
                      output$valueboxcluster4 <- renderValueBox({
                        valueBox(0,
-                                "Gene List 4",
+                                "Group 4",
                                 icon = icon("list"),
                                 color = "green")
                      })
@@ -5417,25 +5434,25 @@ server <- function(input, output, session) {
                  } else {
                    output$valueboxcluster1 <- renderValueBox({
                      valueBox(0,
-                              "Gene List 1",
+                              "Cluster 1",
                               icon = icon("list"),
                               color = "green")
                    })
                    output$valueboxcluster2 <- renderValueBox({
                      valueBox(0,
-                              "Gene List 2",
+                              "Cluster 2",
                               icon = icon("list"),
                               color = "green")
                    })
                    output$valueboxcluster3 <- renderValueBox({
                      valueBox(0,
-                              "Gene List 3",
+                              "Cluster 3",
                               icon = icon("list"),
                               color = "green")
                    })
                    output$valueboxcluster4 <- renderValueBox({
                      valueBox(0,
-                              "Gene List 4",
+                              "Cluster 4",
                               icon = icon("list"),
                               color = "green")
                    })
@@ -5447,7 +5464,7 @@ server <- function(input, output, session) {
   observeEvent(input$actionclusterdatatable, ignoreInit = TRUE, {
     updateTabItems(session, "clustertooltab", "Cluster 1")
     newnames <- gsub("(.{20})", "\\1... ", input$pickerclusterfile)
-    if (any(grep(
+    if (!is.null(reactive_values$clustergroups) & any(grep(
       paste0(reactive_values$clustergroups, "1\nn ="),
       names(LIST_DATA$gene_info)
     ) > 0)) {
@@ -5504,7 +5521,7 @@ server <- function(input, output, session) {
         )
     }
     
-    if (any(grep(
+    if (!is.null(reactive_values$clustergroups) & any(grep(
       paste0(reactive_values$clustergroups, "2\nn ="),
       names(LIST_DATA$gene_info)
     ) > 0)) {
@@ -5561,7 +5578,7 @@ server <- function(input, output, session) {
         )
     }
     
-    if (any(grep(
+    if (!is.null(reactive_values$clustergroups) & any(grep(
       paste0(reactive_values$clustergroups, "3\nn ="),
       names(LIST_DATA$gene_info)
     ) > 0)) {
@@ -5618,7 +5635,7 @@ server <- function(input, output, session) {
         )
     }
     
-    if (any(grep(
+    if (!is.null(reactive_values$clustergroups) & any(grep(
       paste0(reactive_values$clustergroups, "4\nn ="),
       names(LIST_DATA$gene_info)
     ) > 0)) {
@@ -5681,7 +5698,7 @@ server <- function(input, output, session) {
   observeEvent(input$actionclusterplot, {
     print("cluster plot button")
     show('plotcluster')
-    if (any(grep(
+    if (!is.null(reactive_values$clustergroups) & any(grep(
       paste0(reactive_values$clustergroups, "1\nn ="),
       names(LIST_DATA$gene_info)
     ) > 0)) {
