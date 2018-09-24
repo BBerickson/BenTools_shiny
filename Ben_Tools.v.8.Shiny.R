@@ -2907,8 +2907,6 @@ server <- function(input, output, session) {
       }
       write_lines(new_comments, file)
     }
-    updateCheckboxInput(session, "checkboxsavecolor", value = FALSE),
-    updateCheckboxInput(session, "checkboxsavesplit", value = FALSE)
   )
   
   # record new nickname  ----
