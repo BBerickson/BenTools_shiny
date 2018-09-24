@@ -1075,6 +1075,7 @@ CompareRatios <-
            num,
            divzerofix,
            normbin = 0,
+           inturnal_norm,
            mytint = FALSE) {
     if (ratio1file == "") {
       showModal(modalDialog(
@@ -1146,7 +1147,7 @@ CompareRatios <-
             ungroup()
         }
         lc <<- lc + 1
-        if (start2_bin == 0 | end2_bin == 0) {
+        if (!inturnal_norm) {
           outlist[[lc]] <<- df
         } else {
           outlist[[lc]] <<-
@@ -1189,27 +1190,55 @@ CompareRatios <-
       nick_name <- c(nick_name, nick_name1)
       list_data$gene_file[[nick_name1]]$full <- upratio
       list_data$gene_file[[nick_name1]]$use <- select(upratio, gene)
-      list_data$gene_file[[nick_name1]]$info <-
-        paste(
-          "Ratio_Up_file1",
-          ratio1file,
-          "/",
-          ratio2file,
-          "bins",
-          start1_bin,
-          "to",
-          end1_bin,
-          "/",
-          start2_bin,
-          end2_bin,
-          "fold change cut off",
-          num,
-          divzerofix,
-          "from",
-          list_name,
-          "gene list",
-          Sys.Date()
-        )
+      if (inturnal_norm) {
+        list_data$gene_file[[nick_name1]]$info <-
+          paste(
+            "Ratio_Up_file1",
+            ratio2file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/[",
+            start2_bin,
+            "to",
+            end2_bin,
+            "]/",
+            ratio1file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/[",
+            start2_bin,
+            "to",
+            end2_bin,
+            "] ",
+            "fold change cut off",
+            num,
+            divzerofix,
+            "from",
+            list_name,
+            "gene list",
+            Sys.Date()
+          )
+      } else {
+        list_data$gene_file[[nick_name1]]$info <-
+          paste(
+            "Ratio_Up_file1",
+            ratio2file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/",
+            ratio1file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "] ",
+            "fold change cut off",
+            num,
+            divzerofix,
+            "from",
+            list_name,
+            "gene list",
+            Sys.Date()
+          )
+      }
       list_data$gene_file[[nick_name1]]$sub <-
         paste(
           "Ratio_Up_file1",
@@ -1227,27 +1256,55 @@ CompareRatios <-
       nick_name <- c(nick_name, nick_name2)
       list_data$gene_file[[nick_name2]]$full <- upratio
       list_data$gene_file[[nick_name2]]$use <- select(upratio, gene)
-      list_data$gene_file[[nick_name2]]$info <-
-        paste(
-          "Ratio_Up_file2",
-          ratio2file,
-          "/",
-          ratio1file,
-          "bins",
-          start1_bin,
-          "to",
-          end1_bin,
-          "/",
-          start2_bin,
-          end2_bin,
-          "fold change cut off",
-          num,
-          divzerofix,
-          "from",
-          list_name,
-          "gene list",
-          Sys.Date()
-        )
+      if (inturnal_norm) {
+        list_data$gene_file[[nick_name2]]$info <-
+          paste(
+            "Ratio_Up_file1",
+            ratio2file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/[",
+            start2_bin,
+            "to",
+            end2_bin,
+            "]/",
+            ratio1file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/[",
+            start2_bin,
+            "to",
+            end2_bin,
+            "] ",
+            "fold change cut off",
+            num,
+            divzerofix,
+            "from",
+            list_name,
+            "gene list",
+            Sys.Date()
+          )
+      } else {
+        list_data$gene_file[[nick_name2]]$info <-
+          paste(
+            "Ratio_Up_file1",
+            ratio2file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/",
+            ratio1file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "] ",
+            "fold change cut off",
+            num,
+            divzerofix,
+            "from",
+            list_name,
+            "gene list",
+            Sys.Date()
+          )
+      }
       list_data$gene_file[[nick_name2]]$sub <-
         paste(
           "Ratio_Up_file2",
@@ -1267,27 +1324,55 @@ CompareRatios <-
       nick_name <- c(nick_name, nick_name3)
       list_data$gene_file[[nick_name3]]$full <- upratio
       list_data$gene_file[[nick_name3]]$use <- select(upratio, gene)
-      list_data$gene_file[[nick_name3]]$info <-
-        paste(
-          "Ratio_No_Diff",
-          ratio1file,
-          "/",
-          ratio2file,
-          "bins",
-          start1_bin,
-          "to",
-          end1_bin,
-          "/",
-          start2_bin,
-          end2_bin,
-          "fold change cut off",
-          num,
-          divzerofix,
-          "from",
-          list_name,
-          "gene list",
-          Sys.Date()
-        )
+      if (inturnal_norm) {
+        list_data$gene_file[[nick_name3]]$info <-
+          paste(
+            "Ratio_Up_file1",
+            ratio2file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/[",
+            start2_bin,
+            "to",
+            end2_bin,
+            "]/",
+            ratio1file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/[",
+            start2_bin,
+            "to",
+            end2_bin,
+            "] ",
+            "fold change cut off",
+            num,
+            divzerofix,
+            "from",
+            list_name,
+            "gene list",
+            Sys.Date()
+          )
+      } else {
+        list_data$gene_file[[nick_name3]]$info <-
+          paste(
+            "Ratio_Up_file1",
+            ratio2file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "]/",
+            ratio1file,
+            "[", start1_bin,
+            "to",
+            end1_bin, "] ",
+            "fold change cut off",
+            num,
+            divzerofix,
+            "from",
+            list_name,
+            "gene list",
+            Sys.Date()
+          )
+      }
       list_data$gene_file[[nick_name3]]$sub <-
         paste(
           "Ratio_No_Diff",
@@ -4382,14 +4467,6 @@ server <- function(input, output, session) {
     } else {
       updateNumericInput(session, "numericratio", value = 2)
     }
-    if (input$sliderbinratio2[1] == 0 &
-        input$sliderbinratio2[2] > 0) {
-      updateSliderInput(
-        session,
-        "sliderbinratio2",
-        value = c(input$sliderbinratio2[2], input$sliderbinratio2[2])
-      )
-    }
     if (input$sliderbinratio2[2] > 0 &
         input$sliderbinratio1[2] >= input$sliderbinratio2[1] |
         input$pickerratio2file == "None") {
@@ -4429,7 +4506,8 @@ server <- function(input, output, session) {
                        input$sliderbinratio2[2],
                        input$numericratio,
                        input$radioratiozero,
-                       input$sliderRatioBinNorm
+                       input$sliderRatioBinNorm,
+                       input$checkboxrationom
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -6440,7 +6518,7 @@ ui <- dashboardPage(
           awesomeRadio(
             "radionormzero",
             label = "Handling #/0 = Inf",
-            choices = c("replace with min/2", "remove genes containing"),
+            choices = c("replace with min/2", "remove genes with any 0's in denominator"),
             selected = "replace with min/2"
           ),
           valueBoxOutput("valueboxnormfile")
@@ -6749,8 +6827,8 @@ ui <- dashboardPage(
                     column(
                       5,
                       sliderInput(
-                        "sliderbinratio1",
-                        label = "Select 5' Bin Range:",
+                        "sliderbinratio2",
+                        label = "Select nominator Bin Range:",
                         min = 0,
                         max = 80,
                         value = c(0, 80)
@@ -6759,20 +6837,22 @@ ui <- dashboardPage(
                     column(
                       5,
                       sliderInput(
-                        "sliderbinratio2",
-                        label = "Optinal 3' Bin Range:",
+                        "sliderbinratio1",
+                        label = "Optinal denominator Bin Range:",
                         min = 0,
                         max = 80,
                         value = c(0, 0)
-                      )
+                      ),
+                      checkboxInput("checkboxrationom", "inturnal norm", value = FALSE),
+                      helpText("NA if one file selected")
                     )
                   ),
                   actionButton("actionratiotool", "Get fold changes"),
                   awesomeRadio(
                     "radioratiozero",
                     label = "Handling #/0 = Inf",
-                    choices = c("replace with min/2", "remove genes containing"),
-                    selected = "remove genes containing"
+                    choices = c("replace with min/2", "remove genes with any 0's in denominator"),
+                    selected = "remove genes with any 0's in denominator"
                   ),
                   sliderInput(
                     "sliderRatioBinNorm",
@@ -6948,8 +7028,8 @@ ui <- dashboardPage(
             fluidRow(column(
               5,
               sliderInput(
-                "sliderbincdf1",
-                label = "Select 5' Bin Range:",
+                "sliderbincdf2",
+                label = "Select nominator Bin Range:",
                 min = 0,
                 max = 80,
                 value = c(0, 80)
@@ -6958,8 +7038,8 @@ ui <- dashboardPage(
             column(
               5,
               sliderInput(
-                "sliderbincdf2",
-                label = "Select 3' Bin Range:",
+                "sliderbincdf1",
+                label = "Select denominator Bin Range:",
                 min = 0,
                 max = 80,
                 value = c(0, 0)
@@ -6976,7 +7056,7 @@ ui <- dashboardPage(
                 value = c(0, 100)
               )
             ),
-            checkboxInput("checkboxcdfcommon", label = "in common", value = TRUE),
+            checkboxInput("checkboxcdfcommon", label = "in common", value = FALSE),
             actionButton("actioncdftool", "Plot CDF")
           ),
           box(
