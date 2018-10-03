@@ -2017,17 +2017,30 @@ LinesLablesListset <- function(body1bin = 20,
 # Sets plot lines and lables colors
 LinesLablesListPlot <-
   function(body1bin,
+           body1color,
+           body1line,
            body2bin,
+           body2color,
+           body2line,
            tssbin,
+           tsscolor,
+           tssline,
            tesbin,
+           tescolor,
+           tesline,
            use_plot_breaks_labels,
-           use_plot_breaks) {
+           use_plot_breaks,
+           vlinesize, 
+           linesize, 
+           fontsizex, 
+           fontsizey,
+           legendsize) {
     # print("lines and lables plot fun")
     if (length(use_plot_breaks_labels) > 0) {
       mycolors <- rep("black", length(use_plot_breaks))
       use_virtical_line <- c(NA, NA, NA, NA)
       if (tssbin > 0) {
-        mycolors[which(use_plot_breaks == tssbin  + .5)] <- "green"
+        mycolors[which(use_plot_breaks == tssbin  + .5)] <- tsscolor
         use_virtical_line[1] <- tssbin  + .5
         if (tssbin < body1bin &
             body1bin < body2bin &
@@ -2036,7 +2049,7 @@ LinesLablesListPlot <-
         }
       }
       if (tesbin > 0) {
-        mycolors[which(use_plot_breaks == tesbin  + .5)] <- "red"
+        mycolors[which(use_plot_breaks == tesbin  + .5)] <- tescolor
         use_virtical_line[2] <- tesbin + .5
       }
     } else {
@@ -2045,8 +2058,8 @@ LinesLablesListPlot <-
       use_virtical_line <- c(NA, NA, NA, NA)
     }
     # virtical line set up
-    use_virtical_line_color <- c("green", "red", "black", "black")
-    use_virtical_line_type <- c("dotted", "dotted", "solid", "solid")
+    use_virtical_line_color <- c(tsscolor, tsscolor, body1color, body2color)
+    use_virtical_line_type <- c(tssline, tesline, body1line, body2line)
     use_plot_breaks <- na_if(use_plot_breaks, 0.5)
     use_virtical_line <- na_if(use_virtical_line, 0.5)
     use_plot_breaks_labels <-
@@ -2066,7 +2079,8 @@ LinesLablesListPlot <-
       ),
       mycolors = mycolors,
       mybrakes = use_plot_breaks,
-      mylables = use_plot_breaks_labels
+      mylables = use_plot_breaks_labels,
+      mysize = c(vlinesize,linesize,fontsizex,fontsizey,legendsize)
     )
   }
 
@@ -2173,11 +2187,11 @@ GGplotLineDot <-
     if (use_smooth) {
       gp <- gp +
         geom_smooth(se = FALSE,
-                    size = 2.5,
+                    size = line_list$mysize[2],
                     span = .2)
     } else{
       gp <- gp +
-        geom_line(size = 2.5)
+        geom_line(size = line_list$mysize[2])
     }
     gp <- gp +
       geom_point(stroke = .001) +
@@ -2196,22 +2210,22 @@ GGplotLineDot <-
       geom_vline(
         data = line_list$myline,
         aes(xintercept = use_virtical_line),
-        size = 2,
+        size = line_list$mysize[1],
         linetype = line_list$myline$use_virtical_line_type,
         color = line_list$myline$use_virtical_line_color
       ) +
       theme_bw() +
       theme(panel.grid.minor = element_blank(),
             panel.grid.major = element_blank()) +
-      theme(axis.title.y = element_text(size =  17, margin = margin(2, 10, 2, 2))) +
-      theme(axis.text.y = element_text(size = 13,
+      theme(axis.title.y = element_text(size =  line_list$mysize[4] + 4, margin = margin(2, 10, 2, 2))) +
+      theme(axis.text.y = element_text(size = line_list$mysize[4],
                                        face = 'bold')) +
-      theme(axis.title.x = element_text(size =  13, vjust = .5)) +
+      theme(axis.title.x = element_text(size =  line_list$mysize[3], vjust = .5)) +
       theme(
         axis.text.x = element_text(
           #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
           color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
-          size = 13,
+          size = line_list$mysize[3],
           angle = -45,
           hjust = .1,
           vjust = .9,
@@ -2220,9 +2234,9 @@ GGplotLineDot <-
       ) +
       theme(
         legend.title = element_blank(),
-        legend.key = element_rect(size = 5, color = 'white'),
+        legend.key = element_rect(size = line_list$mysize[5]/2, color = 'white'),
         legend.key.height = unit(legend_space, "line"),
-        legend.text = element_text(size = 10, face = 'bold')
+        legend.text = element_text(size = line_list$mysize[5], face = 'bold')
       )  +
       coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
     suppressMessages(print(gp))
@@ -2676,6 +2690,7 @@ server <- function(input, output, session) {
                          )
                      })
         if (!is.null(reactive_values$Apply_Math)) {
+          reactive_values$Y_Axis_Lable <- YAxisLable()
           reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
         }
       } else if (LIST_DATA$STATE[2] == 2) {
@@ -3391,6 +3406,34 @@ server <- function(input, output, session) {
     
   })
   
+  # keep sizes real numbers ---
+  observeEvent(c(input$selectvlinesize, 
+                 input$selectlinesize, 
+                 input$selectfontsizex, 
+                 input$selectfontsizey,
+                 input$selectlegendsize),
+               ignoreInit = TRUE, {
+                 mynum <- c(2,2.5,13,13,10)
+                 myset <- c(
+                   input$selectvlinesize, 
+                   input$selectlinesize, 
+                   input$selectfontsizex, 
+                   input$selectfontsizey,
+                   input$selectlegendsize
+                 )
+                 # keep bin positions in bounds > 0
+                 for (i in seq_along(myset)) {
+                   if (is.na(myset[i]) | myset[i] < 0) {
+                     myset[i] <- mynum[i]
+                     updateNumericInput(session, "selectvlinesize", value = myset[1])
+                     updateNumericInput(session, "selectlinesize", value = myset[2])
+                     updateNumericInput(session, "selectfontsizex", value = myset[3])
+                     updateNumericInput(session, "selectfontsizey", value = myset[4])
+                     updateNumericInput(session, "selectlegendsize", value = myset[5])
+                   }
+                 }
+               })
+  
   # Update lines and lables ----
   observeEvent(
     c(
@@ -3441,11 +3484,24 @@ server <- function(input, output, session) {
         if (length(my_pos) > 0) {
           reactive_values$Lines_Lables_List <-
             LinesLablesListPlot(myset[1],
+                                input$selectbody1color,
+                                input$selectbody1line,
                                 myset[2],
+                                input$selectbody2color,
+                                input$selectbody2line,
                                 myset[3],
+                                input$selecttsscolor,
+                                input$selecttssline,
                                 myset[4],
+                                input$selecttescolor,
+                                input$selecttesline,
                                 my_label,
-                                my_pos)
+                                my_pos,
+                                input$selectvlinesize, 
+                                input$selectlinesize, 
+                                input$selectfontsizex, 
+                                input$selectfontsizey,
+                                input$selectlegendsize)
         }
       }
       # set lable and posistion numbers
@@ -3484,11 +3540,24 @@ server <- function(input, output, session) {
       reactive_values$Lines_Lables_List <-
         LinesLablesListPlot(
           input$numericbody1,
+          input$selectbody1color,
+          input$selectbody1line,
           input$numericbody2,
+          input$selectbody2color,
+          input$selectbody2line,
           input$numerictss,
+          input$selecttsscolor,
+          input$selecttssline,
           input$numerictes,
+          input$selecttescolor,
+          input$selecttesline,
           my_label,
-          my_pos
+          my_pos, 
+          input$selectvlinesize, 
+          input$selectlinesize, 
+          input$selectfontsizex, 
+          input$selectfontsizey,
+          input$selectlegendsize
         )
     }
   })
@@ -3508,11 +3577,24 @@ server <- function(input, output, session) {
     reactive_values$Lines_Lables_List <-
       LinesLablesListPlot(
         input$numericbody1,
+        input$selectbody1color,
+        input$selectbody1line,
         input$numericbody2,
+        input$selectbody2color,
+        input$selectbody2line,
         input$numerictss,
+        input$selecttsscolor,
+        input$selecttssline,
         input$numerictes,
+        input$selecttescolor,
+        input$selecttesline,
         my_label,
-        my_pos
+        my_pos, 
+        input$selectvlinesize, 
+        input$selectlinesize, 
+        input$selectfontsizex, 
+        input$selectfontsizey,
+        input$selectlegendsize
       )
   })
   
@@ -6629,6 +6711,147 @@ ui <- dashboardPage(
                   solidHeader = T,
                   collapsible = TRUE,
                   collapsed = TRUE,
+                  column(12,
+                         div(
+                           style = "padding-left: -5px; display:inline-block;",
+                           dropdownButton(
+                             
+                             tags$h3("Set TSS Options"),
+                             
+                             selectInput(inputId = 'selecttsscolor',
+                                         label = 'TSS line and lable color',
+                                         choices = c("red","green","blue","brown","black","white"),
+                                         selected = "green"
+                             ),
+                             selectInput(inputId = 'selecttssline',
+                                         label = 'TSS line type',
+                                         choices = c("dotted", "solid"),
+                                         selected = "dotted"
+                             ),
+                             icon = icon("bars"),
+                             status = "success",
+                             tooltip = tooltipOptions(title = "TSS Options")
+                           )
+                         ),
+                         div(
+                           style = "padding-left: 20px; display:inline-block;",
+                           dropdownButton(
+                             
+                             tags$h3("Set 5|4 Options"),
+                             
+                             selectInput(inputId = 'selectbody1color',
+                                         label = '5|4 line and lable color',
+                                         choices = c("red","green","blue","brown","black","white"),
+                                         selected = "black"
+                             ),
+                             selectInput(inputId = 'selectbody1line',
+                                         label = '5|4 line type',
+                                         choices = c("dotted", "solid"),
+                                         selected = "solid"
+                             ),
+                             icon = icon("bars"),
+                             tooltip = tooltipOptions(title = "5|4 Options")
+                           )
+                         ),
+                         div(
+                           style = "padding-left: 20px; display:inline-block;",
+                           dropdownButton(
+                             
+                             tags$h3("Set 4|3 Options"),
+                             
+                             selectInput(inputId = 'selectbody2color',
+                                         label = '4|3 line and lable color',
+                                         choices = c("red","green","blue","brown","black","white"),
+                                         selected = "black"
+                             ),
+                             selectInput(inputId = 'selectbody2line',
+                                         label = '4|3 line type',
+                                         choices = c("dotted", "solid"),
+                                         selected = "solid"
+                             ),
+                             icon = icon("bars"),
+                             tooltip = tooltipOptions(title = "4|3 Options")
+                           )
+                         ),
+                         div(
+                           style = "padding-left: 25px; display:inline-block;",
+                           dropdownButton(
+                             
+                             tags$h3("Set TES Options"),
+                             
+                             selectInput(inputId = 'selecttescolor',
+                                         label = 'TES line and lable color',
+                                         choices = c("red","green","blue","brown","black","white"),
+                                         selected = "red"
+                             ),
+                             selectInput(inputId = 'selecttesline',
+                                         label = 'TES line type',
+                                         choices = c("dotted", "solid"),
+                                         selected = "dotted"
+                             ),
+                             icon = icon("bars"),
+                             status = "danger",
+                             tooltip = tooltipOptions(title = "TSS Options")
+                           )
+                         ),
+                         div(
+                           style = "padding-left: 25px; display:inline-block;",
+                           dropdownButton(
+                             
+                             tags$h3("Set font Options"),
+                             
+                             numericInput(inputId = 'selectvlinesize',
+                                          "Set vertcal line size",
+                                          value = 2,
+                                          min = .5,
+                                          max = 10,
+                                          step = .5
+                             ),
+                             numericInput(inputId = 'selectfontsizex',
+                                          "Set X axis font size",
+                                          value = 13,
+                                          min = 1,
+                                          max = 30,
+                                          step = 1
+                             ),
+                             numericInput(inputId = 'selectfontsizey',
+                                          "Set Y axis font size",
+                                          value = 13,
+                                          min = 1,
+                                          max = 30,
+                                          step = 1
+                             ),
+                             icon = icon("bars"),
+                             status = "warning",
+                             tooltip = tooltipOptions(title = "TSS Options")
+                           )
+                         ),
+                         div(
+                           style = "padding-left: 25px; display:inline-block;",
+                           dropdownButton(
+                             
+                             tags$h3("Set line Options"),
+                             
+                             numericInput(inputId = 'selectlinesize',
+                                          "Set plot line size",
+                                          value = 2.5,
+                                          min = .5,
+                                          max = 10,
+                                          step = .5
+                             ),
+                             numericInput(inputId = 'selectlegendsize',
+                                          "Set plot line size",
+                                          value = 10,
+                                          min = 1,
+                                          max = 20,
+                                          step = 1
+                             ),
+                             icon = icon("bars"),
+                             status = "warning",
+                             tooltip = tooltipOptions(title = "TSS Options")
+                           )
+                         )
+                  ),
                   div(
                     style = "padding:2px; display:inline-block;",
                     numericInput(
