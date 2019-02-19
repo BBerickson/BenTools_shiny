@@ -90,6 +90,16 @@ kBrewerList <-
     "Set2",
     "Set3")
 
+# lines and labels types ----
+kLinesandlables <- c(
+  "543 bins 20,20,40",
+  "5' 1k 1k 80bins",
+  "543 bins 10,10,20",
+  "5' .25k 10k 205bins",
+  "3'",
+  "4",
+  "generic 543")
+
 # color Brewer set that is active to use in plot ----
 kListColorSet <- brewer.pal(8, kBrewerList[6])
 
@@ -2058,7 +2068,7 @@ LinesLablesListPlot <-
       use_virtical_line <- c(NA, NA, NA, NA)
     }
     # virtical line set up
-    use_virtical_line_color <- c(tsscolor, tsscolor, body1color, body2color)
+    use_virtical_line_color <- c(tsscolor, tescolor, body1color, body2color)
     use_virtical_line_type <- c(tssline, tesline, body1line, body2line)
     use_plot_breaks <- na_if(use_plot_breaks, 0.5)
     use_virtical_line <- na_if(use_virtical_line, 0.5)
@@ -2087,17 +2097,17 @@ LinesLablesListPlot <-
 # lines and labels preset helper
 LinesLablesPreSet <- function(mytype) {
   # 5|4, 4|3, tss, pA, bp/bin, every bin
-  if (mytype == "543 bins 20,20,40") {
+  if (mytype == kLinesandlables[1]) {
     tt <- c(20, 40, 15, 45, 100, LIST_DATA$x_plot_range[2], 10)
-  } else if (mytype == "543 bins 10,10,20") {
+  } else if (mytype == kLinesandlables[3]) {
     tt <- c(10, 20, 5, 25, 100, LIST_DATA$x_plot_range[2], 5)
-  } else if (mytype == "5' 1k 1k 80bins") {
+  } else if (mytype == kLinesandlables[2]) {
     tt <- c(0, 0, 40, 0, 25, LIST_DATA$x_plot_range[2], 20)
-  } else if (mytype == "5' .25k 10k 205bins") {
+  } else if (mytype == kLinesandlables[4]) {
     tt <- c(0, 0, 5, 0, 50, LIST_DATA$x_plot_range[2], 6)
-  } else if (mytype == "3'") {
+  } else if (mytype == kLinesandlables[5]) {
     tt <- c(0, 0, 0, 40, 25, LIST_DATA$x_plot_range[2], 20)
-  } else if (mytype == "4'") {
+  } else if (mytype == kLinesandlables[6]) {
     tt <- c(0, 0, 15, 45, 100, LIST_DATA$x_plot_range[2], 5)
   } else {
     tt <-
@@ -2837,19 +2847,19 @@ server <- function(input, output, session) {
       # tries to guess lines and lables type
       num_bins <- LIST_DATA$x_plot_range[2]
       if (num_bins == 80 & LIST_DATA$STATE[3] == '543') {
-        updateSelectInput(session, "selectlineslables", selected = "543 bins 20,20,40")
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[1])
       } else if (num_bins == 80 & LIST_DATA$STATE[3] == '5') {
-        updateSelectInput(session, "selectlineslables", selected = "5' 1k 1k 80bins")
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[2])
       } else if (num_bins <= 60 & LIST_DATA$STATE[3] == '543') {
-        updateSelectInput(session, "selectlineslables", selected = "543 bins 10,10,10")
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[3])
       } else if (num_bins == 205 & LIST_DATA$STATE[3] == '5') {
-        updateSelectInput(session, "selectlineslables", selected = "5' .25k 10k 205bins")
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[4])
       } else if (LIST_DATA$STATE[3] == '3') {
-        updateSelectInput(session, "selectlineslables", selected = "3'")
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[5])
       } else if (LIST_DATA$STATE[3] == '4') {
-        updateSelectInput(session, "selectlineslables", selected = "4")
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[6])
       } else {
-        updateSelectInput(session, "selectlineslables", selected = "generic 543")
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[7])
       }
       LIST_DATA$STATE[1] <<- 1
     }
@@ -6405,13 +6415,7 @@ ui <- dashboardPage(
             label = "quick set lines and lables",
             choices = c(
               "Choose one" = "",
-              "543 bins 20,20,40",
-              "543 bins 10,10,20",
-              "5' 1k 1k 80bins",
-              "5' .25k 10k 205bins",
-              "3'",
-              "4",
-              "generic 543"
+              kLinesandlables
             )
           )
         )
