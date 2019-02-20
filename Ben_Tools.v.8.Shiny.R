@@ -172,7 +172,6 @@ LoadTableFile <-
     # tests if loading a file with a list of address to remote files, requirs .url.txt in file name
     if (length(file_name) == 1 &
         length(grep(".url.txt", file_name)) == 1) {
-      my_remote_file <- TRUE
       file_path <- read_lines(file_path)
       file_name <- NULL
       file_path2 <- NULL
@@ -189,6 +188,7 @@ LoadTableFile <-
       # builds varible for reading in remote files
       for (i in file_path) {
         if (length(strsplit(i, " ")[[1]]) > 1) {
+          my_remote_file <- TRUE
           file_path2 <- c(file_path2, strsplit(i, " ")[[1]][1])
           file_name <-
             c(file_name, last(strsplit(strsplit(i, " ")[[1]][1], "/")[[1]]))
@@ -201,7 +201,7 @@ LoadTableFile <-
       }
       if (!is.null(file_path2)) {
         file_path <- file_path2
-      }
+      } 
     }
     # gets number of files loaded in master list of lists
     file_count <- length(list_data$table_file)
@@ -3547,9 +3547,9 @@ server <- function(input, output, session) {
   observeEvent(c(input$landlnames, input$landlposition), ignoreInit = TRUE, {
     my_pos <-
       suppressWarnings(as.numeric(unlist(
-        strsplit(input$landlposition, split = " ")
+        strsplit(input$landlposition, split = "\\s+")
       )))
-    my_label <- unlist(strsplit(input$landlnames, split = " "))
+    my_label <- unlist(strsplit(input$landlnames, split = "\\s+"))
     if (any(is.na(my_pos))) {
       my_pos <- my_pos[is.na(my_pos)]
       updateTextInput(session, "landlposition", value = my_pos)
@@ -3596,9 +3596,9 @@ server <- function(input, output, session) {
     # print("action lines and lables")
     my_pos <-
       suppressWarnings(as.numeric(unlist(
-        strsplit(input$landlposition, split = " ")
+        strsplit(input$landlposition, split = "\\s+")
       )))
-    my_label <- unlist(strsplit(input$landlnames, split = " "))
+    my_label <- unlist(strsplit(input$landlnames, split = "\\s+"))
     if (length(my_pos) == 0) {
       my_label <- "none"
       my_pos <- LIST_DATA$x_plot_range[2] * 2
@@ -6663,24 +6663,29 @@ ui <- dashboardPage(
                   ),
                   sliderInput(
                     "sliderplotYRange",
-                    label = "Plot Y height:",
+                    label = "......  Min %  ....... Plot Y height ....... Max %  ......",
                     min = -20,
                     max = 120,
                     post = "%",
-                    value = c(0, 100)
+                    value = c(100, 0)
                   ),
                   fluidRow(
                     column(
                       4,
-                      numericInput("numericYRangeHigh", label = "Plot Y max:", value = 0)
+                      numericInput("numericYRangeLow", label = "Plot Y min:", value = 0)
                     ),
                     column(
                       4,
-                      numericInput("numericYRangeLow", label = "Plot Y min:", value = 0)
+                      numericInput("numericYRangeHigh", label = "Plot Y max:", value = 0)
                     ),
-                    column(2,
-                           checkboxInput("checkboxyrange", label = "apply"))
-                    
+                    column(2, style = "padding-top: 8%;",
+                           actionBttn(
+                             inputId = "checkboxyrange",
+                             label = "apply",
+                             style = "unite", 
+                             color = "default",
+                             size = "sm"
+                           ))
                   )
                 ),
                 box(
