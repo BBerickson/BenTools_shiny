@@ -19,6 +19,7 @@ my_packages <- function(x) {
 # run load needed pakages using my_pakages(x) ----
 suppressPackageStartupMessages(my_packages(
   c(
+    "RCurl",
     "shiny",
     "DT",
     "shinydashboard",
@@ -167,9 +168,11 @@ LoadTableFile <-
     my_nickname <- NULL
     my_color <- NULL
     my_landl <- NULL
+    my_remote_file <- FALSE
     # tests if loading a file with a list of address to remote files, requirs .url.txt in file name
     if (length(file_name) == 1 &
         length(grep(".url.txt", file_name)) == 1) {
+      my_remote_file <- TRUE
       file_path <- read_lines(file_path)
       file_name <- NULL
       file_path2 <- NULL
@@ -206,6 +209,16 @@ LoadTableFile <-
     for (x in seq_along(file_path)) {
       # shiny progress bar
       setProgress(1, detail = "start wroking on file")
+      # check if file exits
+      if(my_remote_file){
+        if(!url.exists(file_path[x])){
+          next
+        }
+      } else {
+        if(!file.exists(file_path[x])){
+          next
+        }
+      }
       #gets number of columns in file, used to guess how to deal with file
       num_bins <-
         count_fields(file_path[x],
@@ -1893,7 +1906,7 @@ LinesLablesListset <- function(body1bin = 20,
         TSSname <- append(TSSname, "TSS")
       }
       my_5prim <-
-        data_frame(lloc = TSSloc, lname = as.character(TSSname))
+        tibble(lloc = TSSloc, lname = as.character(TSSname))
       # tss to next
       nextStart <- tssbin + everybin
       if (body1bin > 0 & tesbin > 0 & body2bin > 0) {
@@ -1915,12 +1928,12 @@ LinesLablesListset <- function(body1bin = 20,
           TSSloc1 <- c(TSSloc1, nextEnd)
         }
         my_5prim2 <-
-          data_frame(lloc = TSSloc1, lname = as.character(TSSname1))
+          tibble(lloc = TSSloc1, lname = as.character(TSSname1))
         my_5prim <-
           full_join(my_5prim, my_5prim2, by = c("lloc", "lname"))
       } else if (nextEnd > 0) {
         my_5prim2 <-
-          data_frame(lloc = nextEnd, lname = as.character((nextEnd - tssbin) * binbp))
+          tibble(lloc = nextEnd, lname = as.character((nextEnd - tssbin) * binbp))
         my_5prim <-
           full_join(my_5prim, my_5prim2, by = c("lloc", "lname"))
       }
@@ -1949,9 +1962,9 @@ LinesLablesListset <- function(body1bin = 20,
           TESname <- append(TESname, "pA")
         }
         my_3prim <-
-          data_frame(lloc = TESloc, lname = as.character(TESname))
+          tibble(lloc = TESloc, lname = as.character(TESname))
       } else {
-        my_3prim <- data_frame(lloc = tesbin + .5, lname = "pA")
+        my_3prim <- tibble(lloc = tesbin + .5, lname = "pA")
       }
       # TES to end
       nextStart <- tesbin + everybin
@@ -1966,7 +1979,7 @@ LinesLablesListset <- function(body1bin = 20,
           TESloc1 <- c(TESloc1, totbins)
         }
         my_3prim2 <-
-          data_frame(lloc = TESloc1, lname = as.character(TESname1))
+          tibble(lloc = TESloc1, lname = as.character(TESname1))
         my_3prim <-
           full_join(my_3prim, my_3prim2, by = c("lloc", "lname"))
       }
@@ -2825,6 +2838,12 @@ server <- function(input, output, session) {
       #   print(object.size(LIST_DATA$table_file), units = "auto")
       # }
     } else {
+      showModal(modalDialog(
+          title = "Information message",
+          paste("No files loaded"),
+          size = "s",
+          easyClose = TRUE
+        ))
       return()
     }
     updateSelectInput(
