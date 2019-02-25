@@ -2534,6 +2534,10 @@ server <- function(input, output, session) {
       if (!ol %in% names(LIST_DATA$gene_file)) {
         ol <- names(LIST_DATA$gene_file)[1]
       }
+      og <- input$pickerclusterfile
+      if (!og %in% names(LIST_DATA$table_file)) {
+        og <- NULL
+      }
       updateSelectInput(
         session,
         "selectclusterfile",
@@ -2544,7 +2548,7 @@ server <- function(input, output, session) {
         session,
         "pickerclusterfile",
         choices = names(LIST_DATA$table_file),
-        selected = NULL,
+        selected = og,
         choicesOpt = list(style = paste("color", c(
           sapply(LIST_DATA$gene_info[[input$selectclusterfile]], "[[", 4)
         ), sep = ":"))
@@ -5942,7 +5946,7 @@ server <- function(input, output, session) {
             YAxisLable(
               input$myMathcluster,
               input$radioplotnromcluster,
-              as.numeric(input$selectplotBinNorm),
+              as.numeric(input$selectplotBinNormcluster),
               input$checkboxsmoothcluster,
               input$checkboxlog2cluster
             )
