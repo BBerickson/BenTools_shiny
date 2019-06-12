@@ -50,8 +50,8 @@ Norm tab
 
   select a file and one to noromalize by
     select divide gene by gene or bin by bin
-    select replacing #/0 = Inf or remove that gene
-    
+    select replacing #/0 = Inf with psudo count
+  or to combinde  
     adds new "data file"
     
 Plot tab

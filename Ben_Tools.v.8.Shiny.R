@@ -647,7 +647,7 @@ CheckBoxOnOff <- function(check_box, list_data) {
 }
 
 # make a new normalized file by deviding one file by the other
-MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
+MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix, addfiles) {
   # check 2 files have been selected
   if (nom == "" | dnom == "") {
     return(NULL)
@@ -656,8 +656,8 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
   myname <- "bin_by_bin"
   setProgress(1, detail = "Gathering data")
   # get data files
-  mynom <- list_data$table_file[[nom]] %>% na_if(., 0)
-  mydom <- list_data$table_file[[dnom]] %>% na_if(., 0)
+  mynom <- list_data$table_file[[nom]] 
+  mydom <- list_data$table_file[[dnom]]
   # applies custome norm factor(s)
   if (list_data$gene_info[[1]][[nom]]["rnorm"] != 1) {
     mynom <-
@@ -667,28 +667,31 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
     mydom <-
       mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
   }
+  if (addfiles == "+") {
+    new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) 
+    legend_nickname <- paste0(nom, " + ", dnom)
+    new_gene_list <- transmute(
+      new_gene_list,
+      gene = gene,
+      bin = bin,
+      set = legend_nickname,
+      score = score.x + score.y) 
+  } else {
   # if min/2 find Na's and 0's, and replace
-  if (divzerofix == "replace with min/2") {
+  if (divzerofix == "replace 0 with min/2") {
+    mydom <- na_if(mydom, 0)
     myname <- paste0(myname, "_0->min/2")
-    new_min_for_nom <-
-      min(mynom$score, na.rm = TRUE) / 2
     new_min_for_dom <-
       min(mydom$score, na.rm = TRUE) / 2
-    mynom <-
-      replace_na(mynom, list(score = new_min_for_nom))
     mydom <-
       replace_na(mydom, list(score = new_min_for_dom))
-  } else {
-    myname <- paste0(myname, "_Inf_RM")
-  }
+  } 
   # files numbers are replaced with mean of bins if applied
   if (gbyg != "bin by bin") {
     myname <- "mean_of_bins"
-    if (divzerofix == "replace with min/2") {
+    if (divzerofix == "replace 0 with min/2") {
       myname <- paste0(myname, "_0->min/2")
-    } else {
-      myname <- paste0(myname, "_Inf_RM")
-    }
+    } 
     mynom <-
       group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
     mydom <-
@@ -705,12 +708,7 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix) {
     set = legend_nickname,
     score = score.x / score.y
   ) %>% na_if(Inf)
-  # remove all NA's (if min/2 should not be any but as a safty do anyway)
-  new_gene_list <-
-    group_by(new_gene_list, gene) %>%
-    summarise(test = sum(score)) %>%
-    filter(!is.na(test)) %>%
-    semi_join(new_gene_list, ., by = "gene")
+  }
   # output test
   gene_names <-
     semi_join(list_data$gene_file[[1]]$use, new_gene_list, by = "gene")
@@ -3914,7 +3912,8 @@ server <- function(input, output, session) {
                      input$pickernumerator,
                      input$pickerdenominator,
                      input$radiogenebygene,
-                     input$radionormzero
+                     input$radionormzero,
+                     input$adddata
                    )
                  })
     if (!is_empty(LD$table_file)) {
@@ -6608,6 +6607,19 @@ ui <- dashboardPage(
               )),
           div(style = "padding-left: 15%;",
               fluidRow(
+                column(3,
+                radioGroupButtons("adddata",
+                                label = "",
+                                status = "primary",
+                             choices = c("/", "+"),
+                             selected = "/"
+                             )),
+                column(4, style = "padding-top: 4%;",
+                actionButton("actionnorm", label = "create file")
+                )
+              )),
+          div(style = "padding-left: 15%;",
+              fluidRow(
                 pickerInput(
                   "pickerdenominator",
                   label = "denominator",
@@ -6617,7 +6629,6 @@ ui <- dashboardPage(
                   options = list(title = "Select second file")
                 )
               )),
-          actionButton("actionnorm", label = "create norm file"),
           awesomeRadio(
             "radiogenebygene",
             label = "",
@@ -6627,8 +6638,8 @@ ui <- dashboardPage(
           awesomeRadio(
             "radionormzero",
             label = "Handling #/0 = Inf",
-            choices = c("replace with min/2", "remove genes with any 0's in denominator"),
-            selected = "replace with min/2"
+            choices = c("replace 0 with min/2", "replace Inf with NA"),
+            selected = "replace 0 with min/2"
           ),
           valueBoxOutput("valueboxnormfile")
         )
