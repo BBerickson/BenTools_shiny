@@ -614,7 +614,6 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
         col_names = F,
         col_types = "cc"
       ))
-  } 
   # match name test color and update colors in list of lists
   for (i in seq_along(color_file$X1)) {
     nickname <-
@@ -651,7 +650,8 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
       list_data$gene_info[[gene_list]][[num]]['mycol'] <-
         color_file$X2[i]
     }
-  list_data
+  }
+    return(list_data)
   } else {
     showModal(modalDialog(
       title = "Information message",
