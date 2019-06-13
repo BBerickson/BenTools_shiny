@@ -572,25 +572,49 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
   num_bins <-
     count_fields(file_path,
                  n_max = 1,
-                 tokenizer = tokenizer_delim(" "))
+                 tokenizer = tokenizer_delim(","))
   # guessing fist column has file name and second has color
-  if (num_bins == 2) {
+  if (num_bins == 1) {
+    color_file <-
+      suppressMessages(read_table(
+        file_path, col_names = FALSE))
+  for (i in seq_along(color_file$X1)) {
+    # convert rgb to hex if needed
+    if (suppressWarnings(!is.na(as.numeric(substr(
+        color_file$X1[1], 1, 1
+      )))) == TRUE) {
+        color_file$X1[i] <- RgbToHex(my_rgb = color_file$X1[i])
+      }
+      # checks hex is a valid color
+      if (!isColor(color_file$X1[i])) {
+        color_file$X1[i] <- "black"
+        showModal(modalDialog(
+          title = "Information message",
+          paste(
+            "does not look like a color I know so setting",
+            i,
+            "to black",
+            sep = " "
+          ),
+          size = "s",
+          easyClose = TRUE
+        ))
+      }
+    if(i <= length(list_data$table_file)){
+      list_data$gene_info[[gene_list]][[i]]['mycol'] <-
+        color_file$X1[i]
+    }
+  }
+    return(list_data)
+   }else if (num_bins == 2) {
     color_file <-
       suppressMessages(read_delim(
-        delim = " ",
+        delim = ",",
         file_path,
         col_names = F,
         col_types = "cc"
       ))
-  } else {
-    showModal(modalDialog(
-      title = "Information message",
-      paste("Needs name and color separeted by a space, ie: a.table 255,0,0"),
-      size = "s",
-      easyClose = TRUE
-    ))
-    return(list_data)
-  }
+  } 
   # match name test color and update colors in list of lists
   for (i in seq_along(color_file$X1)) {
     nickname <-
@@ -602,7 +626,7 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
         ignore.case = TRUE,
         value = T
       )
-    if (length(num) > 0) {
+    if (length(num) == 1) {
       # convert rgb to hex if needed
       if (suppressWarnings(!is.na(as.numeric(substr(
         color_file$X2[1], 1, 1
@@ -627,8 +651,16 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
       list_data$gene_info[[gene_list]][[num]]['mycol'] <-
         color_file$X2[i]
     }
-  }
   list_data
+  } else {
+    showModal(modalDialog(
+      title = "Information message",
+      paste("Needs name and color separeted by a space, ie: a.table 255,0,0"),
+      size = "s",
+      easyClose = TRUE
+    ))
+    return(list_data)
+  }
 }
 
 # records check box on/off
@@ -3008,7 +3040,8 @@ server <- function(input, output, session) {
         new_comments <- NULL
         for (i in names(LIST_DATA$gene_info[[input$selectgenelistoptions]])) {
           new_comments <-
-            c(new_comments, paste(i, LIST_DATA$gene_info[[input$selectgenelistoptions]][[i]][4]))
+            c(new_comments, paste(i, LIST_DATA$gene_info[[input$selectgenelistoptions]][[i]][4],
+                                  sep = ","))
         }
       } else {
         new_comments <- paste("#", Sys.Date(), "\n# File(s) used:")

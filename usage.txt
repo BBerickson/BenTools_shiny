@@ -29,7 +29,7 @@ Load Data tab
   load color file
     applies color pallet to selected gene list
     can be just a one column list of colors 
-    can be a two column list file name (partial matching) and colors 
+    can be a comma separated list  of file name (partial matching) and color ie A.table,#E41A1C 
     color format can be a named ("blue"), rgb (255,0,0) or hex (#E41A1C)
     can save color list based on drop down selected gene list
     
@@ -51,7 +51,7 @@ Norm tab
   select a file and one to noromalize by
     select divide gene by gene or bin by bin
     select replacing #/0 = Inf with psudo count
-  or to combinde  
+  or to combinde files  
     adds new "data file"
     
 Plot tab
