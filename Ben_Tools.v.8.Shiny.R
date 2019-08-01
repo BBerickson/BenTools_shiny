@@ -97,9 +97,11 @@ kLinesandlables <- c(
   "5' 1k 1k 80bins",
   "543 bins 10,10,20",
   "5' .25k 10k 205bins",
-  "3'",
+  "5'",
   "4",
-  "generic 543")
+  "3",
+  "generic 543"
+)
 
 # color Brewer set that is active to use in plot ----
 kListColorSet <- brewer.pal(8, kBrewerList[6])
@@ -201,7 +203,7 @@ LoadTableFile <-
       }
       if (!is.null(file_path2)) {
         file_path <- file_path2
-      } 
+      }
     }
     # gets number of files loaded in master list of lists
     file_count <- length(list_data$table_file)
@@ -210,12 +212,12 @@ LoadTableFile <-
       # shiny progress bar
       setProgress(1, detail = "start wroking on file")
       # check if file exits
-      if(my_remote_file){
-        if(!url.exists(file_path[x])){
+      if (my_remote_file) {
+        if (!url.exists(file_path[x])) {
           next
         }
       } else {
-        if(!file.exists(file_path[x])){
+        if (!file.exists(file_path[x])) {
           next
         }
       }
@@ -520,7 +522,7 @@ LoadTableFile <-
       sapply(seq_along(list_data$gene_file)[-1], function(g) {
         oldname <- grep("CDF ", names(list_data$gene_info)[g])
         if (!is_empty(oldname)) {
-          dt <- select(list_data$gene_file[[g]]$full,-bin,-set) %>%
+          dt <- select(list_data$gene_file[[g]]$full, -bin, -set) %>%
             spread(., set2, value) %>% select(., gene)
           enesg <- inner_join(dt,
                               list_data$gene_file[[1]]$use,
@@ -576,11 +578,10 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
   # guessing fist column has file name and second has color
   if (num_bins == 1) {
     color_file <-
-      suppressMessages(read_table(
-        file_path, col_names = FALSE))
-  for (i in seq_along(color_file$X1)) {
-    # convert rgb to hex if needed
-    if (suppressWarnings(!is.na(as.numeric(substr(
+      suppressMessages(read_table(file_path, col_names = FALSE))
+    for (i in seq_along(color_file$X1)) {
+      # convert rgb to hex if needed
+      if (suppressWarnings(!is.na(as.numeric(substr(
         color_file$X1[1], 1, 1
       )))) == TRUE) {
         color_file$X1[i] <- RgbToHex(my_rgb = color_file$X1[i])
@@ -600,13 +601,13 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
           easyClose = TRUE
         ))
       }
-    if(i <= length(list_data$table_file)){
-      list_data$gene_info[[gene_list]][[i]]['mycol'] <-
-        color_file$X1[i]
+      if (i <= length(list_data$table_file)) {
+        list_data$gene_info[[gene_list]][[i]]['mycol'] <-
+          color_file$X1[i]
+      }
     }
-  }
     return(list_data)
-   }else if (num_bins == 2) {
+  } else if (num_bins == 2) {
     color_file <-
       suppressMessages(read_delim(
         delim = ",",
@@ -614,43 +615,45 @@ LoadColorFile <- function(file_path, list_data, gene_list) {
         col_names = F,
         col_types = "cc"
       ))
-  # match name test color and update colors in list of lists
-  for (i in seq_along(color_file$X1)) {
-    nickname <-
-      strsplit(as.character(color_file$X1[i]), '.tab')[[1]][1]
-    num <-
-      grep(
-        nickname,
-        names(list_data$table_file),
-        ignore.case = TRUE,
-        value = T
-      )
-    if (length(num) == 1) {
-      # convert rgb to hex if needed
-      if (suppressWarnings(!is.na(as.numeric(substr(
-        color_file$X2[1], 1, 1
-      )))) == TRUE) {
-        color_file$X2[i] <- RgbToHex(my_rgb = color_file$X2[i])
+    # match name test color and update colors in list of lists
+    for (i in seq_along(color_file$X1)) {
+      nickname <-
+        strsplit(as.character(color_file$X1[i]), '.tab')[[1]][1]
+      num <-
+        grep(
+          nickname,
+          names(list_data$table_file),
+          ignore.case = TRUE,
+          value = T
+        )
+      if (length(num) == 1) {
+        # convert rgb to hex if needed
+        if (suppressWarnings(!is.na(as.numeric(substr(
+          color_file$X2[1], 1, 1
+        )))) == TRUE) {
+          color_file$X2[i] <- RgbToHex(my_rgb = color_file$X2[i])
+        }
+        # checks hex is a valid color
+        if (!isColor(color_file$X2[i])) {
+          color_file$X2[i] <- "black"
+          showModal(
+            modalDialog(
+              title = "Information message",
+              paste(
+                "does not look like a color I know so setting",
+                num,
+                "to black",
+                sep = " "
+              ),
+              size = "s",
+              easyClose = TRUE
+            )
+          )
+        }
+        list_data$gene_info[[gene_list]][[num]]['mycol'] <-
+          color_file$X2[i]
       }
-      # checks hex is a valid color
-      if (!isColor(color_file$X2[i])) {
-        color_file$X2[i] <- "black"
-        showModal(modalDialog(
-          title = "Information message",
-          paste(
-            "does not look like a color I know so setting",
-            num,
-            "to black",
-            sep = " "
-          ),
-          size = "s",
-          easyClose = TRUE
-        ))
-      }
-      list_data$gene_info[[gene_list]][[num]]['mycol'] <-
-        color_file$X2[i]
     }
-  }
     return(list_data)
   } else {
     showModal(modalDialog(
@@ -679,132 +682,109 @@ CheckBoxOnOff <- function(check_box, list_data) {
 }
 
 # make a new normalized file by deviding one file by the other
-MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix, addfiles) {
-  # check 2 files have been selected
-  if (nom == "" | dnom == "") {
-    return(NULL)
-  }
-  # set up tool info and progress bar
-  myname <- "bin_by_bin"
-  setProgress(1, detail = "Gathering data")
-  # get data files
-  mynom <- list_data$table_file[[nom]] 
-  mydom <- list_data$table_file[[dnom]]
-  # applies custome norm factor(s)
-  if (list_data$gene_info[[1]][[nom]]["rnorm"] != 1) {
-    mynom <-
-      mutate(mynom, score = score / as.numeric(list_data$gene_info[[1]][[nom]]["rnorm"]))
-  }
-  if (list_data$gene_info[[1]][[dnom]]["rnorm"] != 1) {
-    mydom <-
-      mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
-  }
-  if (addfiles == "+") {
-    new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin")) 
-    legend_nickname <- paste0(nom, " + ", dnom)
-    new_gene_list <- transmute(
-      new_gene_list,
-      gene = gene,
-      bin = bin,
-      set = legend_nickname,
-      score = score.x + score.y) 
-  } else {
-  # if min/2 find Na's and 0's, and replace
-  if (divzerofix == "replace 0 with min/2") {
-    mydom <- na_if(mydom, 0)
-    myname <- paste0(myname, "_0->min/2")
-    new_min_for_dom <-
-      min(mydom$score, na.rm = TRUE) / 2
-    mydom <-
-      replace_na(mydom, list(score = new_min_for_dom))
-  } 
-  # files numbers are replaced with mean of bins if applied
-  if (gbyg != "bin by bin") {
-    myname <- "mean_of_bins"
-    if (divzerofix == "replace 0 with min/2") {
-      myname <- paste0(myname, "_0->min/2")
-    } 
-    mynom <-
-      group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
-    mydom <-
-      group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
-  }
-  # inner join
-  new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
-  # make gene list and do math
-  legend_nickname <- paste0(nom, " / ", dnom, ": ", myname)
-  new_gene_list <- transmute(
-    new_gene_list,
-    gene = gene,
-    bin = bin,
-    set = legend_nickname,
-    score = score.x / score.y
-  ) %>% na_if(Inf)
-  }
-  # output test
-  gene_names <-
-    semi_join(list_data$gene_file[[1]]$use, new_gene_list, by = "gene")
-  if (n_distinct(gene_names) < 1) {
-    showModal(
-      modalDialog(
-        title = "Information message",
-        " No genes in left, try replacing Inf and/or bin by bin",
-        size = "s",
-        easyClose = TRUE
+MakeNormFile <-
+  function(list_data,
+           nom,
+           dnom,
+           gbyg,
+           divzerofix,
+           addfiles,
+           nickname) {
+    # check 2 files have been selected
+    if (nom == "" | dnom == "") {
+      return(NULL)
+    }
+    # set up tool info and progress bar
+    myname <- "bin_by_bin"
+    setProgress(1, detail = "Gathering data")
+    # get data files
+    mynom <- list_data$table_file[[nom]]
+    mydom <- list_data$table_file[[dnom]]
+    
+    if(nchar(nickname)<1){
+      nickname <- paste(nom, addfiles, dnom,sep = " ")
+    }
+    # applies custome norm factor(s)
+    if (list_data$gene_info[[1]][[nom]]["rnorm"] != 1) {
+      mynom <-
+        mutate(mynom, score = score / as.numeric(list_data$gene_info[[1]][[nom]]["rnorm"]))
+    }
+    if (list_data$gene_info[[1]][[dnom]]["rnorm"] != 1) {
+      mydom <-
+        mutate(mydom, score = score / as.numeric(list_data$gene_info[[1]][[dnom]]["rnorm"]))
+    }
+    if (addfiles == "+") {
+      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
+      legend_nickname <- nickname
+      new_gene_list <- transmute(
+        new_gene_list,
+        gene = gene,
+        bin = bin,
+        set = legend_nickname,
+        score = score.x + score.y
       )
-    )
-    setProgress(5, detail = "Done")
-    return(NULL)
-  }
-  # adds data to list of lists
-  setProgress(2, detail = "building new data")
-  color_safe <-
-    (length(list_data$table_file) + 1) %% length(kListColorSet)
-  if (color_safe == 0) {
-    color_safe <- 1
-  }
-  my_name <- paste("common\nn =", n_distinct(gene_names$gene))
-  names(list_data$gene_file)[1] <- my_name
-  names(list_data$gene_info)[1] <- my_name
-  list_data$table_file[[legend_nickname]] <- new_gene_list
-  list_data$gene_file[[my_name]]$use <- gene_names
-  list_data$gene_info[[my_name]][[legend_nickname]] <-
-    # don't change the order of postions
-    tibble(
-      set = legend_nickname,
-      mydot = kDotOptions[1],
-      myline = kLineOptions[1],
-      mycol = kListColorSet[color_safe],
-      onoff = 0,
-      rnorm = "1"
-    )
-  # generate info for new file for loaded gene list(s)
-  setProgress(3, detail = "building gene lists info")
-  sapply(seq_along(list_data$gene_file)[-1], function(g) {
-    enesg <-
-      inner_join(list_data$gene_file[[g]]$full,
-                 list_data$gene_file[[1]]$use,
-                 by = "gene")
-    if (n_distinct(enesg$gene) < 1) {
+    } else {
+      # if min/2 find Na's and 0's, and replace
+      if (divzerofix == "replace 0 with min/2") {
+        mydom <- na_if(mydom, 0)
+        myname <- paste0(myname, "_0->min/2")
+        new_min_for_dom <-
+          min(mydom$score, na.rm = TRUE) / 2
+        mydom <-
+          replace_na(mydom, list(score = new_min_for_dom))
+      }
+      # files numbers are replaced with mean of bins if applied
+      if (gbyg != "bin by bin") {
+        myname <- "mean_of_bins"
+        if (divzerofix == "replace 0 with min/2") {
+          myname <- paste0(myname, "_0->min/2")
+        }
+        mynom <-
+          group_by(mynom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
+        mydom <-
+          group_by(mydom, bin, set) %>% mutate(score = mean(score, na.rm = TRUE)) %>% ungroup()
+      }
+      # inner join
+      new_gene_list <- inner_join(mynom, mydom, by = c("gene", "bin"))
+      # make gene list and do math
+      legend_nickname <- paste0(nickname, ": ", myname)
+      new_gene_list <- transmute(
+        new_gene_list,
+        gene = gene,
+        bin = bin,
+        set = legend_nickname,
+        score = score.x / score.y
+      ) %>% na_if(Inf)
+    }
+    # output test
+    gene_names <-
+      semi_join(list_data$gene_file[[1]]$use, new_gene_list, by = "gene")
+    if (n_distinct(gene_names) < 1) {
       showModal(
         modalDialog(
           title = "Information message",
-          " No genes in common, need to remove gene file",
+          " No genes in left, try replacing Inf and/or bin by bin",
           size = "s",
           easyClose = TRUE
         )
       )
+      setProgress(5, detail = "Done")
+      return(NULL)
     }
-    list_data$gene_file[[g]]$use <<- select(enesg, gene)
-    my_name_g <-
-      sub(
-        "([0-9]+)",
-        n_distinct(list_data$gene_file[[g]]$full$gene),
-        names(list_data$gene_file)[g]
-      )
-    names(list_data$gene_file)[g] <<- my_name_g
-    names(list_data$gene_info)[g] <<- my_name_g
-    list_data$gene_info[[my_name_g]][[legend_nickname]] <<-
+    # adds data to list of lists
+    setProgress(2, detail = "building new data")
+    color_safe <-
+      (length(list_data$table_file) + 1) %% length(kListColorSet)
+    if (color_safe == 0) {
+      color_safe <- 1
+    }
+    my_name <- paste("common\nn =", n_distinct(gene_names$gene))
+    names(list_data$gene_file)[1] <- my_name
+    names(list_data$gene_info)[1] <- my_name
+    list_data$table_file[[legend_nickname]] <- new_gene_list
+    list_data$gene_file[[my_name]]$use <- gene_names
+    list_data$gene_info[[my_name]][[legend_nickname]] <-
+      # don't change the order of postions
       tibble(
         set = legend_nickname,
         mydot = kDotOptions[1],
@@ -813,10 +793,45 @@ MakeNormFile <- function(list_data, nom, dnom, gbyg, divzerofix, addfiles) {
         onoff = 0,
         rnorm = "1"
       )
-  })
-  setProgress(5, detail = "Done")
-  return(list_data)
-}
+    # generate info for new file for loaded gene list(s)
+    setProgress(3, detail = "building gene lists info")
+    sapply(seq_along(list_data$gene_file)[-1], function(g) {
+      enesg <-
+        inner_join(list_data$gene_file[[g]]$full,
+                   list_data$gene_file[[1]]$use,
+                   by = "gene")
+      if (n_distinct(enesg$gene) < 1) {
+        showModal(
+          modalDialog(
+            title = "Information message",
+            " No genes in common, need to remove gene file",
+            size = "s",
+            easyClose = TRUE
+          )
+        )
+      }
+      list_data$gene_file[[g]]$use <<- select(enesg, gene)
+      my_name_g <-
+        sub(
+          "([0-9]+)",
+          n_distinct(list_data$gene_file[[g]]$full$gene),
+          names(list_data$gene_file)[g]
+        )
+      names(list_data$gene_file)[g] <<- my_name_g
+      names(list_data$gene_info)[g] <<- my_name_g
+      list_data$gene_info[[my_name_g]][[legend_nickname]] <<-
+        tibble(
+          set = legend_nickname,
+          mydot = kDotOptions[1],
+          myline = kLineOptions[1],
+          mycol = kListColorSet[color_safe],
+          onoff = 0,
+          rnorm = "1"
+        )
+    })
+    setProgress(5, detail = "Done")
+    return(list_data)
+  }
 
 # removes gene list
 RemoveGeneList <-
@@ -930,7 +945,8 @@ IntersectGeneLists <-
       # recored for info
       nick_name <- c(nick_name, nick_name1)
       list_data$gene_file[[nick_name1]]$full <- intersect
-      list_data$gene_file[[nick_name1]]$use <- select(intersect, gene)
+      list_data$gene_file[[nick_name1]]$use <-
+        select(intersect, gene)
       list_data$gene_file[[nick_name1]]$info <-
         paste("Gene_List_intersect",
               "from",
@@ -1015,7 +1031,6 @@ SortTop <-
       gene_count <- nrow(apply_bins)
       if (topbottom == "Top%") {
         num2 <- c(1, ceiling(gene_count * (num / 100)))
-        topbottom <- paste(topbottom, paste0(num, "%"))
       } else if (topbottom == "Middle%") {
         if (num == 100) {
           num2 <- c(1, gene_count)
@@ -1028,15 +1043,14 @@ SortTop <-
       } else {
         num2 <-
           c(ceiling((gene_count + 1) - (gene_count * (num / 100))), gene_count)
-        topbottom <- paste(topbottom, paste0(num, "%"))
       }
       if (any(is.na(num2))) {
         num2 <-
           c(ceiling((gene_count) - (gene_count * max(.5, num / 100))), ceiling(gene_count * max(.5, num / 100)))
       }
       nickname <- list_data$gene_info[[1]][[j]]$set
-      outlist2 <- mutate(apply_bins, !!nickname := myper) %>%
-        select(gene, !!nickname) %>%
+      outlist2 <- mutate(apply_bins,!!nickname := myper) %>%
+        select(gene,!!nickname) %>%
         slice(num2[1]:num2[2])
       if (lc > 0) {
         outlist <<- inner_join(outlist, outlist2, by = 'gene')
@@ -1058,12 +1072,13 @@ SortTop <-
       strtrim(gsub("(.{30})",
                    "\\1... ",
                    paste0("Sort n = ", n_distinct(outlist$gene))), 33)
+    topbottom2 <- paste(str_remove(topbottom,"%"), paste0(num, "%"))
     list_data$gene_file[[nick_name]]$full <- outlist
     list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
     list_data$gene_file[[nick_name]]$info <-
       paste(
         "Sort",
-        topbottom,
+        topbottom2,
         "bins",
         start_bin,
         "to",
@@ -1076,9 +1091,11 @@ SortTop <-
       )
     list_data$gene_file[[nick_name]]$sub <-
       paste("Sort",
-            topbottom,
-            "from",
-            list_data$gene_file[[list_name]]$sub)
+            topbottom2,
+            "bins",
+            start_bin,
+            "to",
+            end_bin)
     if (mytint) {
       mytint <- length(list_data$gene_file) * 0.1
     } else {
@@ -1128,7 +1145,6 @@ CompareRatios <-
            num,
            divzerofix,
            normbin = 0,
-           inturnal_norm,
            mytint = FALSE) {
     if (ratio1file == "") {
       showModal(modalDialog(
@@ -1161,22 +1177,17 @@ CompareRatios <-
                     sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
           ungroup()
       }
+      # if min/2 find Na's and 0's, and replace
+      if (divzerofix == "replace 0 with min/2") {
+        df$sum2 <- na_if(df$sum2, 0)
+        new_min <-
+          min(df$score, na.rm = TRUE) / 2
+        df$sum2 <-
+          replace_na(df$sum2, list(sum2 = new_min))
+      }
       outlist[[1]] <-
         transmute(df, gene = gene, Ratio = sum1 / sum2) %>%
         na_if(Inf) %>% select(gene, Ratio)
-      if (divzerofix == "replace with min/2") {
-        # find Inf and Na's replace 0s
-        outlist[[1]] <-
-          replace_na(outlist[[1]], list(Ratio = 0)) %>%
-          arrange(desc(Ratio))
-      } else {
-        outlist[[1]] <-
-          group_by(outlist[[1]], gene) %>%
-          summarise(test = sum(Ratio)) %>%
-          filter(!is.na(test)) %>%
-          semi_join(outlist[[1]], ., by = "gene") %>%
-          arrange(desc(Ratio))
-      }
     } else {
       lc <- 0
       lapply(c(ratio1file, ratio2file), function(j) {
@@ -1200,30 +1211,35 @@ CompareRatios <-
             ungroup()
         }
         lc <<- lc + 1
-        if (!inturnal_norm) {
-          outlist[[lc]] <<- df
+        
+        if (divzerofix == "replace 0 with min/2") {
+          df$sum2 <- na_if(df$sum2, 0)
+          new_min <-
+            min(df$score, na.rm = TRUE) / 2
+          df$sum2 <-
+            replace_na(df$sum2, list(sum2 = new_min))
+          outlist[[lc]] <<-
+            transmute(df, gene = gene, sum1 = sum1 / sum2) %>%
+            na_if(Inf)
         } else {
           outlist[[lc]] <<-
             transmute(df, gene = gene, sum1 = sum1 / sum2) %>%
             na_if(Inf)
         }
         if (lc > 1) {
-          outlist[[1]] <<-
-            inner_join(outlist[[1]], outlist[[lc]], by = 'gene') %>%
-            transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
-            na_if(Inf)  %>% select(gene, Ratio)
-          if (divzerofix == "replace with min/2") {
-            # find Inf and Na's replace 0s
+          if (divzerofix == "replace 0 with min/2") {
+            outlist[[2]]$sum1 <- na_if(outlist[[2]]$sum1, 0)
+            outlist[[2]]$sum1 <-
+              replace_na(outlist[[2]]$sum1, list(sum1 = new_min))
             outlist[[1]] <<-
-              replace_na(outlist[[1]], list(Ratio = 0)) %>%
-              arrange(desc(Ratio))
+              inner_join(outlist[[1]], outlist[[2]], by = 'gene') %>%
+              transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
+              na_if(Inf)  %>% select(gene, Ratio)
           } else {
             outlist[[1]] <<-
-              group_by(outlist[[1]], gene) %>%
-              summarise(test = sum(Ratio)) %>%
-              filter(!is.na(test)) %>%
-              semi_join(outlist[[1]], ., by = "gene") %>%
-              arrange(desc(Ratio))
+              inner_join(outlist[[1]], outlist[[2]], by = 'gene') %>%
+              transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
+              na_if(Inf)  %>% select(gene, Ratio)
           }
         }
       })
@@ -1243,55 +1259,37 @@ CompareRatios <-
       nick_name <- c(nick_name, nick_name1)
       list_data$gene_file[[nick_name1]]$full <- upratio
       list_data$gene_file[[nick_name1]]$use <- select(upratio, gene)
-      if (inturnal_norm) {
-        list_data$gene_file[[nick_name1]]$info <-
-          paste(
-            "Ratio_Up_file1",
-            ratio2file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/[",
-            start2_bin,
-            "to",
-            end2_bin,
-            "]/",
-            ratio1file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/[",
-            start2_bin,
-            "to",
-            end2_bin,
-            "] ",
-            "fold change cut off",
-            num,
-            divzerofix,
-            "from",
-            list_name,
-            "gene list",
-            Sys.Date()
-          )
-      } else {
-        list_data$gene_file[[nick_name1]]$info <-
-          paste(
-            "Ratio_Up_file1",
-            ratio2file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/",
-            ratio1file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "] ",
-            "fold change cut off",
-            num,
-            divzerofix,
-            "from",
-            list_name,
-            "gene list",
-            Sys.Date()
-          )
-      }
+      list_data$gene_file[[nick_name1]]$info <-
+        paste(
+          "Ratio_Up_file1",
+          ratio2file,
+          "[",
+          start1_bin,
+          "to",
+          end1_bin,
+          "]/[",
+          start2_bin,
+          "to",
+          end2_bin,
+          "]/",
+          ratio1file,
+          "[",
+          start1_bin,
+          "to",
+          end1_bin,
+          "]/[",
+          start2_bin,
+          "to",
+          end2_bin,
+          "] ",
+          "fold change cut off",
+          num,
+          divzerofix,
+          "from",
+          list_name,
+          "gene list",
+          Sys.Date()
+        )
       list_data$gene_file[[nick_name1]]$sub <-
         paste(
           "Ratio_Up_file1",
@@ -1305,62 +1303,45 @@ CompareRatios <-
     setProgress(3, detail = paste("building list", ratio2file))
     upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
     if (n_distinct(upratio$gene) > 0) {
-      nick_name2 <- paste("Ratio_Up_file2\nn =", n_distinct(upratio$gene))
+      nick_name2 <-
+        paste("Ratio_Down_file1\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name2)
       list_data$gene_file[[nick_name2]]$full <- upratio
       list_data$gene_file[[nick_name2]]$use <- select(upratio, gene)
-      if (inturnal_norm) {
-        list_data$gene_file[[nick_name2]]$info <-
-          paste(
-            "Ratio_Up_file1",
-            ratio2file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/[",
-            start2_bin,
-            "to",
-            end2_bin,
-            "]/",
-            ratio1file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/[",
-            start2_bin,
-            "to",
-            end2_bin,
-            "] ",
-            "fold change cut off",
-            num,
-            divzerofix,
-            "from",
-            list_name,
-            "gene list",
-            Sys.Date()
-          )
-      } else {
-        list_data$gene_file[[nick_name2]]$info <-
-          paste(
-            "Ratio_Up_file1",
-            ratio2file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/",
-            ratio1file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "] ",
-            "fold change cut off",
-            num,
-            divzerofix,
-            "from",
-            list_name,
-            "gene list",
-            Sys.Date()
-          )
-      }
+      list_data$gene_file[[nick_name2]]$info <-
+        paste(
+          "Ratio_Up_file1",
+          ratio2file,
+          "[",
+          start1_bin,
+          "to",
+          end1_bin,
+          "]/[",
+          start2_bin,
+          "to",
+          end2_bin,
+          "]/",
+          ratio1file,
+          "[",
+          start1_bin,
+          "to",
+          end1_bin,
+          "]/[",
+          start2_bin,
+          "to",
+          end2_bin,
+          "] ",
+          "fold change cut off",
+          num,
+          divzerofix,
+          "from",
+          list_name,
+          "gene list",
+          Sys.Date()
+        )
       list_data$gene_file[[nick_name2]]$sub <-
         paste(
-          "Ratio_Up_file2",
+          "Ratio_Down_file1",
           "fold change cut off",
           num,
           divzerofix,
@@ -1370,62 +1351,45 @@ CompareRatios <-
     }
     setProgress(4, detail = paste("building list: no change"))
     upratio <-
-      filter(outlist[[1]], Ratio <= num & Ratio >= 1 / num | Ratio == 0)
+      filter(outlist[[1]], Ratio <= num &
+               Ratio >= 1 / num | Ratio == 0)
     if (n_distinct(upratio$gene) > 0) {
       nick_name3 <-
         paste("Ratio_No_Diff\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name3)
       list_data$gene_file[[nick_name3]]$full <- upratio
       list_data$gene_file[[nick_name3]]$use <- select(upratio, gene)
-      if (inturnal_norm) {
-        list_data$gene_file[[nick_name3]]$info <-
-          paste(
-            "Ratio_Up_file1",
-            ratio2file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/[",
-            start2_bin,
-            "to",
-            end2_bin,
-            "]/",
-            ratio1file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/[",
-            start2_bin,
-            "to",
-            end2_bin,
-            "] ",
-            "fold change cut off",
-            num,
-            divzerofix,
-            "from",
-            list_name,
-            "gene list",
-            Sys.Date()
-          )
-      } else {
-        list_data$gene_file[[nick_name3]]$info <-
-          paste(
-            "Ratio_Up_file1",
-            ratio2file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "]/",
-            ratio1file,
-            "[", start1_bin,
-            "to",
-            end1_bin, "] ",
-            "fold change cut off",
-            num,
-            divzerofix,
-            "from",
-            list_name,
-            "gene list",
-            Sys.Date()
-          )
-      }
+      list_data$gene_file[[nick_name3]]$info <-
+        paste(
+          "Ratio_Up_file1",
+          ratio2file,
+          "[",
+          start1_bin,
+          "to",
+          end1_bin,
+          "]/[",
+          start2_bin,
+          "to",
+          end2_bin,
+          "]/",
+          ratio1file,
+          "[",
+          start1_bin,
+          "to",
+          end1_bin,
+          "]/[",
+          start2_bin,
+          "to",
+          end2_bin,
+          "] ",
+          "fold change cut off",
+          num,
+          divzerofix,
+          "from",
+          list_name,
+          "gene list",
+          Sys.Date()
+        )
       list_data$gene_file[[nick_name3]]$sub <-
         paste(
           "Ratio_No_Diff",
@@ -1671,7 +1635,7 @@ CumulativeDistribution <-
       })
     }
     # makes gene list common to all output
-    if(my_common){
+    if (my_common) {
       lapply(names(outlist), function(p)
         outlist[[p]] <<-
           inner_join(outlist[[p]], genelist, by = "gene"))
@@ -1798,7 +1762,9 @@ ApplyMath <-
           ungroup() %>%
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
-            gsub("(.{17})", "\\1\n", set),
+            paste(gsub("(.{17})", "\\1\n", 
+                       str_split_fixed(set, "\n", n=2)[,1]),
+                  str_split_fixed(set, "\n", n=2)[,2], sep = "\n"),
             sep = '\n'
           ))
       } else {
@@ -1809,7 +1775,9 @@ ApplyMath <-
           ungroup() %>%
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
-            gsub("(.{17})", "\\1\n", set),
+            paste(gsub("(.{17})", "\\1\n", 
+                       str_split_fixed(set, "\n", n=2)[,1]),
+                  str_split_fixed(set, "\n", n=2)[,2], sep = "\n"),
             sep = '\n'
           ))
       }
@@ -1854,7 +1822,9 @@ MakePlotOptionFrame <- function(list_data) {
           mysize = if_else(my_dots == 1, 0.01, 4.5),
           set = paste(
             gsub("(.{17})", "\\1\n", i),
-            gsub("(.{17})", "\\1\n", set),
+            paste(gsub("(.{17})", "\\1\n", 
+                       str_split_fixed(set, "\n", n=2)[,1]),
+                  str_split_fixed(set, "\n", n=2)[,2], sep = "\n"),
             sep = '\n'
           ),
           mysub = paste(list_data$gene_file[[i]]$sub)
@@ -2083,9 +2053,9 @@ LinesLablesListPlot <-
            tesline,
            use_plot_breaks_labels,
            use_plot_breaks,
-           vlinesize, 
-           linesize, 
-           fontsizex, 
+           vlinesize,
+           linesize,
+           fontsizex,
            fontsizey,
            legendsize) {
     # print("lines and lables plot fun")
@@ -2111,8 +2081,10 @@ LinesLablesListPlot <-
       use_virtical_line <- c(NA, NA, NA, NA)
     }
     # virtical line set up
-    use_virtical_line_color <- c(tsscolor, tescolor, body1color, body2color)
-    use_virtical_line_type <- c(tssline, tesline, body1line, body2line)
+    use_virtical_line_color <-
+      c(tsscolor, tescolor, body1color, body2color)
+    use_virtical_line_type <-
+      c(tssline, tesline, body1line, body2line)
     use_plot_breaks <- na_if(use_plot_breaks, 0.5)
     use_virtical_line <- na_if(use_virtical_line, 0.5)
     use_plot_breaks_labels <-
@@ -2122,7 +2094,8 @@ LinesLablesListPlot <-
       use_virtical_line_type[!is.na(use_virtical_line)]
     use_virtical_line_color <-
       use_virtical_line_color[!is.na(use_virtical_line)]
-    use_virtical_line <- use_virtical_line[!is.na(use_virtical_line)]
+    use_virtical_line <-
+      use_virtical_line[!is.na(use_virtical_line)]
     list(
       myline = virtical_line_data_frame <- data.frame(
         use_virtical_line,
@@ -2133,7 +2106,7 @@ LinesLablesListPlot <-
       mycolors = mycolors,
       mybrakes = use_plot_breaks,
       mylables = use_plot_breaks_labels,
-      mysize = c(vlinesize,linesize,fontsizex,fontsizey,legendsize)
+      mysize = c(vlinesize, linesize, fontsizex, fontsizey, legendsize)
     )
   }
 
@@ -2147,11 +2120,33 @@ LinesLablesPreSet <- function(mytype) {
   } else if (mytype == kLinesandlables[2]) {
     tt <- c(0, 0, 40, 0, 25, LIST_DATA$x_plot_range[2], 20)
   } else if (mytype == kLinesandlables[4]) {
-    tt <- c(0, 0, 5, 0, 50, LIST_DATA$x_plot_range[2], 6)
+    tt <- c(0, 0, 5, 0, 50, LIST_DATA$x_plot_range[2], 10)
   } else if (mytype == kLinesandlables[5]) {
-    tt <- c(0, 0, 0, 40, 25, LIST_DATA$x_plot_range[2], 20)
+    tt <- c(0,
+            0,
+            floor(LIST_DATA$x_plot_range[2] * .25),
+            0,
+            100,
+            LIST_DATA$x_plot_range[2],
+            10)
   } else if (mytype == kLinesandlables[6]) {
-    tt <- c(0, 0, 15, 45, 100, LIST_DATA$x_plot_range[2], 5)
+    tt <- c(
+      0,
+      0,
+      floor(LIST_DATA$x_plot_range[2] * .25),
+      ceiling(LIST_DATA$x_plot_range[2] * .75),
+      100,
+      LIST_DATA$x_plot_range[2],
+      10
+    )
+  } else if (mytype == kLinesandlables[7]) {
+    tt <- c(0,
+            0,
+            0,
+            ceiling(LIST_DATA$x_plot_range[2] * .75),
+            100,
+            LIST_DATA$x_plot_range[2],
+            10)
   } else {
     tt <-
       c(
@@ -2287,7 +2282,7 @@ GGplotLineDot <-
       ) +
       theme(
         legend.title = element_blank(),
-        legend.key = element_rect(size = line_list$mysize[5]/2, color = 'white'),
+        legend.key = element_rect(size = line_list$mysize[5] / 2, color = 'white'),
         legend.key.height = unit(legend_space, "line"),
         legend.text = element_text(size = line_list$mysize[5], face = 'bold')
       )  +
@@ -2523,10 +2518,11 @@ server <- function(input, output, session) {
                    color = "green")
         })
       }
-      if (any(grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info)) > 0)) {
+      if (any(grep("Ratio_Down_file1\nn =", names(LIST_DATA$gene_info)) > 0)) {
         output$valueboxratio2 <- renderValueBox({
           valueBox(
-            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))]]$use),
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Down_file1\nn =",
+                                                 names(LIST_DATA$gene_info))]]$use),
             "Ratio Up file2",
             icon = icon("list"),
             color = "blue"
@@ -2723,16 +2719,10 @@ server <- function(input, output, session) {
                  color = "green")
       })
     }
-    toggle(
-      "selectlineslablesshow",
-      condition = (
-        input$tabs == "mainplot" | input$tabs == "clustertool" &
-          LIST_DATA$STATE[1] != 0
-      )
-    )
     # first time switch tab auto plot
     if (input$tabs == "mainplot" & LIST_DATA$STATE[1] != 0) {
-      reactive_values$Picker_controler <- names(LIST_DATA$gene_file)
+      reactive_values$Picker_controler <- 
+        c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
       if (LIST_DATA$STATE[2] == 0) {
         withProgress(message = 'Calculation in progress',
                      detail = 'This may take a while...',
@@ -2748,7 +2738,8 @@ server <- function(input, output, session) {
                      })
         if (!is.null(reactive_values$Apply_Math)) {
           reactive_values$Y_Axis_Lable <- YAxisLable()
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA)
+          reactive_values$Plot_Options <-
+            MakePlotOptionFrame(LIST_DATA)
         }
       } else if (LIST_DATA$STATE[2] == 2) {
         show("actionmyplotshow")
@@ -2794,14 +2785,16 @@ server <- function(input, output, session) {
         floor(LIST_DATA$x_plot_range[2] / 4)
       )
     )
-    updateSliderInput(session,
-                      "sliderbinratio2",
-                      min = LIST_DATA$x_plot_range[1],
-                      max = LIST_DATA$x_plot_range[2],
-                      value = c(
-                        ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
-                        floor(LIST_DATA$x_plot_range[2] / 2)
-                      ))
+    updateSliderInput(
+      session,
+      "sliderbinratio2",
+      min = LIST_DATA$x_plot_range[1],
+      max = LIST_DATA$x_plot_range[2],
+      value = c(
+        ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
+        floor(LIST_DATA$x_plot_range[2] / 2)
+      )
+    )
     updateSliderInput(
       session,
       "sliderRatioBinNorm",
@@ -2873,11 +2866,11 @@ server <- function(input, output, session) {
       # }
     } else {
       showModal(modalDialog(
-          title = "Information message",
-          paste("No files loaded"),
-          size = "s",
-          easyClose = TRUE
-        ))
+        title = "Information message",
+        paste("No files loaded"),
+        size = "s",
+        easyClose = TRUE
+      ))
       return()
     }
     updateSelectInput(
@@ -2893,6 +2886,7 @@ server <- function(input, output, session) {
       show("downloadGeneList")
       show("checkboxsavesplit")
       show("filecolor")
+      show("hiddensave")
       show("startoff")
       # print("1st slider and plot lines Ylable")
       reactive_values$binset <- TRUE
@@ -2907,12 +2901,14 @@ server <- function(input, output, session) {
         updateSelectInput(session, "selectlineslables", selected = kLinesandlables[3])
       } else if (num_bins == 205 & LIST_DATA$STATE[3] == '5') {
         updateSelectInput(session, "selectlineslables", selected = kLinesandlables[4])
-      } else if (LIST_DATA$STATE[3] == '3') {
+      } else if (LIST_DATA$STATE[3] == '5') {
         updateSelectInput(session, "selectlineslables", selected = kLinesandlables[5])
       } else if (LIST_DATA$STATE[3] == '4') {
         updateSelectInput(session, "selectlineslables", selected = kLinesandlables[6])
-      } else {
+      } else if (LIST_DATA$STATE[3] == '3') {
         updateSelectInput(session, "selectlineslables", selected = kLinesandlables[7])
+      } else {
+        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[8])
       }
       LIST_DATA$STATE[1] <<- 1
     }
@@ -3026,9 +3022,11 @@ server <- function(input, output, session) {
   # save functions, gene list, color list ----
   output$downloadGeneList <- downloadHandler(
     filename = function() {
-      if (input$checkboxsavecolor) {
+      if (input$radiogroupsave == "Save common color - file pair") {
         paste(Sys.Date(), ".color.txt", sep = "")
-      } else {
+      } else if (input$radiogroupsave == "Save full Table file"){
+        paste(input$selectdataoption, ".table", sep = "")
+        } else {
         paste(gsub("\nn = ", " n = ", input$selectgenelistoptions),
               Sys.Date(),
               ".txt",
@@ -3036,13 +3034,18 @@ server <- function(input, output, session) {
       }
     },
     content = function(file) {
-      if (input$checkboxsavecolor) {
+      if ((input$radiogroupsave == "Save common color - file pair")) {
         new_comments <- NULL
         for (i in names(LIST_DATA$gene_info[[input$selectgenelistoptions]])) {
           new_comments <-
-            c(new_comments, paste(i, LIST_DATA$gene_info[[input$selectgenelistoptions]][[i]][4],
-                                  sep = ","))
+            c(new_comments,
+              paste(i, LIST_DATA$gene_info[[input$selectgenelistoptions]][[i]][4],
+                    sep = ","))
         }
+        write_lines(new_comments, file)
+      } else if (input$radiogroupsave == "Save full Table file"){
+        new_comments <- LIST_DATA$table_file[[input$selectdataoption]] %>% select(-set)
+        write_tsv(new_comments, file)
       } else {
         new_comments <- paste("#", Sys.Date(), "\n# File(s) used:")
         new_comments <-
@@ -3056,6 +3059,7 @@ server <- function(input, output, session) {
             "\nn = ", " n = ",
             paste(LIST_DATA$gene_file[[input$selectgenelistoptions]]$info)
           )))
+        
         if (input$checkboxsavesplit) {
           new_comments <-
             c(new_comments, gsub(
@@ -3067,9 +3071,8 @@ server <- function(input, output, session) {
           new_comments <-
             c(new_comments, pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use))
         }
-        
+        write_lines(new_comments, file)
       }
-      write_lines(new_comments, file)
     }
   )
   
@@ -3202,7 +3205,8 @@ server <- function(input, output, session) {
               reactive_values$Y_Axis_Lable
             )
         }
-        reactive_values$Picker_controler <- paste("color", c(sapply(LIST_DATA$gene_info[[1]], "[[", 4)), sep = ":")
+        reactive_values$Picker_controler <-
+          paste("color", c(sapply(LIST_DATA$gene_info[[1]], "[[", 4)), sep = ":")
       }
     }
   })
@@ -3471,32 +3475,37 @@ server <- function(input, output, session) {
   })
   
   # keep sizes real numbers ---
-  observeEvent(c(input$selectvlinesize, 
-                 input$selectlinesize, 
-                 input$selectfontsizex, 
-                 input$selectfontsizey,
-                 input$selectlegendsize),
-               ignoreInit = TRUE, {
-                 mynum <- c(2,2.5,13,13,10)
-                 myset <- c(
-                   input$selectvlinesize, 
-                   input$selectlinesize, 
-                   input$selectfontsizex, 
-                   input$selectfontsizey,
-                   input$selectlegendsize
-                 )
-                 # keep bin positions in bounds > 0
-                 for (i in seq_along(myset)) {
-                   if (is.na(myset[i]) | myset[i] < 0) {
-                     myset[i] <- mynum[i]
-                     updateNumericInput(session, "selectvlinesize", value = myset[1])
-                     updateNumericInput(session, "selectlinesize", value = myset[2])
-                     updateNumericInput(session, "selectfontsizex", value = myset[3])
-                     updateNumericInput(session, "selectfontsizey", value = myset[4])
-                     updateNumericInput(session, "selectlegendsize", value = myset[5])
-                   }
-                 }
-               })
+  observeEvent(
+    c(
+      input$selectvlinesize,
+      input$selectlinesize,
+      input$selectfontsizex,
+      input$selectfontsizey,
+      input$selectlegendsize
+    ),
+    ignoreInit = TRUE,
+    {
+      mynum <- c(2, 2.5, 13, 13, 10)
+      myset <- c(
+        input$selectvlinesize,
+        input$selectlinesize,
+        input$selectfontsizex,
+        input$selectfontsizey,
+        input$selectlegendsize
+      )
+      # keep bin positions in bounds > 0
+      for (i in seq_along(myset)) {
+        if (is.na(myset[i]) | myset[i] < 0) {
+          myset[i] <- mynum[i]
+          updateNumericInput(session, "selectvlinesize", value = myset[1])
+          updateNumericInput(session, "selectlinesize", value = myset[2])
+          updateNumericInput(session, "selectfontsizex", value = myset[3])
+          updateNumericInput(session, "selectfontsizey", value = myset[4])
+          updateNumericInput(session, "selectlegendsize", value = myset[5])
+        }
+      }
+    }
+  )
   
   # Update lines and lables ----
   observeEvent(
@@ -3545,28 +3554,6 @@ server <- function(input, output, session) {
         my_pos <-
           suppressWarnings(as.numeric((Lines_Lables_List$mybrakes)))
         my_label <- Lines_Lables_List$mylables
-        if (length(my_pos) > 0) {
-          reactive_values$Lines_Lables_List <-
-            LinesLablesListPlot(myset[1],
-                                input$selectbody1color,
-                                input$selectbody1line,
-                                myset[2],
-                                input$selectbody2color,
-                                input$selectbody2line,
-                                myset[3],
-                                input$selecttsscolor,
-                                input$selecttssline,
-                                myset[4],
-                                input$selecttescolor,
-                                input$selecttesline,
-                                my_label,
-                                my_pos,
-                                input$selectvlinesize, 
-                                input$selectlinesize, 
-                                input$selectfontsizex, 
-                                input$selectfontsizey,
-                                input$selectlegendsize)
-        }
       }
       # set lable and posistion numbers
       updateTextInput(session,
@@ -3616,10 +3603,10 @@ server <- function(input, output, session) {
           input$selecttescolor,
           input$selecttesline,
           my_label,
-          my_pos, 
-          input$selectvlinesize, 
-          input$selectlinesize, 
-          input$selectfontsizex, 
+          my_pos,
+          input$selectvlinesize,
+          input$selectlinesize,
+          input$selectfontsizex,
           input$selectfontsizey,
           input$selectlegendsize
         )
@@ -3653,10 +3640,10 @@ server <- function(input, output, session) {
         input$selecttescolor,
         input$selecttesline,
         my_label,
-        my_pos, 
-        input$selectvlinesize, 
-        input$selectlinesize, 
-        input$selectfontsizex, 
+        my_pos,
+        input$selectvlinesize,
+        input$selectlinesize,
+        input$selectfontsizex,
         input$selectfontsizey,
         input$selectlegendsize
       )
@@ -3768,7 +3755,8 @@ server <- function(input, output, session) {
           )
       }
       updateSelectInput(session, "kbrewer", selected = "select")
-      reactive_values$Picker_controler <- paste("color", c(sapply(LIST_DATA$gene_info[[1]], "[[", 4)), sep = ":")
+      reactive_values$Picker_controler <-
+        paste("color", c(sapply(LIST_DATA$gene_info[[1]], "[[", 4)), sep = ":")
     }
   })
   
@@ -3869,6 +3857,7 @@ server <- function(input, output, session) {
       hide("downloadGeneList")
       hide("checkboxsavesplit")
       hide("filecolor")
+      hide("hiddensave")
       hide("startoff")
       hide('actiongenelistsdatatable')
       hide('genelists1table')
@@ -3891,7 +3880,8 @@ server <- function(input, output, session) {
       updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
     }
     reactive_values$binset <- FALSE
-    reactive_values$Picker_controler <- names(LIST_DATA$table_file)
+    reactive_values$Picker_controler <- 
+      c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
   })
   
   # Remove gene list ----
@@ -3923,8 +3913,11 @@ server <- function(input, output, session) {
     )
   })
   
-  observeEvent(input$pickernumerator, {
+  observeEvent(c(input$pickernumerator, input$adddata,
+                 input$pickerdenominator), {
     if (input$pickernumerator != "") {
+      updateTextInput(session, "textnromname",value = paste(input$pickernumerator, input$adddata,
+                                                            input$pickerdenominator))
       output$valueboxnormfile <- renderValueBox({
         valueBox("0%",
                  "Done",
@@ -3946,15 +3939,25 @@ server <- function(input, output, session) {
                      input$pickerdenominator,
                      input$radiogenebygene,
                      input$radionormzero,
-                     input$adddata
+                     input$adddata,
+                     input$textnromname
                    )
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
       updatePickerInput(session,
-                        "pickernumerator", selected = "")
+                        "pickernumerator", selected = "",
+                        choices = names(LIST_DATA$table_file),
+                        choicesOpt = list(style = paste("color", c(
+                          sapply(LIST_DATA$gene_info[[1]], "[[", 4)
+                        ), sep = ":")))
       updatePickerInput(session,
-                        "pickerdenominator", selected = "")
+                        "pickerdenominator", selected = "",
+                        choices = names(LIST_DATA$table_file),
+                        choicesOpt = list(style = paste("color", c(
+                          sapply(LIST_DATA$gene_info[[1]], "[[", 4)
+                        ), sep = ":")))
+      updateTextInput(session, "textnromname", value = "")
       output$valueboxnormfile <- renderValueBox({
         valueBox(
           "Done",
@@ -3968,8 +3971,8 @@ server <- function(input, output, session) {
                         "selectdataoption",
                         choices = ff)
       # update main plot picker with new file name trigger
-      reactive_values$Picker_controler <-
-        names(LIST_DATA$table_file)
+      reactive_values$Picker_controler <- 
+        c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
     } else {
       #no new data file created
       output$valueboxnormfile <- renderValueBox({
@@ -4366,9 +4369,9 @@ server <- function(input, output, session) {
       newnames <-
         gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full))
       dt <- datatable(
-        LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full,
+        rowid_to_column(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full),
         rownames = FALSE,
-        colnames = strtrim(newnames, 30),
+        colnames = c("ID", strtrim(newnames, 30)),
         class = 'cell-border stripe compact',
         filter = 'top',
         caption = LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$info,
@@ -4419,7 +4422,8 @@ server <- function(input, output, session) {
                  newname <-
                    paste("Sort n =",
                          length(input$sorttable_rows_all))
-                 oldname <- grep("Sort n =", names(LIST_DATA$gene_file))
+                 oldname <-
+                   grep("Sort n =", names(LIST_DATA$gene_file))
                  if (newname != names(LIST_DATA$gene_file)[oldname]) {
                    # print("sort filter $use")
                    names(LIST_DATA$gene_file)[oldname] <<- newname
@@ -4429,9 +4433,14 @@ server <- function(input, output, session) {
                    ol <- input$selectsortfile
                    if (!ol %in% names(LIST_DATA$gene_file)) {
                      ol <- newname
-                     reactive_values$pickerfile_controler <- input$pickersortfile
+                     reactive_values$Picker_controler <- 
+                       c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
+                     reactive_values$pickerfile_controler <-
+                       input$pickersortfile
                    } else {
                      reactive_values$pickerfile_controler <- ""
+                     reactive_values$Picker_controler <- 
+                       c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
                    }
                    updateSelectInput(
                      session,
@@ -4500,8 +4509,12 @@ server <- function(input, output, session) {
                      ol <- newname
                      reactive_values$pickerfile_controler <-
                        c(input$pickerratio1file, input$pickerratio2file)
+                     reactive_values$Picker_controler <- 
+                       c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
                    } else {
                      reactive_values$pickerfile_controler <- ""
+                     reactive_values$Picker_controler <- 
+                       c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
                    }
                    updateSelectInput(
                      session,
@@ -4525,10 +4538,10 @@ server <- function(input, output, session) {
                ignoreNULL = TRUE,
                {
                  newname <-
-                   paste("Ratio_Up_file2\nn =",
+                   paste("Ratio_Down_file1\nn =",
                          length(input$ratio2table_rows_all))
                  oldname <-
-                   grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))
+                   grep("Ratio_Down_file1\nn =", names(LIST_DATA$gene_info))
                  if (newname != names(LIST_DATA$gene_file)[oldname]) {
                    # print("ratio2 filter $use")
                    names(LIST_DATA$gene_file)[oldname] <<- newname
@@ -4653,8 +4666,7 @@ server <- function(input, output, session) {
                        input$sliderbinratio2[2],
                        input$numericratio,
                        input$radioratiozero,
-                       input$sliderRatioBinNorm,
-                       input$checkboxrationom
+                       input$sliderRatioBinNorm
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -4695,10 +4707,11 @@ server <- function(input, output, session) {
                    color = "green")
         })
       }
-      if (any(grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info)) > 0)) {
+      if (any(grep("Ratio_Down_file1\nn =", names(LIST_DATA$gene_info)) > 0)) {
         output$valueboxratio2 <- renderValueBox({
           valueBox(
-            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info))]]$use),
+            n_distinct(LIST_DATA$gene_file[[grep("Ratio_Down_file1\nn =",
+                                                 names(LIST_DATA$gene_info))]]$use),
             "Ratio Up file2",
             icon = icon("list"),
             color = "blue"
@@ -4812,13 +4825,15 @@ server <- function(input, output, session) {
         )
       mytab <- "Up Fold Change file 2"
     }
-    if (any(grep("Ratio_Up_file2\nn =", names(LIST_DATA$gene_info)) > 0)) {
+    if (any(grep("Ratio_Down_file1\nn =", names(LIST_DATA$gene_info)) > 0)) {
       newnames2 <-
-        gsub("\n", " ", grep(
-          "Ratio_Up_file2\nn =",
-          names(LIST_DATA$gene_info),
-          value = TRUE
-        ))
+        gsub("\n",
+             " ",
+             grep(
+               "Ratio_Down_file1\nn =",
+               names(LIST_DATA$gene_info),
+               value = TRUE
+             ))
       withProgress(message = 'Calculation in progress',
                    detail = 'This may take a while...',
                    value = 0,
@@ -4826,13 +4841,13 @@ server <- function(input, output, session) {
                      output$ratio2table <-
                        DT::renderDataTable(
                          datatable(
-                           LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn =",
+                           LIST_DATA$gene_file[[grep("Ratio_Down_file1\nn =",
                                                      names(LIST_DATA$gene_info))]]$full,
                            rownames = FALSE,
                            colnames = newnames2,
                            class = 'cell-border stripe compact',
                            filter = 'top',
-                           caption = LIST_DATA$gene_file[[grep("Ratio_Up_file2\nn", names(LIST_DATA$gene_info))]]$info,
+                           caption = LIST_DATA$gene_file[[grep("Ratio_Down_file1\nn", names(LIST_DATA$gene_info))]]$info,
                            options = list(
                              pageLength = 15,
                              scrollX = TRUE,
@@ -4984,7 +4999,8 @@ server <- function(input, output, session) {
                                 {
                                   LD <- LIST_DATA
                                   count <- 0
-                                  ListColorSet <- brewer.pal(4, "Dark2")
+                                  ListColorSet <-
+                                    brewer.pal(4, "Dark2")
                                   sapply(names(LD$gene_info), function(i)
                                     sapply(names(LD$gene_info[[i]]), function(j)
                                       if (i %in% grep(reactive_values$clustergroups,
@@ -5016,24 +5032,25 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          log_2 = input$checkboxlog2cluster
                        )
-                     reactive_values$Plot_controler_cluster <- GGplotLineDot(
-                       reactive_values$Apply_Cluster_Math,
-                       input$sliderplotBinRange,
-                       reactive_values$Plot_Cluster_Options,
-                       Y_Axis_Cluster_numbers,
-                       reactive_values$Lines_Lables_List,
-                       input$checkboxsmoothcluster,
-                       input$checkboxlog2cluster,
-                       isolate(
-                         YAxisLable(
-                           input$myMathcluster,
-                           input$radioplotnromcluster,
-                           as.numeric(input$selectplotBinNorm),
-                           input$checkboxsmoothcluster,
-                           input$checkboxlog2cluster
+                     reactive_values$Plot_controler_cluster <-
+                       GGplotLineDot(
+                         reactive_values$Apply_Cluster_Math,
+                         input$sliderplotBinRange,
+                         reactive_values$Plot_Cluster_Options,
+                         Y_Axis_Cluster_numbers,
+                         reactive_values$Lines_Lables_List,
+                         input$checkboxsmoothcluster,
+                         input$checkboxlog2cluster,
+                         isolate(
+                           YAxisLable(
+                             input$myMathcluster,
+                             input$radioplotnromcluster,
+                             as.numeric(input$selectplotBinNorm),
+                             input$checkboxsmoothcluster,
+                             input$checkboxlog2cluster
+                           )
                          )
                        )
-                     )
                    }
                    
                    ol <- input$selectclusterfile
@@ -5041,8 +5058,12 @@ server <- function(input, output, session) {
                      ol <- newname
                      reactive_values$pickerfile_controler <-
                        input$pickerclusterfile
+                     reactive_values$Picker_controler <- 
+                       c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
                    } else {
                      reactive_values$pickerfile_controler <- ""
+                     reactive_values$Picker_controler <- 
+                       c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
                    }
                    updateSelectInput(
                      session,
@@ -5094,7 +5115,8 @@ server <- function(input, output, session) {
                                 {
                                   LD <- LIST_DATA
                                   count <- 0
-                                  ListColorSet <- brewer.pal(4, "Dark2")
+                                  ListColorSet <-
+                                    brewer.pal(4, "Dark2")
                                   sapply(names(LD$gene_info), function(i)
                                     sapply(names(LD$gene_info[[i]]), function(j)
                                       if (i %in% grep(reactive_values$clustergroups,
@@ -5126,24 +5148,25 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          log_2 = input$checkboxlog2cluster
                        )
-                     reactive_values$Plot_controler_cluster <- GGplotLineDot(
-                       reactive_values$Apply_Cluster_Math,
-                       input$sliderplotBinRange,
-                       reactive_values$Plot_Cluster_Options,
-                       Y_Axis_Cluster_numbers,
-                       reactive_values$Lines_Lables_List,
-                       input$checkboxsmoothcluster,
-                       input$checkboxlog2cluster,
-                       isolate(
-                         YAxisLable(
-                           input$myMathcluster,
-                           input$radioplotnromcluster,
-                           as.numeric(input$selectplotBinNorm),
-                           input$checkboxsmoothcluster,
-                           input$checkboxlog2cluster
+                     reactive_values$Plot_controler_cluster <-
+                       GGplotLineDot(
+                         reactive_values$Apply_Cluster_Math,
+                         input$sliderplotBinRange,
+                         reactive_values$Plot_Cluster_Options,
+                         Y_Axis_Cluster_numbers,
+                         reactive_values$Lines_Lables_List,
+                         input$checkboxsmoothcluster,
+                         input$checkboxlog2cluster,
+                         isolate(
+                           YAxisLable(
+                             input$myMathcluster,
+                             input$radioplotnromcluster,
+                             as.numeric(input$selectplotBinNorm),
+                             input$checkboxsmoothcluster,
+                             input$checkboxlog2cluster
+                           )
                          )
                        )
-                     )
                    }
                    
                    ol <- input$selectclusterfile
@@ -5204,7 +5227,8 @@ server <- function(input, output, session) {
                                 {
                                   LD <- LIST_DATA
                                   count <- 0
-                                  ListColorSet <- brewer.pal(4, "Dark2")
+                                  ListColorSet <-
+                                    brewer.pal(4, "Dark2")
                                   sapply(names(LD$gene_info), function(i)
                                     sapply(names(LD$gene_info[[i]]), function(j)
                                       if (i %in% grep(reactive_values$clustergroups,
@@ -5236,24 +5260,25 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          log_2 = input$checkboxlog2cluster
                        )
-                     reactive_values$Plot_controler_cluster <- GGplotLineDot(
-                       reactive_values$Apply_Cluster_Math,
-                       input$sliderplotBinRange,
-                       reactive_values$Plot_Cluster_Options,
-                       Y_Axis_Cluster_numbers,
-                       reactive_values$Lines_Lables_List,
-                       input$checkboxsmoothcluster,
-                       input$checkboxlog2cluster,
-                       isolate(
-                         YAxisLable(
-                           input$myMathcluster,
-                           input$radioplotnromcluster,
-                           as.numeric(input$selectplotBinNorm),
-                           input$checkboxsmoothcluster,
-                           input$checkboxlog2cluster
+                     reactive_values$Plot_controler_cluster <-
+                       GGplotLineDot(
+                         reactive_values$Apply_Cluster_Math,
+                         input$sliderplotBinRange,
+                         reactive_values$Plot_Cluster_Options,
+                         Y_Axis_Cluster_numbers,
+                         reactive_values$Lines_Lables_List,
+                         input$checkboxsmoothcluster,
+                         input$checkboxlog2cluster,
+                         isolate(
+                           YAxisLable(
+                             input$myMathcluster,
+                             input$radioplotnromcluster,
+                             as.numeric(input$selectplotBinNorm),
+                             input$checkboxsmoothcluster,
+                             input$checkboxlog2cluster
+                           )
                          )
                        )
-                     )
                    }
                    
                    ol <- input$selectclusterfile
@@ -5315,7 +5340,8 @@ server <- function(input, output, session) {
                                 {
                                   LD <- LIST_DATA
                                   count <- 0
-                                  ListColorSet <- brewer.pal(4, "Dark2")
+                                  ListColorSet <-
+                                    brewer.pal(4, "Dark2")
                                   sapply(names(LD$gene_info), function(i)
                                     sapply(names(LD$gene_info[[i]]), function(j)
                                       if (i %in% grep(reactive_values$clustergroups,
@@ -5347,24 +5373,25 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          log_2 = input$checkboxlog2cluster
                        )
-                     reactive_values$Plot_controler_cluster <- GGplotLineDot(
-                       reactive_values$Apply_Cluster_Math,
-                       input$sliderplotBinRange,
-                       reactive_values$Plot_Cluster_Options,
-                       Y_Axis_Cluster_numbers,
-                       reactive_values$Lines_Lables_List,
-                       input$checkboxsmoothcluster,
-                       input$checkboxlog2cluster,
-                       isolate(
-                         YAxisLable(
-                           input$myMathcluster,
-                           input$radioplotnromcluster,
-                           as.numeric(input$selectplotBinNorm),
-                           input$checkboxsmoothcluster,
-                           input$checkboxlog2cluster
+                     reactive_values$Plot_controler_cluster <-
+                       GGplotLineDot(
+                         reactive_values$Apply_Cluster_Math,
+                         input$sliderplotBinRange,
+                         reactive_values$Plot_Cluster_Options,
+                         Y_Axis_Cluster_numbers,
+                         reactive_values$Lines_Lables_List,
+                         input$checkboxsmoothcluster,
+                         input$checkboxlog2cluster,
+                         isolate(
+                           YAxisLable(
+                             input$myMathcluster,
+                             input$radioplotnromcluster,
+                             as.numeric(input$selectplotBinNorm),
+                             input$checkboxsmoothcluster,
+                             input$checkboxlog2cluster
+                           )
                          )
                        )
-                     )
                    }
                    
                    ol <- input$selectclusterfile
@@ -5510,10 +5537,11 @@ server <- function(input, output, session) {
                      choices = names(LIST_DATA$gene_file),
                      selected = ol
                    )
-                   if (!is.null(reactive_values$clustergroups) & any(grep(
-                     paste0(reactive_values$clustergroups, "1\nn ="),
-                     names(LIST_DATA$gene_info)
-                   ) > 0)) {
+                   if (!is.null(reactive_values$clustergroups) &
+                       any(grep(
+                         paste0(reactive_values$clustergroups, "1\nn ="),
+                         names(LIST_DATA$gene_info)
+                       ) > 0)) {
                      output$valueboxcluster1 <- renderValueBox({
                        valueBox(
                          n_distinct(LIST_DATA$gene_file[[grep(
@@ -5533,10 +5561,11 @@ server <- function(input, output, session) {
                                 color = "green")
                      })
                    }
-                   if (!is.null(reactive_values$clustergroups) & any(grep(
-                     paste0(reactive_values$clustergroups, "2\nn ="),
-                     names(LIST_DATA$gene_info)
-                   ) > 0)) {
+                   if (!is.null(reactive_values$clustergroups) &
+                       any(grep(
+                         paste0(reactive_values$clustergroups, "2\nn ="),
+                         names(LIST_DATA$gene_info)
+                       ) > 0)) {
                      output$valueboxcluster2 <- renderValueBox({
                        valueBox(
                          n_distinct(LIST_DATA$gene_file[[grep(
@@ -5556,10 +5585,11 @@ server <- function(input, output, session) {
                                 color = "green")
                      })
                    }
-                   if (!is.null(reactive_values$clustergroups) & any(grep(
-                     paste0(reactive_values$clustergroups, "3\nn ="),
-                     names(LIST_DATA$gene_info)
-                   ) > 0)) {
+                   if (!is.null(reactive_values$clustergroups) &
+                       any(grep(
+                         paste0(reactive_values$clustergroups, "3\nn ="),
+                         names(LIST_DATA$gene_info)
+                       ) > 0)) {
                      output$valueboxcluster3 <- renderValueBox({
                        valueBox(
                          n_distinct(LIST_DATA$gene_file[[grep(
@@ -5579,10 +5609,11 @@ server <- function(input, output, session) {
                                 color = "green")
                      })
                    }
-                   if (!is.null(reactive_values$clustergroups) & any(grep(
-                     paste0(reactive_values$clustergroups, "4\nn ="),
-                     names(LIST_DATA$gene_info)
-                   ) > 0)) {
+                   if (!is.null(reactive_values$clustergroups) &
+                       any(grep(
+                         paste0(reactive_values$clustergroups, "4\nn ="),
+                         names(LIST_DATA$gene_info)
+                       ) > 0)) {
                      output$valueboxcluster4 <- renderValueBox({
                        valueBox(
                          n_distinct(LIST_DATA$gene_file[[grep(
@@ -6012,6 +6043,8 @@ server <- function(input, output, session) {
       names(LIST_DATA$gene_file)[oldname] <<- newname
       names(LIST_DATA$gene_info)[oldname] <<- newname
       LIST_DATA$gene_file[[newname]]$use <<- gene_list
+      reactive_values$Picker_controler <- 
+        c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
       df_options <-
         inner_join(
           bind_rows(LIST_DATA$gene_info[[newname]]),
@@ -6053,6 +6086,14 @@ server <- function(input, output, session) {
             paste(use_header, paste("  p-value = ", format(tt[[2]], scientific = TRUE)))
         }
       }
+      output$valueboxcdf <- renderValueBox({
+        valueBox(
+          n_distinct(LIST_DATA$gene_file[[newname]]$use),
+          "Gene List 1",
+          icon = icon("list"),
+          color = "green"
+        )
+      })
       mycdf <- GGplotC(df, df_options, use_header)
       output$plotcdf <- renderPlot({
         mycdf
@@ -6070,7 +6111,7 @@ server <- function(input, output, session) {
                   names(LIST_DATA$gene_info),
                   value = TRUE))
       df <-
-        select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$full,-bin,-set) %>%
+        select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$full, -bin, -set) %>%
         mutate(value = round(log2(value), 5)) %>%
         spread(., set2, value)
       # PI EI differenc tool
@@ -6143,10 +6184,12 @@ server <- function(input, output, session) {
                    names(LIST_DATA$gene_file)[oldname] <<- newname
                    names(LIST_DATA$gene_info)[oldname] <<- newname
                    dt <-
-                     select(LIST_DATA$gene_file[[newname]]$full,-bin,-set) %>%
+                     select(LIST_DATA$gene_file[[newname]]$full, -bin, -set) %>%
                      spread(., set2, value)
                    LIST_DATA$gene_file[[newname]]$use <<-
                      tibble(gene = dt$gene[input$cdftable_rows_all])
+                   reactive_values$Picker_controler <- 
+                     c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
                    df_options <-
                      inner_join(
                        bind_rows(LIST_DATA$gene_info[[newname]]),
@@ -6162,15 +6205,17 @@ server <- function(input, output, session) {
                      df_options$mycol <-
                        brewer.pal(8, "Set1")[1:n_distinct(df_options$set)]
                    }
-                   df <- inner_join(LIST_DATA$gene_file[[newname]]$full,
-                                    LIST_DATA$gene_file[[newname]]$use,
-                                    by = "gene") %>%
+                   df <-
+                     inner_join(LIST_DATA$gene_file[[newname]]$full,
+                                LIST_DATA$gene_file[[newname]]$use,
+                                by = "gene") %>%
                      mutate(set = paste(
                        sub("\n", " ", newname),
                        gsub("(.{17})", "\\1\n", set2),
                        sep = '\n'
                      ))
-                   use_header <- pull(distinct(df_options, myheader))
+                   use_header <-
+                     pull(distinct(df_options, myheader))
                    if (n_groups(group_by(df_options, set)) == 2 &
                        n_distinct(df$gene) > 1) {
                      tt_name <- pull(distinct(df_options, set))
@@ -6351,7 +6396,7 @@ ui <- dashboardPage(
           }
           "
         )
-        )),
+      )),
       menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
       menuItem("Norm data", tabName = "filenorm", icon = icon("files-o")),
       menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
@@ -6458,25 +6503,9 @@ ui <- dashboardPage(
         )
       ),
       
-      hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4;"),
-      hidden(
-        div(
-          id = "selectlineslablesshow",
-          style = "padding-left: 10%;",
-          selectInput(
-            selectize = T,
-            "selectlineslables",
-            width = "85%",
-            label = "quick set lines and lables",
-            choices = c(
-              "Choose one" = "",
-              kLinesandlables
-            )
-          )
-        )
-      )
-        )
-      ),
+      hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4;")
+    )
+  ),
   dashboardBody(
     useShinyjs(),
     tabItems(
@@ -6487,9 +6516,8 @@ ui <- dashboardPage(
                   ".nav-tabs-custom .nav-tabs li.active a { background-color: transparent; border-color: #2e6da4; } "
                 ),
                 tabBox(
-                  title = "Load files",
                   id = "loadfiles",
-                  width = 4,
+                  width = 5,
                   tabPanel("Table",
                            div(
                              style = "height: 200px;",
@@ -6530,6 +6558,27 @@ ui <- dashboardPage(
                                    )),
                                    helpText("Applies to current gene list")
                                  )
+                               ))),
+                  tabPanel(title = "Save",
+                           div(style = "height: 200px;",
+                               fluidRow(
+                                 hidden(div(
+                                   id = "hiddensave",
+                                   style = "padding: 5px 15px;",
+                                        downloadButton("downloadGeneList", "Save List"),
+                                 radioGroupButtons(
+                                     inputId = "radiogroupsave",
+                                     choices = c("Save Gene list", 
+                                                 "Save full Table file", 
+                                                 "Save common color - file pair"),
+                                     checkIcon = list(
+                                       yes = tags$i(class = "fa fa-check-square", 
+                                                    style = "color: steelblue"),
+                                       no = tags$i(class = "fa fa-square-o", 
+                                                   style = "color: steelblue"))
+                                   ),
+                                   checkboxInput("checkboxsavesplit", "split location and name")
+                                 ))
                                )))
                 ),
                 
@@ -6537,23 +6586,11 @@ ui <- dashboardPage(
                   id = "startoff",
                   box(
                     title =  "Select Gene list",
-                    width = 8,
+                    width = 7,
                     height = "300px",
                     status = "primary",
                     solidHeader = T,
                     selectInput("selectgenelistoptions", "", choices = "common"),
-                    fluidRow(
-                      column(3,
-                             downloadButton("downloadGeneList", "Save List")),
-                      column(
-                        5,
-                        checkboxInput("checkboxsavesplit", "split location and name")
-                      ),
-                      column(
-                        4,
-                        checkboxInput("checkboxsavecolor", "Save common color - file pair")
-                      )
-                    ),
                     actionButton("actionremovegene", "Remove Gene list"),
                     fluidRow(
                       column(4, selectInput(
@@ -6562,7 +6599,7 @@ ui <- dashboardPage(
                         c(choices = "select", kBrewerList)
                       )),
                       column(4, style = "padding-top:5%;",
-                             actionButton("BttnTint", "tint gene list",))
+                             actionButton("BttnTint", "tint gene list", ))
                     )
                   ),
                   box(
@@ -6601,7 +6638,8 @@ ui <- dashboardPage(
                         4,
                         checkboxInput("checkboxremovefile",
                                       "remove all files and restart", value = FALSE)
-                      )),
+                      )
+                      ),
                       tags$hr(style = "color: #2e6da4; background-color: #2e6da4; border-color: #2e6da4;"),
                       textInput("textnickname", "Update Nickname"),
                       fluidRow(
@@ -6640,16 +6678,18 @@ ui <- dashboardPage(
               )),
           div(style = "padding-left: 15%;",
               fluidRow(
-                column(3,
-                radioGroupButtons("adddata",
-                                label = "",
-                                status = "primary",
-                             choices = c("/", "+"),
-                             selected = "/"
-                             )),
+                column(
+                  3,
+                  radioGroupButtons(
+                    "adddata",
+                    label = "",
+                    status = "primary",
+                    choices = c("/", "+"),
+                    selected = "/"
+                  )
+                ),
                 column(4, style = "padding-top: 4%;",
-                actionButton("actionnorm", label = "create file")
-                )
+                       actionButton("actionnorm", label = "create file"))
               )),
           div(style = "padding-left: 15%;",
               fluidRow(
@@ -6661,7 +6701,11 @@ ui <- dashboardPage(
                   multiple = F,
                   options = list(title = "Select second file")
                 )
-              )),
+              ),
+              fluidRow(
+                     textInput("textnromname", "Norm file name",
+                               width = "90%",))
+              ),
           awesomeRadio(
             "radiogenebygene",
             label = "",
@@ -6697,237 +6741,172 @@ ui <- dashboardPage(
               )),
               div(id = "showmainplot",  fluidRow(
                 box(
-                  title = "Sliders",
-                  status = "primary",
-                  solidHeader = T,
-                  width = 6,
-                  collapsible = TRUE,
-                  sliderInput(
-                    "sliderplotBinRange",
-                    label = "Plot Bin Range:",
-                    min = 0,
-                    max = 80,
-                    value = c(0, 80)
-                  ),
-                  sliderInput(
-                    "sliderplotYRange",
-                    label = "......  Min %  ....... Plot Y height ....... Max %  ......",
-                    min = -20,
-                    max = 120,
-                    post = "%",
-                    value = c(100, 0)
-                  ),
-                  fluidRow(
-                    column(
-                      4,
-                      numericInput("numericYRangeLow", label = "Plot Y min:", value = 0)
-                    ),
-                    column(
-                      4,
-                      numericInput("numericYRangeHigh", label = "Plot Y max:", value = 0)
-                    ),
-                    column(2, style = "padding-top: 8%;",
-                           actionBttn(
-                             inputId = "checkboxyrange",
-                             label = "apply",
-                             style = "unite", 
-                             color = "default",
-                             size = "sm"
-                           ))
-                  )
-                ),
-                box(
-                  title = "Normalization",
-                  status = "primary",
-                  solidHeader = T,
-                  width = 6,
-                  collapsible = TRUE,
-                  column(
-                    4,
-                    selectInput(
-                      "selectplotBinNorm",
-                      label = "Bin Norm:",
-                      choices = c(0:80),
-                      selected = 0
-                    )
-                  ),
-                  column(
-                    8,
-                    awesomeRadio(
-                      "radioplotnrom",
-                      label = "Set Y Normalization",
-                      choices = c("none", "relative frequency", "rel gene frequency"),
-                      selected = "none",
-                      inline = T
-                    )
-                  )
-                ),
-                box(
-                  title = "math",
-                  collapsed = F,
-                  collapsible = T,
-                  width = 6,
-                  status = "primary",
-                  solidHeader = T,
-                  awesomeRadio(
-                    "myMath",
-                    label =
-                      " ",
-                    choices = c("mean", "sum", "median", "var"),
-                    selected = "mean",
-                    inline = T
-                  ),
-                  column(4, checkboxInput("checkboxsmooth", label = "smooth")),
-                  column(4, checkboxInput("checkboxlog2", label = "log2"))
-                ),
-                box(
                   title = "Lines and Labels",
                   width = 12,
                   status = "primary",
                   solidHeader = T,
                   collapsible = TRUE,
                   collapsed = TRUE,
-                  column(12,
-                         div(
-                           style = "padding-left: -5px; display:inline-block;",
-                           dropdownButton(
-                             
-                             tags$h3("Set TSS Options"),
-                             
-                             selectInput(inputId = 'selecttsscolor',
-                                         label = 'TSS line and lable color',
-                                         choices = c("red","green","blue","brown","black","white"),
-                                         selected = "green"
-                             ),
-                             selectInput(inputId = 'selecttssline',
-                                         label = 'TSS line type',
-                                         choices = c("dotted", "solid"),
-                                         selected = "dotted"
-                             ),
-                             icon = icon("bars"),
-                             status = "success",
-                             tooltip = tooltipOptions(title = "TSS Options")
-                           )
-                         ),
-                         div(
-                           style = "padding-left: 20px; display:inline-block;",
-                           dropdownButton(
-                             
-                             tags$h3("Set 5|4 Options"),
-                             
-                             selectInput(inputId = 'selectbody1color',
-                                         label = '5|4 line and lable color',
-                                         choices = c("red","green","blue","brown","black","white"),
-                                         selected = "black"
-                             ),
-                             selectInput(inputId = 'selectbody1line',
-                                         label = '5|4 line type',
-                                         choices = c("dotted", "solid"),
-                                         selected = "solid"
-                             ),
-                             icon = icon("bars"),
-                             tooltip = tooltipOptions(title = "5|4 Options")
-                           )
-                         ),
-                         div(
-                           style = "padding-left: 20px; display:inline-block;",
-                           dropdownButton(
-                             
-                             tags$h3("Set 4|3 Options"),
-                             
-                             selectInput(inputId = 'selectbody2color',
-                                         label = '4|3 line and lable color',
-                                         choices = c("red","green","blue","brown","black","white"),
-                                         selected = "black"
-                             ),
-                             selectInput(inputId = 'selectbody2line',
-                                         label = '4|3 line type',
-                                         choices = c("dotted", "solid"),
-                                         selected = "solid"
-                             ),
-                             icon = icon("bars"),
-                             tooltip = tooltipOptions(title = "4|3 Options")
-                           )
-                         ),
-                         div(
-                           style = "padding-left: 25px; display:inline-block;",
-                           dropdownButton(
-                             
-                             tags$h3("Set TES Options"),
-                             
-                             selectInput(inputId = 'selecttescolor',
-                                         label = 'TES line and lable color',
-                                         choices = c("red","green","blue","brown","black","white"),
-                                         selected = "red"
-                             ),
-                             selectInput(inputId = 'selecttesline',
-                                         label = 'TES line type',
-                                         choices = c("dotted", "solid"),
-                                         selected = "dotted"
-                             ),
-                             icon = icon("bars"),
-                             status = "danger",
-                             tooltip = tooltipOptions(title = "TSS Options")
-                           )
-                         ),
-                         div(
-                           style = "padding-left: 25px; display:inline-block;",
-                           dropdownButton(
-                             
-                             tags$h3("Set font Options"),
-                             
-                             numericInput(inputId = 'selectvlinesize',
-                                          "Set vertcal line size",
-                                          value = 2,
-                                          min = .5,
-                                          max = 10,
-                                          step = .5
-                             ),
-                             numericInput(inputId = 'selectfontsizex',
-                                          "Set X axis font size",
-                                          value = 13,
-                                          min = 1,
-                                          max = 30,
-                                          step = 1
-                             ),
-                             numericInput(inputId = 'selectfontsizey',
-                                          "Set Y axis font size",
-                                          value = 13,
-                                          min = 1,
-                                          max = 30,
-                                          step = 1
-                             ),
-                             icon = icon("bars"),
-                             status = "warning",
-                             tooltip = tooltipOptions(title = "TSS Options")
-                           )
-                         ),
-                         div(
-                           style = "padding-left: 25px; display:inline-block;",
-                           dropdownButton(
-                             
-                             tags$h3("Set line Options"),
-                             
-                             numericInput(inputId = 'selectlinesize',
-                                          "Set plot line size",
-                                          value = 2.5,
-                                          min = .5,
-                                          max = 10,
-                                          step = .5
-                             ),
-                             numericInput(inputId = 'selectlegendsize',
-                                          "Set plot line size",
-                                          value = 10,
-                                          min = 1,
-                                          max = 20,
-                                          step = 1
-                             ),
-                             icon = icon("bars"),
-                             status = "warning",
-                             tooltip = tooltipOptions(title = "TSS Options")
-                           )
-                         )
-                  ),
+                  column(
+                    12,
+                    div(
+                      style = "padding-left: -5px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set TSS Options"),
+                        
+                        selectInput(
+                          inputId = 'selecttsscolor',
+                          label = 'TSS line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "green"
+                        ),
+                        selectInput(
+                          inputId = 'selecttssline',
+                          label = 'TSS line type',
+                          choices = c("dotted", "solid"),
+                          selected = "dotted"
+                        ),
+                        icon = icon("bars"),
+                        status = "success",
+                        tooltip = tooltipOptions(title = "TSS Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 20px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set 5|4 Options"),
+                        
+                        selectInput(
+                          inputId = 'selectbody1color',
+                          label = '5|4 line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "black"
+                        ),
+                        selectInput(
+                          inputId = 'selectbody1line',
+                          label = '5|4 line type',
+                          choices = c("dotted", "solid"),
+                          selected = "solid"
+                        ),
+                        icon = icon("bars"),
+                        tooltip = tooltipOptions(title = "5|4 Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 20px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set 4|3 Options"),
+                        
+                        selectInput(
+                          inputId = 'selectbody2color',
+                          label = '4|3 line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "black"
+                        ),
+                        selectInput(
+                          inputId = 'selectbody2line',
+                          label = '4|3 line type',
+                          choices = c("dotted", "solid"),
+                          selected = "solid"
+                        ),
+                        icon = icon("bars"),
+                        tooltip = tooltipOptions(title = "4|3 Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 25px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set TES Options"),
+                        
+                        selectInput(
+                          inputId = 'selecttescolor',
+                          label = 'TES line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "red"
+                        ),
+                        selectInput(
+                          inputId = 'selecttesline',
+                          label = 'TES line type',
+                          choices = c("dotted", "solid"),
+                          selected = "dotted"
+                        ),
+                        icon = icon("bars"),
+                        status = "danger",
+                        tooltip = tooltipOptions(title = "TSS Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 25px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set font Options"),
+                        
+                        numericInput(
+                          inputId = 'selectvlinesize',
+                          "Set vertcal line size",
+                          value = 2,
+                          min = .5,
+                          max = 10,
+                          step = .5
+                        ),
+                        numericInput(
+                          inputId = 'selectfontsizex',
+                          "Set X axis font size",
+                          value = 13,
+                          min = 1,
+                          max = 30,
+                          step = 1
+                        ),
+                        numericInput(
+                          inputId = 'selectfontsizey',
+                          "Set Y axis font size",
+                          value = 13,
+                          min = 1,
+                          max = 30,
+                          step = 1
+                        ),
+                        icon = icon("bars"),
+                        status = "warning",
+                        tooltip = tooltipOptions(title = "TSS Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 25px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set line Options"),
+                        
+                        numericInput(
+                          inputId = 'selectlinesize',
+                          "Set plot line size",
+                          value = 2.5,
+                          min = .5,
+                          max = 10,
+                          step = .5
+                        ),
+                        numericInput(
+                          inputId = 'selectlegendsize',
+                          "Set plot line size",
+                          value = 10,
+                          min = 1,
+                          max = 20,
+                          step = 1
+                        ),
+                        icon = icon("bars"),
+                        status = "warning",
+                        tooltip = tooltipOptions(title = "TSS Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 25px; display:inline-block;",
+                      selectInput(
+                        selectize = T,
+                        "selectlineslables",
+                        width = "130px",
+                        label = "quick set lines and labels",
+                        choices = c("Choose one" = "",
+                                    kLinesandlables)
+                      )
+                    )
+                  ), 
                   div(
                     style = "padding:2px; display:inline-block;",
                     numericInput(
@@ -6996,8 +6975,95 @@ ui <- dashboardPage(
                   ),
                   div(
                     style = "padding-left:33%;",
-                    actionButton("actionlineslabels", "Plot with new Lines and Lables")
+                    actionButton("actionlineslabels", "UPDATE PLOT")
                   )
+                ),
+                box(
+                  title = "Sliders",
+                  status = "primary",
+                  solidHeader = T,
+                  width = 6,
+                  collapsible = TRUE,
+                  sliderInput(
+                    "sliderplotBinRange",
+                    label = "Plot Bin Range:",
+                    min = 0,
+                    max = 80,
+                    value = c(0, 80)
+                  ),
+                  sliderInput(
+                    "sliderplotYRange",
+                    label = "......  Min %  ....... Plot Y height ....... Max %  ......",
+                    min = -20,
+                    max = 120,
+                    post = "%",
+                    value = c(100, 0)
+                  ),
+                  fluidRow(
+                    column(
+                      4,
+                      numericInput("numericYRangeLow", label = "Plot Y min:", value = 0)
+                    ),
+                    column(
+                      4,
+                      numericInput("numericYRangeHigh", label = "Plot Y max:", value = 0)
+                    ),
+                    column(
+                      2,
+                      style = "padding-top: 8%;",
+                      actionBttn(
+                        inputId = "checkboxyrange",
+                        label = "apply",
+                        style = "unite",
+                        color = "default",
+                        size = "sm"
+                      )
+                    )
+                  )
+                ),
+                box(
+                  title = "Normalization",
+                  status = "primary",
+                  solidHeader = T,
+                  width = 6,
+                  collapsible = TRUE,
+                  column(
+                    4,
+                    selectInput(
+                      "selectplotBinNorm",
+                      label = "Bin Norm:",
+                      choices = c(0:80),
+                      selected = 0
+                    )
+                  ),
+                  column(
+                    8,
+                    awesomeRadio(
+                      "radioplotnrom",
+                      label = "Set Y Normalization",
+                      choices = c("none", "relative frequency", "rel gene frequency"),
+                      selected = "none",
+                      inline = T
+                    )
+                  )
+                ),
+                box(
+                  title = "math",
+                  collapsed = F,
+                  collapsible = T,
+                  width = 6,
+                  status = "primary",
+                  solidHeader = T,
+                  awesomeRadio(
+                    "myMath",
+                    label =
+                      " ",
+                    choices = c("mean", "sum", "median", "var"),
+                    selected = "mean",
+                    inline = T
+                  ),
+                  column(4, checkboxInput("checkboxsmooth", label = "smooth")),
+                  column(4, checkboxInput("checkboxlog2", label = "log2"))
                 )
               ))),
       # main gene lists tab ----
@@ -7137,21 +7203,19 @@ ui <- dashboardPage(
                       5,
                       sliderInput(
                         "sliderbinratio1",
-                        label = "Optinal denominator Bin Range:",
+                        label = "denominator Bin Range:",
                         min = 0,
                         max = 80,
                         value = c(0, 0)
-                      ),
-                      checkboxInput("checkboxrationom", "inturnal norm", value = FALSE),
-                      helpText("NA if one file selected")
+                      )
                     )
                   ),
                   actionButton("actionratiotool", "Get fold changes"),
                   awesomeRadio(
                     "radioratiozero",
-                    label = "Handling #/0 = Inf",
-                    choices = c("replace with min/2", "remove genes with any 0's in denominator"),
-                    selected = "remove genes with any 0's in denominator"
+                    label = "Handling all #/0 = Inf",
+                    choices = c("replace 0 with min/2", "replace Inf with NA"),
+                    selected = "replace Inf with NA"
                   ),
                   sliderInput(
                     "sliderRatioBinNorm",
@@ -7383,7 +7447,7 @@ ui <- dashboardPage(
       )
     )
   )
-      )
+)
 
 # exicute ----
 shinyApp(ui = ui, server = server)
