@@ -725,7 +725,7 @@ MakeNormFile <-
       )
     } else {
       # if min/2 find Na's and 0's, and replace
-      if (divzerofix == "replace 0 with min/2") {
+      if (divzerofix) {
         mydom <- na_if(mydom, 0)
         myname <- paste0(myname, "_0->min/2")
         new_min_for_dom <-
@@ -736,7 +736,7 @@ MakeNormFile <-
       # files numbers are replaced with mean of bins if applied
       if (gbyg != "bin by bin") {
         myname <- "mean_of_bins"
-        if (divzerofix == "replace 0 with min/2") {
+        if (divzerofix) {
           myname <- paste0(myname, "_0->min/2")
         }
         mynom <-
@@ -1581,8 +1581,7 @@ CumulativeDistribution <-
            start2_bin,
            end2_bin,
            bottom_per,
-           top_per,
-           my_common) {
+           top_per) {
     if (is.null(onoff)) {
       showModal(modalDialog(
         title = "Information message",
@@ -1634,12 +1633,7 @@ CumulativeDistribution <-
         }
       })
     }
-    # makes gene list common to all output
-    if (my_common) {
-      lapply(names(outlist), function(p)
-        outlist[[p]] <<-
-          inner_join(outlist[[p]], genelist, by = "gene"))
-    }
+    
     # unlist and binds all together
     outlist <- bind_rows(outlist)
     
@@ -1758,7 +1752,8 @@ ApplyMath <-
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
           ungroup() %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T)) %>%
+          summarise(value = get(use_math)(score, na.rm = T),new = list(mean_se(score))) %>% 
+          unnest(new) %>%
           ungroup() %>%
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
@@ -1771,7 +1766,8 @@ ApplyMath <-
         list_long_data_frame[[i]] <-
           bind_rows(list_data_frame) %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T)) %>%
+          summarise(value = get(use_math)(score, na.rm = T),new = list(mean_se(score))) %>% 
+          unnest(new) %>%
           ungroup() %>%
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
@@ -1785,12 +1781,16 @@ ApplyMath <-
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
           arrange(bin) %>%
-          mutate(value = value / nth(value, normbin)) %>%
+          mutate(value = value / nth(value, normbin),
+                 ymin= ymin / nth(y, normbin),
+                 ymax= ymax / nth(y, normbin)) %>%
           ungroup()
       } else if (relative_frequency == "relative frequency") {
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
-          mutate(value = value / sum(value)) %>%
+          mutate(value = value / sum(value),
+                 ymin= ymin / sum(y),
+                 ymax= ymax / sum(y)) %>%
           ungroup()
       }
       list_data_frame <- NULL
@@ -2195,6 +2195,7 @@ GGplotLineDot <-
            yBinRange,
            line_list,
            use_smooth,
+           use_sem,
            use_log2,
            use_y_label) {
     # print("ggplot")
@@ -2236,10 +2237,15 @@ GGplotLineDot <-
       gp <- gp +
         geom_smooth(se = FALSE,
                     size = line_list$mysize[2],
-                    span = .2)
+                    span = .2) 
+    } else if (use_sem & str_detect(use_y_label,"mean")){
+      gp <- gp +
+        geom_ribbon(aes(ymin = ymin, ymax = ymax,fill = set),alpha=0.25) + 
+        scale_fill_manual(values = use_col) +
+        geom_line(size = line_list$mysize[2],alpha=0.8)
     } else{
       gp <- gp +
-        geom_line(size = line_list$mysize[2])
+        geom_line(size = line_list$mysize[2],alpha=0.8)
     }
     gp <- gp +
       geom_point(stroke = .001) +
@@ -2254,7 +2260,7 @@ GGplotLineDot <-
       #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
       scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
                          labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
-      
+
       geom_vline(
         data = line_list$myline,
         aes(xintercept = use_virtical_line),
@@ -2971,7 +2977,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth,
+          input$checkboxsmooth, input$checkboxsem,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3136,7 +3142,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth,
+              input$checkboxsmooth, input$checkboxsem,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3163,7 +3169,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth,
+              input$checkboxsmooth, input$checkboxsem,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3200,7 +3206,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth,
+              input$checkboxsmooth, input$checkboxsem,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3410,7 +3416,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth,
+          input$checkboxsmooth, input$checkboxsem,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3450,7 +3456,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth,
+            input$checkboxsmooth, input$checkboxsem,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -3668,10 +3674,39 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth,
+          input$checkboxsmooth, input$checkboxsem,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
+    }
+  })
+  
+  
+  # replot with SEM update ----
+  observeEvent(input$checkboxsem, ignoreInit = TRUE, {
+    if (!is.null(reactive_values$Apply_Math) &
+        LIST_DATA$STATE[2] != 2 & str_detect(input$myMath,"mean")){
+      reactive_values$Y_Axis_Lable <-
+        YAxisLable(
+          input$myMath,
+          input$radioplotnrom,
+          as.numeric(input$selectplotBinNorm),
+          input$checkboxsmooth,
+          input$checkboxlog2
+        )
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Options,
+          reactive_values$Y_Axis_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth, input$checkboxsem,
+          input$checkboxlog2,
+          reactive_values$Y_Axis_Lable
+        )
+    } else {
+      updateCheckboxInput(session, "checkboxsem",value = FALSE)
     }
   })
   
@@ -3712,7 +3747,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth,
+          input$checkboxsmooth, input$checkboxsem,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3749,7 +3784,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth,
+            input$checkboxsmooth, input$checkboxsem,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -3784,7 +3819,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth,
+            input$checkboxsmooth, input$checkboxsem,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -3938,7 +3973,7 @@ server <- function(input, output, session) {
                      input$pickernumerator,
                      input$pickerdenominator,
                      input$radiogenebygene,
-                     input$radionormzero,
+                     input$checkboxnormzero,
                      input$adddata,
                      input$textnromname
                    )
@@ -6309,8 +6344,7 @@ server <- function(input, output, session) {
                        input$sliderbincdf2[1],
                        input$sliderbincdf2[2],
                        input$slidercdfper[1],
-                       input$slidercdfper[2],
-                       input$checkboxcdfcommon
+                       input$slidercdfper[2]
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -6709,15 +6743,12 @@ ui <- dashboardPage(
           awesomeRadio(
             "radiogenebygene",
             label = "",
-            choices = c("mean of bins by mean of bins", "bin by bin"),
-            selected = "mean of bins by mean of bins"
+            choices = c("bin by bin", "mean of bins by mean of bins"),
+            selected = "bin by bin"
           ),
-          awesomeRadio(
-            "radionormzero",
-            label = "Handling #/0 = Inf",
-            choices = c("replace 0 with min/2", "replace Inf with NA"),
-            selected = "replace 0 with min/2"
-          ),
+          awesomeCheckbox(
+            "checkboxnormzero",
+            label = "replace 0 with min/2",value = FALSE),
           valueBoxOutput("valueboxnormfile")
         )
       ),
@@ -6832,7 +6863,7 @@ ui <- dashboardPage(
                         ),
                         icon = icon("bars"),
                         status = "danger",
-                        tooltip = tooltipOptions(title = "TSS Options")
+                        tooltip = tooltipOptions(title = "TES Options")
                       )
                     ),
                     div(
@@ -6866,7 +6897,7 @@ ui <- dashboardPage(
                         ),
                         icon = icon("bars"),
                         status = "warning",
-                        tooltip = tooltipOptions(title = "TSS Options")
+                        tooltip = tooltipOptions(title = "Font Options")
                       )
                     ),
                     div(
@@ -6892,7 +6923,7 @@ ui <- dashboardPage(
                         ),
                         icon = icon("bars"),
                         status = "warning",
-                        tooltip = tooltipOptions(title = "TSS Options")
+                        tooltip = tooltipOptions(title = "Line Options")
                       )
                     ),
                     div(
@@ -7062,6 +7093,7 @@ ui <- dashboardPage(
                     selected = "mean",
                     inline = T
                   ),
+                  column(4, checkboxInput("checkboxsem", label = "mean_se")),
                   column(4, checkboxInput("checkboxsmooth", label = "smooth")),
                   column(4, checkboxInput("checkboxlog2", label = "log2"))
                 )
@@ -7192,21 +7224,21 @@ ui <- dashboardPage(
                     column(
                       5,
                       sliderInput(
-                        "sliderbinratio2",
-                        label = "Select nominator Bin Range:",
+                        "sliderbinratio1",
+                        label = "Select numerator Bin Range:",
                         min = 0,
                         max = 80,
-                        value = c(0, 80)
+                        value = c(0, 0)
                       )
                     ),
                     column(
                       5,
                       sliderInput(
-                        "sliderbinratio1",
-                        label = "denominator Bin Range:",
+                        "sliderbinratio2",
+                        label = "Select denominator Bin Range:",
                         min = 0,
                         max = 80,
-                        value = c(0, 0)
+                        value = c(0, 80)
                       )
                     )
                   ),
@@ -7388,26 +7420,28 @@ ui <- dashboardPage(
             status = "primary",
             solidHeader = T,
             width = 12,
-            fluidRow(column(
+            fluidRow(
+              column(
+                5,
+                sliderInput(
+                  "sliderbincdf1",
+                  label = "Select numerator Bin Range:",
+                  min = 0,
+                  max = 80,
+                  value = c(0, 0)
+                )
+              ),
+              column(
               5,
               sliderInput(
                 "sliderbincdf2",
-                label = "Select nominator Bin Range:",
+                label = "Select denominator Bin Range:",
                 min = 0,
                 max = 80,
                 value = c(0, 80)
               )
-            ),
-            column(
-              5,
-              sliderInput(
-                "sliderbincdf1",
-                label = "Select denominator Bin Range:",
-                min = 0,
-                max = 80,
-                value = c(0, 0)
               )
-            )),
+            ),
             column(
               5,
               sliderInput(
@@ -7419,7 +7453,6 @@ ui <- dashboardPage(
                 value = c(0, 100)
               )
             ),
-            checkboxInput("checkboxcdfcommon", label = "in common", value = FALSE),
             actionButton("actioncdftool", "Plot CDF")
           ),
           box(
