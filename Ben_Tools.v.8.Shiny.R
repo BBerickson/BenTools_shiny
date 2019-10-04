@@ -29,7 +29,8 @@ suppressPackageStartupMessages(my_packages(
     "fastcluster",
     "shinyjs",
     "colourpicker",
-    "RColorBrewer"
+    "RColorBrewer",
+    "ggpubr"
   )
 ))
 
@@ -1178,12 +1179,15 @@ CompareRatios <-
           ungroup()
       }
       # if min/2 find Na's and 0's, and replace
-      if (divzerofix == "replace 0 with min/2") {
+      if(sum(start2_bin,end2_bin) == 0){
+        df$sum2 <- 1
+      }
+      if (divzerofix) {
         df$sum2 <- na_if(df$sum2, 0)
         new_min <-
-          min(df$score, na.rm = TRUE) / 2
-        df$sum2 <-
-          replace_na(df$sum2, list(sum2 = new_min))
+          min(df$sum2, na.rm = TRUE) / 2
+        df <-
+          replace_na(df, list(sum2 = new_min))
       }
       outlist[[1]] <-
         transmute(df, gene = gene, Ratio = sum1 / sum2) %>%
@@ -1211,13 +1215,15 @@ CompareRatios <-
             ungroup()
         }
         lc <<- lc + 1
-        
-        if (divzerofix == "replace 0 with min/2") {
+        if(sum(start2_bin,end2_bin) == 0){
+          df$sum2 <- 1
+        }
+        if (divzerofix) {
           df$sum2 <- na_if(df$sum2, 0)
           new_min <-
-            min(df$score, na.rm = TRUE) / 2
-          df$sum2 <-
-            replace_na(df$sum2, list(sum2 = new_min))
+            min(df$sum2, na.rm = TRUE) / 2
+          df <-
+            replace_na(df, list(sum2 = new_min))
           outlist[[lc]] <<-
             transmute(df, gene = gene, sum1 = sum1 / sum2) %>%
             na_if(Inf)
@@ -1227,10 +1233,10 @@ CompareRatios <-
             na_if(Inf)
         }
         if (lc > 1) {
-          if (divzerofix == "replace 0 with min/2") {
+          if (divzerofix) {
             outlist[[2]]$sum1 <- na_if(outlist[[2]]$sum1, 0)
-            outlist[[2]]$sum1 <-
-              replace_na(outlist[[2]]$sum1, list(sum1 = new_min))
+            outlist[[2]] <-
+              replace_na(outlist[[2]], list(sum1 = new_min))
             outlist[[1]] <<-
               inner_join(outlist[[1]], outlist[[2]], by = 'gene') %>%
               transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
@@ -1244,6 +1250,7 @@ CompareRatios <-
         }
       })
     }
+    #remove old info
     for (rr in grep("Ratio_", names(LIST_DATA$gene_file), value = T)) {
       if (length(rr) > 0) {
         list_data$gene_file[[rr]] <- NULL
@@ -1252,12 +1259,17 @@ CompareRatios <-
     }
     nick_name <- NULL
     setProgress(2, detail = paste("building list", ratio1file))
-    upratio <- filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
+    if(num != 0){
+      upratio <- filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
+    } else {
+      upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
+    }
+    
     if (n_distinct(upratio$gene) > 0) {
       nick_name1 <-
         paste("Ratio_Up_file1\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name1)
-      list_data$gene_file[[nick_name1]]$full <- upratio
+      list_data$gene_file[[nick_name1]]$full <- upratio %>% mutate(set=nick_name1)
       list_data$gene_file[[nick_name1]]$use <- select(upratio, gene)
       list_data$gene_file[[nick_name1]]$info <-
         paste(
@@ -1301,12 +1313,16 @@ CompareRatios <-
         )
     }
     setProgress(3, detail = paste("building list", ratio2file))
-    upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
+    if(num != 0){
+      upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
+    }  else {
+      upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
+    } 
     if (n_distinct(upratio$gene) > 0) {
       nick_name2 <-
         paste("Ratio_Down_file1\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name2)
-      list_data$gene_file[[nick_name2]]$full <- upratio
+      list_data$gene_file[[nick_name2]]$full <- upratio %>% mutate(set=nick_name2)
       list_data$gene_file[[nick_name2]]$use <- select(upratio, gene)
       list_data$gene_file[[nick_name2]]$info <-
         paste(
@@ -1350,14 +1366,19 @@ CompareRatios <-
         )
     }
     setProgress(4, detail = paste("building list: no change"))
-    upratio <-
-      filter(outlist[[1]], Ratio <= num &
-               Ratio >= 1 / num | Ratio == 0)
+    if(num != 0){
+      upratio <-
+        filter(outlist[[1]], Ratio <= num &
+                 Ratio >= 1 / num | Ratio == 0)
+    } else {
+      upratio <- outlist[[1]]
+      }
+    
     if (n_distinct(upratio$gene) > 0) {
       nick_name3 <-
         paste("Ratio_No_Diff\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name3)
-      list_data$gene_file[[nick_name3]]$full <- upratio
+      list_data$gene_file[[nick_name3]]$full <- upratio %>% mutate(set=nick_name3)
       list_data$gene_file[[nick_name3]]$use <- select(upratio, gene)
       list_data$gene_file[[nick_name3]]$info <-
         paste(
@@ -1405,7 +1426,9 @@ CompareRatios <-
     } else {
       mytint <- 0
     }
+    list_data$gene_file$boxRatio <- NULL
     for (nn in nick_name) {
+      list_data$gene_file$boxRatio <- bind_rows(list_data$gene_file$boxRatio,list_data$gene_file[[nn]]$full)
       list_data$gene_info[[nn]] <-
         lapply(setNames(
           names(list_data$gene_info[[1]]),
@@ -1709,8 +1732,7 @@ ApplyMath <-
   function(list_data,
            use_math,
            relative_frequency,
-           normbin,
-           log_2 = F) {
+           normbin) {
     # print("apply math fun")
     table_file = list_data$table_file
     gene_file = list_data$gene_file
@@ -1752,9 +1774,14 @@ ApplyMath <-
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
           ungroup() %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T),new = list(mean_se(score))) %>% 
-          unnest(new) %>%
+          summarise(value = get(use_math)(score, na.rm = T), y = mean(score),
+                    n = n(),
+                    sd = sd(score),
+                    se = sd/sqrt(n),
+                    SEmin=y-se,SEmax=y+se,
+                    SDmin=y-sd,SDmax=y+sd) %>%
           ungroup() %>%
+          select(-n, -sd, -se) %>% 
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
             paste(gsub("(.{17})", "\\1\n", 
@@ -1766,9 +1793,14 @@ ApplyMath <-
         list_long_data_frame[[i]] <-
           bind_rows(list_data_frame) %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T),new = list(mean_se(score))) %>% 
-          unnest(new) %>%
+          summarise(value = get(use_math)(score, na.rm = T),y = mean(score),
+                    n = n(),
+                    sd = sd(score),
+                    se = sd/sqrt(n),
+                    SEmin=y-se,SEmax=y+se,
+                    SDmin=y-sd,SDmax=y+sd) %>%
           ungroup() %>%
+          select(-n, -sd, -se) %>% 
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
             paste(gsub("(.{17})", "\\1\n", 
@@ -1782,15 +1814,19 @@ ApplyMath <-
           group_by(list_long_data_frame[[i]], set) %>%
           arrange(bin) %>%
           mutate(value = value / nth(value, normbin),
-                 ymin= ymin / nth(y, normbin),
-                 ymax= ymax / nth(y, normbin)) %>%
+                 SEmin= SEmin / nth(y, normbin),
+                 SEmax= SEmax / nth(y, normbin),
+                 SDmin= SDmin / nth(y, normbin),
+                 SDmax= SDmax / nth(y, normbin)) %>%
           ungroup()
       } else if (relative_frequency == "relative frequency") {
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
           mutate(value = value / sum(value),
-                 ymin= ymin / sum(y),
-                 ymax= ymax / sum(y)) %>%
+                 SEmin= SEmin / sum(y),
+                 SEmax= SEmax / sum(y),
+                 SDmin= SDmin / sum(y),
+                 SDmax= SDmax / sum(y)) %>%
           ungroup()
       }
       list_data_frame <- NULL
@@ -2167,24 +2203,34 @@ MyXSetValues <-
   function(apply_math,
            xBinRange,
            yBinRange = c(0, 100),
-           log_2 = F) {
+           log_2 = F,
+           my_sem = "none") {
+    if(my_sem == "SEM"){
+      tt <- group_by(apply_math, set) %>%
+        filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
+        ungroup() %>%
+        summarise(min(SEmin, na.rm = T), max(SEmax, na.rm = T)) %>%
+        unlist(., use.names = FALSE)
+    } else if (my_sem == "SD"){
+      tt <- group_by(apply_math, set) %>%
+        filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
+        ungroup() %>%
+        summarise(min(SDmin, na.rm = T), max(SDmax, na.rm = T)) %>%
+        unlist(., use.names = FALSE)
+    } else {
     tt <- group_by(apply_math, set) %>%
       filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
       ungroup() %>%
       summarise(min(value, na.rm = T), max(value, na.rm = T)) %>%
       unlist(., use.names = FALSE)
-    if (log_2) {
-      bb <- group_by(apply_math, set) %>%
-        filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
-        ungroup() %>%
-        summarise(min(na_if(value, 0), na.rm = T) / 2) %>%
-        unlist(., use.names = FALSE)
-      tt[tt == 0] <- bb
-      tt <- log2(tt)
     }
     tt <-
       c(tt[1] + (tt[1] * (yBinRange[1] / 100)), tt[2] + (tt[2] * ((yBinRange[2] -
                                                                      100) / 100)))
+    if (log_2) {
+      tt <- log2((abs(tt))^(sign(tt)))
+    }
+    tt
   }
 
 # main ggplot function
@@ -2238,11 +2284,24 @@ GGplotLineDot <-
         geom_smooth(se = FALSE,
                     size = line_list$mysize[2],
                     span = .2) 
-    } else if (use_sem & str_detect(use_y_label,"mean")){
+    } else if (use_sem == "SEM" & str_detect(use_y_label,"mean")){
+      if(use_log2){
+        gp <- gp +
+          geom_ribbon(aes(ymin = log2((abs(SEmin))^(sign(SEmin))), 
+                          ymax = log2((abs(SEmax))^(sign(SEmax))),fill = set),alpha=0.25) + 
+          scale_fill_manual(values = use_col) +
+          geom_line(size = line_list$mysize[2],alpha=0.8)
+      } else {
       gp <- gp +
-        geom_ribbon(aes(ymin = ymin, ymax = ymax,fill = set),alpha=0.25) + 
+        geom_ribbon(aes(ymin = SEmin, ymax = SEmax,fill = set),alpha=0.25) + 
         scale_fill_manual(values = use_col) +
         geom_line(size = line_list$mysize[2],alpha=0.8)
+      }
+      } else if (use_sem == "SD" & str_detect(use_y_label,"mean")){
+        gp <- gp +
+            geom_ribbon(aes(ymin = SDmin, ymax = SDmax,fill = set),alpha=0.25) + 
+            scale_fill_manual(values = use_col) +
+            geom_line(size = line_list$mysize[2],alpha=0.8)
     } else{
       gp <- gp +
         geom_line(size = line_list$mysize[2],alpha=0.8)
@@ -2349,6 +2408,7 @@ server <- function(input, output, session) {
     Plot_Options = NULL,
     Plot_controler = NULL,
     Plot_controler_cluster = NULL,
+    Plot_controler_ratio = NULL,
     Picker_controler = NULL,
     Y_Axis_plot = 0,
     onoff = list(),
@@ -2787,18 +2847,18 @@ server <- function(input, output, session) {
       min = LIST_DATA$x_plot_range[1],
       max = LIST_DATA$x_plot_range[2],
       value = c(
-        floor(LIST_DATA$x_plot_range[1] / 8),
-        floor(LIST_DATA$x_plot_range[2] / 4)
+        floor(LIST_DATA$x_plot_range[2] / 5.5),
+        floor(LIST_DATA$x_plot_range[2] / 4.4)
       )
     )
     updateSliderInput(
       session,
       "sliderbinratio2",
-      min = LIST_DATA$x_plot_range[1],
+      min = 0,
       max = LIST_DATA$x_plot_range[2],
       value = c(
-        ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
-        floor(LIST_DATA$x_plot_range[2] / 2)
+        floor(LIST_DATA$x_plot_range[2] / 4.4) + 1,
+        floor(LIST_DATA$x_plot_range[2] / 1.77)
       )
     )
     updateSliderInput(
@@ -2830,8 +2890,8 @@ server <- function(input, output, session) {
       min = LIST_DATA$x_plot_range[1],
       max = LIST_DATA$x_plot_range[2],
       value = c(
-        floor(LIST_DATA$x_plot_range[1] / 8),
-        floor(LIST_DATA$x_plot_range[2] / 4)
+        floor(LIST_DATA$x_plot_range[2] / 5.5),
+        floor(LIST_DATA$x_plot_range[2] / 4.4)
       )
     )
     updateSliderInput(
@@ -2840,8 +2900,8 @@ server <- function(input, output, session) {
       min = LIST_DATA$x_plot_range[1],
       max = LIST_DATA$x_plot_range[2],
       value = c(
-        ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
-        floor(LIST_DATA$x_plot_range[2] / 2)
+        floor(LIST_DATA$x_plot_range[2] / 4.4) + 1,
+        floor(LIST_DATA$x_plot_range[2] / 1.77)
       )
     )
   })
@@ -2977,7 +3037,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$checkboxsem,
+          input$checkboxsmooth, input$sliderSE,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3142,7 +3202,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth, input$checkboxsem,
+              input$checkboxsmooth, input$sliderSE,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3169,7 +3229,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth, input$checkboxsem,
+              input$checkboxsmooth, input$sliderSE,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3206,7 +3266,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth, input$checkboxsem,
+              input$checkboxsmooth, input$sliderSE,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3343,13 +3403,23 @@ server <- function(input, output, session) {
   output$plotcluster <- renderPlot({
     reactive_values$Plot_controler_cluster
   })
-  
+  output$plotratio <- renderPlot({
+    reactive_values$Plot_controler_ratio
+  })
   # updates norm applymath ----
   observeEvent(c(input$myMath,
                  input$selectplotBinNorm,
                  input$radioplotnrom),
                ignoreInit = TRUE,
                {
+                 if(str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
+                   enable("sliderSE")
+                 }else{
+                   disable("sliderSE")
+                   updateSliderTextInput(session, "sliderSE",
+                                         choices = c("SEM", "none", "SD"),
+                                         selected = "none")
+                 }
                  reactive_values$Y_Axis_Lable <-
                    YAxisLable(
                      input$myMath,
@@ -3385,7 +3455,8 @@ server <- function(input, output, session) {
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
           input$sliderplotYRange,
-          input$checkboxlog2
+          input$checkboxlog2,
+          input$sliderSE
         )
       my_step <-
         (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
@@ -3416,7 +3487,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$checkboxsem,
+          input$checkboxsmooth, input$sliderSE,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3456,7 +3527,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth, input$checkboxsem,
+            input$checkboxsmooth, input$sliderSE,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -3657,61 +3728,14 @@ server <- function(input, output, session) {
   
   # replot with smooth update ----
   observeEvent(input$checkboxsmooth, ignoreInit = TRUE, {
-    if (!is.null(reactive_values$Apply_Math) &
-        LIST_DATA$STATE[2] != 2) {
-      reactive_values$Y_Axis_Lable <-
-        YAxisLable(
-          input$myMath,
-          input$radioplotnrom,
-          as.numeric(input$selectplotBinNorm),
-          input$checkboxsmooth,
-          input$checkboxlog2
-        )
-      reactive_values$Plot_controler <-
-        GGplotLineDot(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-          reactive_values$Plot_Options,
-          reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$checkboxsem,
-          input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
-        )
+    if(str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
+      enable("sliderSE")
+    }else{
+      disable("sliderSE")
+      updateSliderTextInput(session, "sliderSE",
+                            choices = c("SEM", "none", "SD"),
+                            selected = "none")
     }
-  })
-  
-  
-  # replot with SEM update ----
-  observeEvent(input$checkboxsem, ignoreInit = TRUE, {
-    if (!is.null(reactive_values$Apply_Math) &
-        LIST_DATA$STATE[2] != 2 & str_detect(input$myMath,"mean")){
-      reactive_values$Y_Axis_Lable <-
-        YAxisLable(
-          input$myMath,
-          input$radioplotnrom,
-          as.numeric(input$selectplotBinNorm),
-          input$checkboxsmooth,
-          input$checkboxlog2
-        )
-      reactive_values$Plot_controler <-
-        GGplotLineDot(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-          reactive_values$Plot_Options,
-          reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$checkboxsem,
-          input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
-        )
-    } else {
-      updateCheckboxInput(session, "checkboxsem",value = FALSE)
-    }
-  })
-  
-  # replot with log2 update ----
-  observeEvent(input$checkboxlog2, ignoreInit = TRUE, {
     if (!is.null(reactive_values$Apply_Math) &
         LIST_DATA$STATE[2] != 2) {
       reactive_values$Y_Axis_Lable <-
@@ -3727,7 +3751,8 @@ server <- function(input, output, session) {
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
           input$sliderplotYRange,
-          input$checkboxlog2
+          input$checkboxlog2,
+          input$sliderSE
         )
       my_step <-
         (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
@@ -3747,7 +3772,106 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$checkboxsem,
+          input$checkboxsmooth, input$sliderSE,
+          input$checkboxlog2,
+          reactive_values$Y_Axis_Lable
+        )
+    }
+  })
+  
+  
+  # replot with SEM update ----
+  observeEvent(input$sliderSE, ignoreInit = TRUE, {
+    if (!is.null(reactive_values$Apply_Math) &
+        LIST_DATA$STATE[2] != 2 & str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
+      reactive_values$Y_Axis_Lable <-
+        YAxisLable(
+          input$myMath,
+          input$radioplotnrom,
+          as.numeric(input$selectplotBinNorm),
+          input$checkboxsmooth,
+          input$checkboxlog2
+        )
+      reactive_values$Y_Axis_numbers <-
+        MyXSetValues(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          input$sliderplotYRange,
+          input$checkboxlog2,
+          input$sliderSE
+        )
+      my_step <-
+        (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
+        20
+      updateNumericInput(session,
+                         "numericYRangeHigh",
+                         value = round(max(reactive_values$Y_Axis_numbers), 4),
+                         step = my_step)
+      updateNumericInput(session,
+                         "numericYRangeLow",
+                         value = round(min(reactive_values$Y_Axis_numbers), 4),
+                         step = my_step)
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Options,
+          reactive_values$Y_Axis_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth, input$sliderSE,
+          input$checkboxlog2,
+          reactive_values$Y_Axis_Lable
+        )
+    } 
+  })
+  
+  # replot with log2 update ----
+  observeEvent(input$checkboxlog2, ignoreInit = TRUE, {
+    if(str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
+      enable("sliderSE")
+    }else{
+      disable("sliderSE")
+      updateSliderTextInput(session, "sliderSE",
+                            choices = c("SEM", "none", "SD"),
+                            selected = "none")
+    }
+    if (!is.null(reactive_values$Apply_Math) &
+        LIST_DATA$STATE[2] != 2) {
+      reactive_values$Y_Axis_Lable <-
+        YAxisLable(
+          input$myMath,
+          input$radioplotnrom,
+          as.numeric(input$selectplotBinNorm),
+          input$checkboxsmooth,
+          input$checkboxlog2
+        )
+      reactive_values$Y_Axis_numbers <-
+        MyXSetValues(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          input$sliderplotYRange,
+          input$checkboxlog2,
+          input$sliderSE
+        )
+      my_step <-
+        (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
+        20
+      updateNumericInput(session,
+                         "numericYRangeHigh",
+                         value = round(max(reactive_values$Y_Axis_numbers), 4),
+                         step = my_step)
+      updateNumericInput(session,
+                         "numericYRangeLow",
+                         value = round(min(reactive_values$Y_Axis_numbers), 4),
+                         step = my_step)
+      reactive_values$Plot_controler <-
+        GGplotLineDot(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          reactive_values$Plot_Options,
+          reactive_values$Y_Axis_numbers,
+          reactive_values$Lines_Lables_List,
+          input$checkboxsmooth, input$sliderSE,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3784,7 +3908,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth, input$checkboxsem,
+            input$checkboxsmooth, input$sliderSE,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -3819,7 +3943,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth, input$checkboxsem,
+            input$checkboxsmooth, input$sliderSE,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -4662,9 +4786,7 @@ server <- function(input, output, session) {
     } else {
       updateNumericInput(session, "numericratio", value = 2)
     }
-    if (input$sliderbinratio2[2] > 0 &
-        input$sliderbinratio1[2] >= input$sliderbinratio2[1] |
-        input$pickerratio2file == "None") {
+    if (input$sliderbinratio2[1] == 0 & input$sliderbinratio2[2] > 0) {
       # showModal(modalDialog(
       #   title = "Information message",
       #   paste("Bins regions should not overlab, \nBins set to 1/4 3/4"),
@@ -4672,17 +4794,8 @@ server <- function(input, output, session) {
       #   easyClose = TRUE
       # ))
       updateSliderInput(session,
-                        "sliderbinratio1",
-                        value = c(
-                          LIST_DATA$x_plot_range[1],
-                          floor(LIST_DATA$x_plot_range[2] / 4)
-                        ))
-      updateSliderInput(session,
                         "sliderbinratio2",
-                        value = c(
-                          ceiling(LIST_DATA$x_plot_range[2] / 4) + 1,
-                          LIST_DATA$x_plot_range[2]
-                        ))
+                        value = c(0,0))
     }
     
     withProgress(message = 'Calculation in progress',
@@ -4700,7 +4813,7 @@ server <- function(input, output, session) {
                        input$sliderbinratio2[1],
                        input$sliderbinratio2[2],
                        input$numericratio,
-                       input$radioratiozero,
+                       input$checkratiozero,
                        input$sliderRatioBinNorm
                      )
                  })
@@ -4776,6 +4889,18 @@ server <- function(input, output, session) {
                    icon = icon("list"),
                    color = "yellow")
         })
+      }
+      if(!is.null(LIST_DATA$gene_file$boxRatio)){
+        my_range <- range(LIST_DATA$gene_file$boxRatio$Ratio,na.rm = T) 
+        updateNumericInput(session, "textboxmaxratio",
+                           value = my_range[2])
+        updateNumericInput(session, "textboxminratio",
+                           value = my_range[1])
+      } else {
+        updateNumericInput(session, "textboxmaxratio",
+                           value = 0)
+        updateNumericInput(session, "textboxminratio",
+                           value = 0)
       }
     } else {
       output$valueboxratio1 <- renderValueBox({
@@ -4977,6 +5102,39 @@ server <- function(input, output, session) {
       }
     }
     updateTabItems(session, "ratiotooltab", mytab)
+  })
+  
+  # update Ratio boxplot
+  observeEvent(c(input$textboxmaxratio, input$textboxminratio,
+                 input$checkboxoutlierratio),ignoreInit = TRUE, ignoreNULL = TRUE,{
+                   if(!is.null(LIST_DATA$gene_file$boxRatio)){
+                     my_range <- c(ceiling(input$textboxmaxratio), floor(input$textboxminratio)) 
+                     if(input$checkboxoutlierratio){
+                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
+                                       color="set",short.panel.labs = FALSE, notch = T,
+                                       outlier.shape = NA)
+                     } else{
+                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
+                                       color="set",short.panel.labs = FALSE, notch = T)
+                     }
+                     if(n_distinct(LIST_DATA$gene_file$boxRatio$set)>1){
+                       # add remove outlier and set range
+                       combn(unique(LIST_DATA$gene_file$boxRatio$set),2) -> tt
+                       my_comparisons2 <- list()
+                       for(i in 1:ncol(tt)){
+                         my_comparisons2[[i]] <- (c(tt[1,i],tt[2,i]))
+                       }
+                       gb <- gb +
+                         stat_compare_means(comparisons = my_comparisons2, method = "t.test",
+                                            label.y = my_range[1])
+                       
+                       
+                     } 
+                     print(gb + coord_cartesian(ylim = my_range))
+                     reactive_values$Plot_controler_ratio <- gb +
+                       coord_cartesian(ylim = my_range)
+                   } 
+    
   })
   
   # cluster tool picker control ----
@@ -6599,7 +6757,6 @@ ui <- dashboardPage(
                                  hidden(div(
                                    id = "hiddensave",
                                    style = "padding: 5px 15px;",
-                                        downloadButton("downloadGeneList", "Save List"),
                                  radioGroupButtons(
                                      inputId = "radiogroupsave",
                                      choices = c("Save Gene list", 
@@ -6611,6 +6768,7 @@ ui <- dashboardPage(
                                        no = tags$i(class = "fa fa-square-o", 
                                                    style = "color: steelblue"))
                                    ),
+                                 downloadButton("downloadGeneList", "Save List"),
                                    checkboxInput("checkboxsavesplit", "split location and name")
                                  ))
                                )))
@@ -7093,9 +7251,12 @@ ui <- dashboardPage(
                     selected = "mean",
                     inline = T
                   ),
-                  column(4, checkboxInput("checkboxsem", label = "mean_se")),
-                  column(4, checkboxInput("checkboxsmooth", label = "smooth")),
-                  column(4, checkboxInput("checkboxlog2", label = "log2"))
+                  column(6, sliderTextInput("sliderSE", label = "error bar",
+                    choices = c("SEM", "none", "SD"),
+                    selected = "none"
+                  )),
+                  column(3, checkboxInput("checkboxsmooth", label = "smooth")),
+                  column(3, checkboxInput("checkboxlog2", label = "log2"))
                 )
               ))),
       # main gene lists tab ----
@@ -7226,7 +7387,7 @@ ui <- dashboardPage(
                       sliderInput(
                         "sliderbinratio1",
                         label = "Select numerator Bin Range:",
-                        min = 0,
+                        min = 1,
                         max = 80,
                         value = c(0, 0)
                       )
@@ -7243,11 +7404,10 @@ ui <- dashboardPage(
                     )
                   ),
                   actionButton("actionratiotool", "Get fold changes"),
-                  awesomeRadio(
-                    "radioratiozero",
-                    label = "Handling all #/0 = Inf",
-                    choices = c("replace 0 with min/2", "replace Inf with NA"),
-                    selected = "replace Inf with NA"
+                  checkboxInput(
+                    "checkratiozero",
+                    label = "replace 0 with min/2",
+                    value = FALSE
                   ),
                   sliderInput(
                     "sliderRatioBinNorm",
@@ -7256,6 +7416,30 @@ ui <- dashboardPage(
                     max = 80,
                     value = 0
                   )
+                ),
+                box(
+                  title = "box Plot",
+                  status = "primary",
+                  solidHeader = TRUE,
+                  width = 12,
+                  collapsible = TRUE,
+                  collapsed = TRUE,
+                  withSpinner(plotOutput("plotratio"), type = 4),
+                  checkboxInput("checkboxoutlierratio",
+                                label = "remove outliers",
+                                value = FALSE),
+                  numericInput(inputId = 'textboxmaxratio',
+                               "yaxis max",
+                               value = 0,
+                               min = 0,
+                               max = 1000,
+                               step = .5),
+                  numericInput(inputId = 'textboxminratio',
+                               "yaxis min",
+                               value = 0,
+                               min = 0,
+                               max = 1000,
+                               step = .5)
                 ),
                 div(
                   id = "hideratiotable",
