@@ -30,6 +30,7 @@ suppressPackageStartupMessages(my_packages(
     "shinyjs",
     "colourpicker",
     "RColorBrewer",
+    "patchwork",
     "ggpubr"
   )
 ))
@@ -1727,6 +1728,29 @@ CumulativeDistribution <-
     list_data
   }
 
+# makes sure t test wont crash on an error
+try_t_test <- function(db){
+  
+  combn(unique(db$set),2) -> my_comparisons
+    my_comparisons2 <- list()
+    db_out <- list()
+    for(cc in 1:ncol(my_comparisons)){
+      my_comparisons2[[cc]] <- (c(my_comparisons[1,cc],my_comparisons[2,cc]))
+    }
+    db <- spread(db,set,score)
+    
+    for(i in my_comparisons2){
+      kk <- select(db, gene,bin,i) %>% rename(score.x=names(.)[3], score.y=names(.)[4])
+      myTtest <- try(group_by(kk, bin) %>% summarise(p.value=t.test(score.x,score.y)$p.value))
+      if (inherits(myTtest, "try-error")){
+        cat(myTtest)
+        myTtest <- dplyr::select(kk,bin) %>% mutate(p.value=1)
+      }
+      db_out[[str_c(i,collapse = "-")]] <- myTtest
+    }
+    db_out
+}
+
 # Applys math to on data in each gene list
 ApplyMath <-
   function(list_data,
@@ -1754,14 +1778,19 @@ ApplyMath <-
         mynorm <-
           bind_rows(list_data$gene_info[[i]][truefalse]) %>%
           select(rnorm, set) %>% mutate(rnorm = as.numeric(rnorm))
-        list_data_frame[[i]] <-
+        list_data_frame <-
           bind_rows(table_file[truefalse]) %>%
           semi_join(., gene_file[[i]]$use, by = "gene") %>%
           inner_join(., mynorm, by = "set") %>%
           mutate(., score = score / rnorm) %>%
           select(-rnorm)
+        if(length(unique(list_data_frame$set))>1){
+          LIST_DATA[["ttest"]][[i]] <<- bind_rows(try_t_test(list_data_frame, i))
+        }else{
+          LIST_DATA[["ttest"]][[i]] <<- NULL
+        }
       }
-      if (is.null(names(list_data_frame))) {
+      if (is.null((list_data_frame))) {
         # print("nothing to plot")
         return(NULL)
       }
@@ -1769,7 +1798,7 @@ ApplyMath <-
       # applys math to pared down data file
       if (relative_frequency == "rel gene frequency") {
         list_long_data_frame[[i]] <-
-          bind_rows(list_data_frame) %>%
+          (list_data_frame) %>%
           group_by(set, gene) %>%
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
           ungroup() %>%
@@ -1777,11 +1806,9 @@ ApplyMath <-
           summarise(value = get(use_math)(score, na.rm = T), y = mean(score),
                     n = n(),
                     sd = sd(score),
-                    se = sd/sqrt(n),
-                    SEmin=y-se,SEmax=y+se,
                     SDmin=y-sd,SDmax=y+sd) %>%
           ungroup() %>%
-          select(-n, -sd, -se) %>% 
+          select(-n, -sd) %>% 
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
             paste(gsub("(.{17})", "\\1\n", 
@@ -1791,16 +1818,14 @@ ApplyMath <-
           ))
       } else {
         list_long_data_frame[[i]] <-
-          bind_rows(list_data_frame) %>%
+          (list_data_frame) %>%
           group_by(set, bin) %>%
           summarise(value = get(use_math)(score, na.rm = T),y = mean(score),
                     n = n(),
                     sd = sd(score),
-                    se = sd/sqrt(n),
-                    SEmin=y-se,SEmax=y+se,
                     SDmin=y-sd,SDmax=y+sd) %>%
           ungroup() %>%
-          select(-n, -sd, -se) %>% 
+          select(-n, -sd) %>% 
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
             paste(gsub("(.{17})", "\\1\n", 
@@ -1814,8 +1839,6 @@ ApplyMath <-
           group_by(list_long_data_frame[[i]], set) %>%
           arrange(bin) %>%
           mutate(value = value / nth(value, normbin),
-                 SEmin= SEmin / nth(y, normbin),
-                 SEmax= SEmax / nth(y, normbin),
                  SDmin= SDmin / nth(y, normbin),
                  SDmax= SDmax / nth(y, normbin)) %>%
           ungroup()
@@ -1823,8 +1846,6 @@ ApplyMath <-
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
           mutate(value = value / sum(value),
-                 SEmin= SEmin / sum(y),
-                 SEmax= SEmax / sum(y),
                  SDmin= SDmin / sum(y),
                  SDmax= SDmax / sum(y)) %>%
           ungroup()
@@ -2284,24 +2305,11 @@ GGplotLineDot <-
         geom_smooth(se = FALSE,
                     size = line_list$mysize[2],
                     span = .2) 
-    } else if (use_sem == "SEM" & str_detect(use_y_label,"mean")){
-      if(use_log2){
-        gp <- gp +
-          geom_ribbon(aes(ymin = log2((abs(SEmin))^(sign(SEmin))), 
-                          ymax = log2((abs(SEmax))^(sign(SEmax))),fill = set),alpha=0.25) + 
-          scale_fill_manual(values = use_col) +
-          geom_line(size = line_list$mysize[2],alpha=0.8)
-      } else {
+    } else if (use_sem == "SD" & str_detect(use_y_label,"mean")){
       gp <- gp +
-        geom_ribbon(aes(ymin = SEmin, ymax = SEmax,fill = set),alpha=0.25) + 
+        geom_ribbon(aes(ymin = SDmin, ymax = SDmax,fill = set),alpha=0.25) + 
         scale_fill_manual(values = use_col) +
         geom_line(size = line_list$mysize[2],alpha=0.8)
-      }
-      } else if (use_sem == "SD" & str_detect(use_y_label,"mean")){
-        gp <- gp +
-            geom_ribbon(aes(ymin = SDmin, ymax = SDmax,fill = set),alpha=0.25) + 
-            scale_fill_manual(values = use_col) +
-            geom_line(size = line_list$mysize[2],alpha=0.8)
     } else{
       gp <- gp +
         geom_line(size = line_list$mysize[2],alpha=0.8)
@@ -2312,14 +2320,7 @@ GGplotLineDot <-
       scale_color_manual(values = use_col) +
       scale_shape_manual(values = use_dot) +
       scale_linetype_manual(values = use_line) +
-      xlab(paste(Sys.Date(), paste(unique(
-        plot_options$mysub
-      ), collapse = ", "), collapse = ", ")) +
       ylab(use_y_label) +
-      #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
-      scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
-                         labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
-
       geom_vline(
         data = line_list$myline,
         aes(xintercept = use_virtical_line),
@@ -2328,32 +2329,91 @@ GGplotLineDot <-
         color = line_list$myline$use_virtical_line_color
       ) +
       theme_bw() +
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank())+
       theme(panel.grid.minor = element_blank(),
             panel.grid.major = element_blank()) +
       theme(axis.title.y = element_text(size =  line_list$mysize[4] + 4, margin = margin(2, 10, 2, 2))) +
       theme(axis.text.y = element_text(size = line_list$mysize[4],
-                                       face = 'bold')) +
-      theme(axis.title.x = element_text(size =  line_list$mysize[3], vjust = .5)) +
-      theme(
-        axis.text.x = element_text(
-          #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
-          color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
-          size = line_list$mysize[3],
-          angle = -45,
-          hjust = .1,
-          vjust = .9,
-          face = 'bold'
-        )
-      ) +
+                                       face = 'bold'))+
       theme(
         legend.title = element_blank(),
         legend.key = element_rect(size = line_list$mysize[5] / 2, color = 'white'),
         legend.key.height = unit(legend_space, "line"),
         legend.text = element_text(size = line_list$mysize[5], face = 'bold')
-      )  +
-      coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
-    suppressMessages(print(gp))
-    return(suppressMessages(gp))
+      )
+    if(!is_empty(LIST_DATA$ttest)){
+      gp2 <- ggplot(bind_rows(LIST_DATA$ttest), aes(y=p.value,x=bin, color=set)) + 
+        geom_line(size = line_list$mysize[2],alpha=0.8) +
+        geom_hline(yintercept = .05,color="blue") + 
+        theme_bw() +
+        geom_vline(
+          data = line_list$myline,
+          aes(xintercept = use_virtical_line),
+          size = line_list$mysize[1],
+          linetype = line_list$myline$use_virtical_line_type,
+          color = line_list$myline$use_virtical_line_color
+        )+
+        xlab(paste(Sys.Date(), paste(unique(
+          plot_options$mysub
+        ), collapse = ", "), collapse = ", ")) +
+        scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+                           labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
+        theme(axis.title.x = element_text(size =  line_list$mysize[3], vjust = .5)) +
+        theme(axis.title.y = element_text(size =  line_list$mysize[4] + 4, margin = margin(2, 10, 2, 2))) +
+        theme(axis.text.y = element_text(size = line_list$mysize[4],
+                                         face = 'bold'))+
+        theme(
+          axis.text.x = element_text(
+            color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+            size = line_list$mysize[3],
+            angle = -45,
+            hjust = .1,
+            vjust = .9,
+            face = 'bold'
+          )
+        ) +
+        theme(
+          legend.title = element_blank(),
+          legend.key = element_rect(size = line_list$mysize[5] / 2, color = 'white'),
+          legend.key.height = unit(legend_space, "line"),
+          legend.text = element_text(size = line_list$mysize[5], face = 'bold')
+        ) +
+        coord_cartesian(xlim = xBinRange, ylim = c(0,.06))
+      gp <- gp + coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
+      suppressMessages(print(gp + gp2 + plot_layout(ncol = 1, heights = c(5, 1.5))))
+      return(suppressMessages(gp+ gp2 + plot_layout(ncol = 1, heights = c(5, 1.5))))
+    } else{
+      gp <- gp + 
+        xlab(paste(Sys.Date(), paste(unique(
+          plot_options$mysub
+        ), collapse = ", "), collapse = ", ")) +
+        scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+                           labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
+        theme(axis.title.x = element_text(size =  line_list$mysize[3], vjust = .5)) +
+        theme(
+          axis.text.x = element_text(
+            #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
+            color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+            size = line_list$mysize[3],
+            angle = -45,
+            hjust = .1,
+            vjust = .9,
+            face = 'bold'
+          )
+        ) +
+        theme(
+          legend.title = element_blank(),
+          legend.key = element_rect(size = line_list$mysize[5] / 2, color = 'white'),
+          legend.key.height = unit(legend_space, "line"),
+          legend.text = element_text(size = line_list$mysize[5], face = 'bold')
+        )  +
+        coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
+      
+      suppressMessages(print(gp))
+      return(suppressMessages(gp))
+    }
   }
 
 # CDG ggplot function
@@ -3417,7 +3477,7 @@ server <- function(input, output, session) {
                  }else{
                    disable("sliderSE")
                    updateSliderTextInput(session, "sliderSE",
-                                         choices = c("SEM", "none", "SD"),
+                                         choices = c("none", "SD"),
                                          selected = "none")
                  }
                  reactive_values$Y_Axis_Lable <-
@@ -3733,7 +3793,7 @@ server <- function(input, output, session) {
     }else{
       disable("sliderSE")
       updateSliderTextInput(session, "sliderSE",
-                            choices = c("SEM", "none", "SD"),
+                            choices = c("none", "SD"),
                             selected = "none")
     }
     if (!is.null(reactive_values$Apply_Math) &
@@ -3832,7 +3892,7 @@ server <- function(input, output, session) {
     }else{
       disable("sliderSE")
       updateSliderTextInput(session, "sliderSE",
-                            choices = c("SEM", "none", "SD"),
+                            choices = c("none", "SD"),
                             selected = "none")
     }
     if (!is.null(reactive_values$Apply_Math) &
@@ -7252,7 +7312,7 @@ ui <- dashboardPage(
                     inline = T
                   ),
                   column(6, sliderTextInput("sliderSE", label = "error bar",
-                    choices = c("SEM", "none", "SD"),
+                    choices = c("none", "SD"),
                     selected = "none"
                   )),
                   column(3, checkboxInput("checkboxsmooth", label = "smooth")),
