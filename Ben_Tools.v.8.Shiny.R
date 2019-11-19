@@ -8,8 +8,12 @@ my_packages <- function(x) {
     #  require returns TRUE invisibly if it was able to load package
     if (!require(i , character.only = TRUE)) {
       #  If package was not able to be loaded then re-install
-      install.packages(i , dependencies = TRUE)
-      print(paste("installing ", i, " : please wait"))
+      if(i == "patchwork"){
+        devtools::install_github("thomasp85/patchwork")}
+      else{
+        install.packages(i , dependencies = TRUE)
+        print(paste("installing ", i, " : please wait"))
+      }
       #  Load package after installing
       require(i , character.only = TRUE)
     }
@@ -19,6 +23,7 @@ my_packages <- function(x) {
 # run load needed pakages using my_pakages(x) ----
 suppressPackageStartupMessages(my_packages(
   c(
+    "devtools",
     "RCurl",
     "shiny",
     "DT",
@@ -1729,26 +1734,35 @@ CumulativeDistribution <-
   }
 
 # makes sure t test wont crash on an error
-try_t_test <- function(db){
+try_t_test <- function(db,my_set){
   
   combn(unique(db$set),2) -> my_comparisons
-    my_comparisons2 <- list()
-    db_out <- list()
-    for(cc in 1:ncol(my_comparisons)){
-      my_comparisons2[[cc]] <- (c(my_comparisons[1,cc],my_comparisons[2,cc]))
+  my_comparisons2 <- list()
+  db_out <- list()
+  for(cc in 1:ncol(my_comparisons)){
+    my_comparisons2[[cc]] <- (c(my_comparisons[1,cc],my_comparisons[2,cc]))
+  }
+  db <- spread(db,set,score)
+  
+  for(i in my_comparisons2){
+    kk <- select(db, gene,bin,i) %>% rename(score.x=names(.)[3], score.y=names(.)[4]) %>% 
+      replace_na(list(score.x = 0)) %>% replace_na(list(score.y = 0))
+    #need to add set
+    myTtest <- try(group_by(kk, bin) %>% summarise(p.value=t.test(score.x,score.y)$p.value)) 
+    if (inherits(myTtest, "try-error")){
+      cat(myTtest)
+      myTtest <- dplyr::select(kk,bin) %>% mutate(p.value=1)
     }
-    db <- spread(db,set,score)
-    
-    for(i in my_comparisons2){
-      kk <- select(db, gene,bin,i) %>% rename(score.x=names(.)[3], score.y=names(.)[4])
-      myTtest <- try(group_by(kk, bin) %>% summarise(p.value=t.test(score.x,score.y)$p.value))
-      if (inherits(myTtest, "try-error")){
-        cat(myTtest)
-        myTtest <- dplyr::select(kk,bin) %>% mutate(p.value=1)
-      }
-      db_out[[str_c(i,collapse = "-")]] <- myTtest
-    }
-    db_out
+    db_out[[str_c(i,collapse = "-")]] <- myTtest%>% 
+      mutate(., set = paste(
+        gsub("(.{17})", "\\1\n", str_c(i,collapse = "-")),
+        paste(gsub("(.{17})", "\\1\n", 
+                   str_split_fixed(my_set, "\n", n=2)[,1]),
+              str_split_fixed(my_set, "\n", n=2)[,2], sep = "\n"),
+        sep = '\n'
+      ))
+  }
+  db_out
 }
 
 # Applys math to on data in each gene list
@@ -1756,13 +1770,15 @@ ApplyMath <-
   function(list_data,
            use_math,
            relative_frequency,
-           normbin) {
+           normbin,
+           switchbylist) {
     # print("apply math fun")
     table_file = list_data$table_file
     gene_file = list_data$gene_file
     gene_info = list_data$gene_info
     list_data_frame <- NULL
     list_long_data_frame <- NULL
+    LIST_DATA$ttest <<- NULL
     setProgress(1, detail = paste("Gathering info"))
     if (sum(unlist(sapply(names(gene_info), function(i)
       sapply(gene_info[[i]], "[[", 5) != 0))) == 0) {
@@ -1778,38 +1794,34 @@ ApplyMath <-
         mynorm <-
           bind_rows(list_data$gene_info[[i]][truefalse]) %>%
           select(rnorm, set) %>% mutate(rnorm = as.numeric(rnorm))
-        list_data_frame <-
+        list_data_frame[[i]] <-
           bind_rows(table_file[truefalse]) %>%
           semi_join(., gene_file[[i]]$use, by = "gene") %>%
           inner_join(., mynorm, by = "set") %>%
-          mutate(., score = score / rnorm) %>%
+          mutate(., set2 = i, score = score / rnorm) %>%
           select(-rnorm)
-        if(length(unique(list_data_frame$set))>1){
-          LIST_DATA[["ttest"]][[i]] <<- bind_rows(try_t_test(list_data_frame, i))
-        }else{
-          LIST_DATA[["ttest"]][[i]] <<- NULL
+        if(length(unique(list_data_frame[[i]]$set))>1 & switchbylist){
+          LIST_DATA$ttest[[i]] <<- bind_rows(try_t_test(list_data_frame[[i]], i))
+        }else {
+          LIST_DATA$ttest[[i]] <<- NULL
         }
       }
       if (is.null((list_data_frame))) {
         # print("nothing to plot")
         return(NULL)
       }
-      setProgress(1 + length(list_data_frame), detail = paste("applying math to ", i))
+      setProgress(1 + length(list_data_frame[[i]]), detail = paste("applying math to ", i))
       # applys math to pared down data file
       if (relative_frequency == "rel gene frequency") {
         list_long_data_frame[[i]] <-
-          (list_data_frame) %>%
+          (list_data_frame[[i]]) %>%
           group_by(set, gene) %>%
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
           ungroup() %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T), y = mean(score),
-                    n = n(),
-                    sd = sd(score),
-                    SDmin=y-sd,SDmax=y+sd) %>%
+          summarise(value = get(use_math)(score, na.rm = T), y = mean(score)) %>%
           ungroup() %>%
-          select(-n, -sd) %>% 
-          mutate(., set = paste(
+          mutate(.,set = paste(
             gsub("(.{17})", "\\1\n", i),
             paste(gsub("(.{17})", "\\1\n", 
                        str_split_fixed(set, "\n", n=2)[,1]),
@@ -1818,14 +1830,10 @@ ApplyMath <-
           ))
       } else {
         list_long_data_frame[[i]] <-
-          (list_data_frame) %>%
+          (list_data_frame[[i]]) %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T),y = mean(score),
-                    n = n(),
-                    sd = sd(score),
-                    SDmin=y-sd,SDmax=y+sd) %>%
+          summarise(value = get(use_math)(score, na.rm = T),y = mean(score)) %>%
           ungroup() %>%
-          select(-n, -sd) %>% 
           mutate(., set = paste(
             gsub("(.{17})", "\\1\n", i),
             paste(gsub("(.{17})", "\\1\n", 
@@ -1838,19 +1846,28 @@ ApplyMath <-
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
           arrange(bin) %>%
-          mutate(value = value / nth(value, normbin),
-                 SDmin= SDmin / nth(y, normbin),
-                 SDmax= SDmax / nth(y, normbin)) %>%
+          mutate(value = value / nth(value, normbin)) %>%
           ungroup()
       } else if (relative_frequency == "relative frequency") {
         list_long_data_frame[[i]] <-
           group_by(list_long_data_frame[[i]], set) %>%
-          mutate(value = value / sum(value),
-                 SDmin= SDmin / sum(y),
-                 SDmax= SDmax / sum(y)) %>%
+          mutate(value = value / sum(value)) %>%
           ungroup()
       }
-      list_data_frame <- NULL
+    }
+    if(length(names(list_data_frame)) > 1 & !switchbylist){
+      mm <- bind_rows(list_data_frame) %>% rename(set=set2,set2=set)
+      mmm <- NULL
+      for(i in unique(mm$set2)){
+        mmm[[i]] <- filter(mm, set2==i)
+        if(length(unique(mmm[[i]]$set))>1){
+          LIST_DATA$ttest[[i]] <<- bind_rows(try_t_test(mmm[[i]], i))
+        } else {
+          LIST_DATA$ttest[[i]] <<- NULL
+        }
+      } 
+    } else if(length(names(list_data_frame)) < 2 & !switchbylist){
+      LIST_DATA$ttest[[names(list_data_frame)]] <<- NULL
     }
     return(bind_rows(list_long_data_frame))
   }
@@ -2224,27 +2241,12 @@ MyXSetValues <-
   function(apply_math,
            xBinRange,
            yBinRange = c(0, 100),
-           log_2 = F,
-           my_sem = "none") {
-    if(my_sem == "SEM"){
-      tt <- group_by(apply_math, set) %>%
-        filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
-        ungroup() %>%
-        summarise(min(SEmin, na.rm = T), max(SEmax, na.rm = T)) %>%
-        unlist(., use.names = FALSE)
-    } else if (my_sem == "SD"){
-      tt <- group_by(apply_math, set) %>%
-        filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
-        ungroup() %>%
-        summarise(min(SDmin, na.rm = T), max(SDmax, na.rm = T)) %>%
-        unlist(., use.names = FALSE)
-    } else {
+           log_2 = F) {
     tt <- group_by(apply_math, set) %>%
       filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
       ungroup() %>%
       summarise(min(value, na.rm = T), max(value, na.rm = T)) %>%
       unlist(., use.names = FALSE)
-    }
     tt <-
       c(tt[1] + (tt[1] * (yBinRange[1] / 100)), tt[2] + (tt[2] * ((yBinRange[2] -
                                                                      100) / 100)))
@@ -2262,7 +2264,7 @@ GGplotLineDot <-
            yBinRange,
            line_list,
            use_smooth,
-           use_sem,
+           plot_ttest,
            use_log2,
            use_y_label) {
     # print("ggplot")
@@ -2305,11 +2307,6 @@ GGplotLineDot <-
         geom_smooth(se = FALSE,
                     size = line_list$mysize[2],
                     span = .2) 
-    } else if (use_sem == "SD" & str_detect(use_y_label,"mean")){
-      gp <- gp +
-        geom_ribbon(aes(ymin = SDmin, ymax = SDmax,fill = set),alpha=0.25) + 
-        scale_fill_manual(values = use_col) +
-        geom_line(size = line_list$mysize[2],alpha=0.8)
     } else{
       gp <- gp +
         geom_line(size = line_list$mysize[2],alpha=0.8)
@@ -2343,7 +2340,7 @@ GGplotLineDot <-
         legend.key.height = unit(legend_space, "line"),
         legend.text = element_text(size = line_list$mysize[5], face = 'bold')
       )
-    if(!is_empty(LIST_DATA$ttest)){
+    if(!is_empty(LIST_DATA$ttest) & plot_ttest){
       gp2 <- ggplot(bind_rows(LIST_DATA$ttest), aes(y=p.value,x=bin, color=set)) + 
         geom_line(size = line_list$mysize[2],alpha=0.8) +
         geom_hline(yintercept = .05,color="blue") + 
@@ -2859,7 +2856,8 @@ server <- function(input, output, session) {
                            LIST_DATA,
                            input$myMath,
                            input$radioplotnrom,
-                           as.numeric(input$selectplotBinNorm)
+                           as.numeric(input$selectplotBinNorm),
+                                      input$switchbylist
                          )
                      })
         if (!is.null(reactive_values$Apply_Math)) {
@@ -3097,7 +3095,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$sliderSE,
+          input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3262,7 +3260,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth, input$sliderSE,
+              input$checkboxsmooth, input$switchttest,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3289,7 +3287,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth, input$sliderSE,
+              input$checkboxsmooth, input$switchttest,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3326,7 +3324,7 @@ server <- function(input, output, session) {
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
               reactive_values$Lines_Lables_List,
-              input$checkboxsmooth, input$sliderSE,
+              input$checkboxsmooth, input$switchttest,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable
             )
@@ -3400,7 +3398,8 @@ server <- function(input, output, session) {
                        LIST_DATA,
                        input$myMath,
                        input$radioplotnrom,
-                       as.numeric(input$selectplotBinNorm)
+                       as.numeric(input$selectplotBinNorm),
+                       input$switchbylist
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
@@ -3472,14 +3471,6 @@ server <- function(input, output, session) {
                  input$radioplotnrom),
                ignoreInit = TRUE,
                {
-                 if(str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
-                   enable("sliderSE")
-                 }else{
-                   disable("sliderSE")
-                   updateSliderTextInput(session, "sliderSE",
-                                         choices = c("none", "SD"),
-                                         selected = "none")
-                 }
                  reactive_values$Y_Axis_Lable <-
                    YAxisLable(
                      input$myMath,
@@ -3500,7 +3491,8 @@ server <- function(input, output, session) {
                                       LIST_DATA,
                                       input$myMath,
                                       input$radioplotnrom,
-                                      as.numeric(input$selectplotBinNorm)
+                                      as.numeric(input$selectplotBinNorm),
+                                      input$switchbylist
                                     )
                                 })
                  }
@@ -3515,8 +3507,7 @@ server <- function(input, output, session) {
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
           input$sliderplotYRange,
-          input$checkboxlog2,
-          input$sliderSE
+          input$checkboxlog2
         )
       my_step <-
         (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
@@ -3547,7 +3538,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$sliderSE,
+          input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3587,7 +3578,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth, input$sliderSE,
+            input$checkboxsmooth, input$switchttest,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -3788,14 +3779,6 @@ server <- function(input, output, session) {
   
   # replot with smooth update ----
   observeEvent(input$checkboxsmooth, ignoreInit = TRUE, {
-    if(str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
-      enable("sliderSE")
-    }else{
-      disable("sliderSE")
-      updateSliderTextInput(session, "sliderSE",
-                            choices = c("none", "SD"),
-                            selected = "none")
-    }
     if (!is.null(reactive_values$Apply_Math) &
         LIST_DATA$STATE[2] != 2) {
       reactive_values$Y_Axis_Lable <-
@@ -3811,8 +3794,7 @@ server <- function(input, output, session) {
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
           input$sliderplotYRange,
-          input$checkboxlog2,
-          input$sliderSE
+          input$checkboxlog2
         )
       my_step <-
         (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
@@ -3832,7 +3814,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$sliderSE,
+          input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3840,37 +3822,24 @@ server <- function(input, output, session) {
   })
   
   
-  # replot with SEM update ----
-  observeEvent(input$sliderSE, ignoreInit = TRUE, {
+  # replot with t.test update ----
+  observeEvent(c(input$switchttest, input$switchbylist), ignoreInit = TRUE, {
     if (!is.null(reactive_values$Apply_Math) &
-        LIST_DATA$STATE[2] != 2 & str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
-      reactive_values$Y_Axis_Lable <-
-        YAxisLable(
-          input$myMath,
-          input$radioplotnrom,
-          as.numeric(input$selectplotBinNorm),
-          input$checkboxsmooth,
-          input$checkboxlog2
-        )
-      reactive_values$Y_Axis_numbers <-
-        MyXSetValues(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-          input$sliderplotYRange,
-          input$checkboxlog2,
-          input$sliderSE
-        )
-      my_step <-
-        (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
-        20
-      updateNumericInput(session,
-                         "numericYRangeHigh",
-                         value = round(max(reactive_values$Y_Axis_numbers), 4),
-                         step = my_step)
-      updateNumericInput(session,
-                         "numericYRangeLow",
-                         value = round(min(reactive_values$Y_Axis_numbers), 4),
-                         step = my_step)
+        LIST_DATA$STATE[2] != 2){
+      
+      withProgress(message = 'Calculation in progress',
+                   detail = 'This may take a while...',
+                   value = 0,
+                   {
+                     reactive_values$Apply_Math <-
+                       ApplyMath(
+                         LIST_DATA,
+                         input$myMath,
+                         input$radioplotnrom,
+                         as.numeric(input$selectplotBinNorm),
+                         input$switchbylist
+                       )
+                   })
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
@@ -3878,7 +3847,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$sliderSE,
+          input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3887,14 +3856,6 @@ server <- function(input, output, session) {
   
   # replot with log2 update ----
   observeEvent(input$checkboxlog2, ignoreInit = TRUE, {
-    if(str_detect(input$myMath,"mean") & !input$checkboxsmooth & !input$checkboxlog2){
-      enable("sliderSE")
-    }else{
-      disable("sliderSE")
-      updateSliderTextInput(session, "sliderSE",
-                            choices = c("none", "SD"),
-                            selected = "none")
-    }
     if (!is.null(reactive_values$Apply_Math) &
         LIST_DATA$STATE[2] != 2) {
       reactive_values$Y_Axis_Lable <-
@@ -3910,8 +3871,7 @@ server <- function(input, output, session) {
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
           input$sliderplotYRange,
-          input$checkboxlog2,
-          input$sliderSE
+          input$checkboxlog2
         )
       my_step <-
         (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
@@ -3931,7 +3891,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$sliderSE,
+          input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable
         )
@@ -3968,7 +3928,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth, input$sliderSE,
+            input$checkboxsmooth, input$switchttest,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -4003,7 +3963,7 @@ server <- function(input, output, session) {
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
             reactive_values$Lines_Lables_List,
-            input$checkboxsmooth, input$sliderSE,
+            input$checkboxsmooth, input$switchttest,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable
           )
@@ -5273,7 +5233,8 @@ server <- function(input, output, session) {
                                       LD,
                                       input$myMathcluster,
                                       input$radioplotnromcluster,
-                                      as.numeric(input$selectplotBinNormcluster)
+                                      as.numeric(input$selectplotBinNormcluster),
+                                      input$switchbylist
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5292,7 +5253,7 @@ server <- function(input, output, session) {
                          reactive_values$Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
                          reactive_values$Lines_Lables_List,
-                         input$checkboxsmoothcluster,
+                         input$checkboxsmoothcluster,input$switchttest,
                          input$checkboxlog2cluster,
                          isolate(
                            YAxisLable(
@@ -5389,7 +5350,8 @@ server <- function(input, output, session) {
                                       LD,
                                       input$myMathcluster,
                                       input$radioplotnromcluster,
-                                      as.numeric(input$selectplotBinNormcluster)
+                                      as.numeric(input$selectplotBinNormcluster),
+                                      input$switchbylist
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5408,7 +5370,7 @@ server <- function(input, output, session) {
                          reactive_values$Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
                          reactive_values$Lines_Lables_List,
-                         input$checkboxsmoothcluster,
+                         input$checkboxsmoothcluster,input$switchttest,
                          input$checkboxlog2cluster,
                          isolate(
                            YAxisLable(
@@ -5501,7 +5463,8 @@ server <- function(input, output, session) {
                                       LD,
                                       input$myMathcluster,
                                       input$radioplotnromcluster,
-                                      as.numeric(input$selectplotBinNormcluster)
+                                      as.numeric(input$selectplotBinNormcluster),
+                                      input$switchbylist
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5520,7 +5483,7 @@ server <- function(input, output, session) {
                          reactive_values$Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
                          reactive_values$Lines_Lables_List,
-                         input$checkboxsmoothcluster,
+                         input$checkboxsmoothcluster,input$switchttest,
                          input$checkboxlog2cluster,
                          isolate(
                            YAxisLable(
@@ -5614,7 +5577,8 @@ server <- function(input, output, session) {
                                       LD,
                                       input$myMathcluster,
                                       input$radioplotnromcluster,
-                                      as.numeric(input$selectplotBinNormcluster)
+                                      as.numeric(input$selectplotBinNormcluster),
+                                      input$switchbylist
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5633,7 +5597,7 @@ server <- function(input, output, session) {
                          reactive_values$Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
                          reactive_values$Lines_Lables_List,
-                         input$checkboxsmoothcluster,
+                         input$checkboxsmoothcluster,input$switchttest,
                          input$checkboxlog2cluster,
                          isolate(
                            YAxisLable(
@@ -5911,7 +5875,8 @@ server <- function(input, output, session) {
                                     LD,
                                     input$myMathcluster,
                                     input$radioplotnromcluster,
-                                    as.numeric(input$selectplotBinNormcluster)
+                                    as.numeric(input$selectplotBinNormcluster),
+                                    input$switchbylist
                                   )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5930,7 +5895,7 @@ server <- function(input, output, session) {
                          reactive_values$Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
                          reactive_values$Lines_Lables_List,
-                         input$checkboxsmoothcluster,
+                         input$checkboxsmoothcluster,input$switchttest,
                          input$checkboxlog2cluster,
                          isolate(
                            YAxisLable(
@@ -6238,7 +6203,8 @@ server <- function(input, output, session) {
                        LD,
                        input$myMathcluster,
                        input$radioplotnromcluster,
-                       as.numeric(input$selectplotBinNormcluster)
+                       as.numeric(input$selectplotBinNormcluster),
+                       input$switchbylist
                      )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -6256,7 +6222,7 @@ server <- function(input, output, session) {
           reactive_values$Plot_Cluster_Options,
           Y_Axis_Cluster_numbers,
           reactive_values$Lines_Lables_List,
-          input$checkboxsmoothcluster,
+          input$checkboxsmoothcluster,input$switchttest,
           input$checkboxlog2cluster,
           isolate(
             YAxisLable(
@@ -7303,6 +7269,28 @@ ui <- dashboardPage(
                   width = 6,
                   status = "primary",
                   solidHeader = T,
+                  column(6, tags$h5("t.test"),
+                         dropdownButton(
+                    icon = icon("bars"),
+                    status = "success",
+                    tooltip = tooltipOptions(title = "t.test Options"),
+                    
+                    materialSwitch(
+                      inputId = "switchttest",
+                      label = "Plot t.test", 
+                      value = FALSE,
+                      status = "primary"
+                    ),
+                    switchInput(
+                      inputId = "switchbylist",
+                      onLabel = "list",
+                      offLabel = "file",
+                      value = TRUE,
+                      label = "by"
+                    )
+                  )),
+                  column(3, checkboxInput("checkboxsmooth", label = "smooth")),
+                  column(3, checkboxInput("checkboxlog2", label = "log2")),
                   awesomeRadio(
                     "myMath",
                     label =
@@ -7310,13 +7298,7 @@ ui <- dashboardPage(
                     choices = c("mean", "sum", "median", "var"),
                     selected = "mean",
                     inline = T
-                  ),
-                  column(6, sliderTextInput("sliderSE", label = "error bar",
-                    choices = c("none", "SD"),
-                    selected = "none"
-                  )),
-                  column(3, checkboxInput("checkboxsmooth", label = "smooth")),
-                  column(3, checkboxInput("checkboxlog2", label = "log2"))
+                  )
                 )
               ))),
       # main gene lists tab ----
