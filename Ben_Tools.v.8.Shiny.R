@@ -1266,10 +1266,7 @@ CompareRatios <-
     nick_name <- NULL
     setProgress(2, detail = paste("building list", ratio1file))
     if(num != 0){
-      upratio <- filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
-    } else {
       upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
-    }
     
     if (n_distinct(upratio$gene) > 0) {
       nick_name1 <-
@@ -1319,11 +1316,7 @@ CompareRatios <-
         )
     }
     setProgress(3, detail = paste("building list", ratio2file))
-    if(num != 0){
-      upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
-    }  else {
-      upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
-    } 
+    upratio <- filter(outlist[[1]], Ratio < num & Ratio != 0)
     if (n_distinct(upratio$gene) > 0) {
       nick_name2 <-
         paste("Ratio_Down_file1\nn =", n_distinct(upratio$gene))
@@ -1372,7 +1365,6 @@ CompareRatios <-
         )
     }
     setProgress(4, detail = paste("building list: no change"))
-    if(num != 0){
       upratio <-
         filter(outlist[[1]], Ratio <= num &
                  Ratio >= 1 / num | Ratio == 0)
@@ -1432,9 +1424,9 @@ CompareRatios <-
     } else {
       mytint <- 0
     }
-    list_data$gene_file$boxRatio <- NULL
+    list_data$data_for_plots$boxRatio <- NULL
     for (nn in nick_name) {
-      list_data$gene_file$boxRatio <- bind_rows(list_data$gene_file$boxRatio,list_data$gene_file[[nn]]$full)
+      list_data$data_for_plots$boxRatio <- bind_rows(list_data$data_for_plots$boxRatio,list_data$gene_file[[nn]]$full)
       list_data$gene_info[[nn]] <-
         lapply(setNames(
           names(list_data$gene_info[[1]]),
@@ -4910,8 +4902,8 @@ server <- function(input, output, session) {
                    color = "yellow")
         })
       }
-      if(!is.null(LIST_DATA$gene_file$boxRatio)){
-        my_range <- range(LIST_DATA$gene_file$boxRatio$Ratio,na.rm = T) 
+      if(!is.null(LIST_DATA$data_for_plots$boxRatio)){
+        my_range <- range(LIST_DATA$data_for_plots$boxRatio$Ratio,na.rm = T) 
         updateNumericInput(session, "textboxmaxratio",
                            value = my_range[2])
         updateNumericInput(session, "textboxminratio",
@@ -5127,19 +5119,19 @@ server <- function(input, output, session) {
   # update Ratio boxplot
   observeEvent(c(input$textboxmaxratio, input$textboxminratio,
                  input$checkboxoutlierratio),ignoreInit = TRUE, ignoreNULL = TRUE,{
-                   if(!is.null(LIST_DATA$gene_file$boxRatio)){
+                   if(!is.null(LIST_DATA$data_for_plots$boxRatio)){
                      my_range <- c(ceiling(input$textboxmaxratio), floor(input$textboxminratio)) 
                      if(input$checkboxoutlierratio){
-                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
+                       gb <- ggboxplot(LIST_DATA$data_for_plots$boxRatio, x= "set", y = "Ratio", 
                                        color="set",short.panel.labs = FALSE, notch = T,
                                        outlier.shape = NA)
                      } else{
-                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
+                       gb <- ggboxplot(LIST_DATA$data_for_plots$boxRatio, x= "set", y = "Ratio", 
                                        color="set",short.panel.labs = FALSE, notch = T)
                      }
-                     if(n_distinct(LIST_DATA$gene_file$boxRatio$set)>1){
+                     if(n_distinct(LIST_DATA$data_for_plots$boxRatio$set)>1){
                        # add remove outlier and set range
-                       combn(unique(LIST_DATA$gene_file$boxRatio$set),2) -> tt
+                       combn(unique(LIST_DATA$data_for_plots$boxRatio$set),2) -> tt
                        my_comparisons2 <- list()
                        for(i in 1:ncol(tt)){
                          my_comparisons2[[i]] <- (c(tt[1,i],tt[2,i]))
