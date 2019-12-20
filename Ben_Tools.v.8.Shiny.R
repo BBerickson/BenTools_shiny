@@ -1068,10 +1068,6 @@ SortTop <-
     })
     old_name <- grep("Sort", names(list_data$gene_file), value = T)
     if (length(outlist$gene) == 0) {
-      if (length(old_name) > 0) {
-        list_data$gene_file[[old_name]] <- NULL
-        list_data$gene_info[[old_name]] <- NULL
-      }
       return(list_data)
     }
     setProgress(lc + 2, detail = "building list")
@@ -1128,14 +1124,7 @@ SortTop <-
                  rnorm = paste(list_data$gene_info[[list_name]][[i]]["rnorm"])
                )
              })
-    if (length(old_name) > 0) {
-      # print(old_name)
-      # print(nick_name)
-      if (old_name != nick_name) {
-        list_data$gene_file[[old_name]] <- NULL
-        list_data$gene_info[[old_name]] <- NULL
-      }
-    }
+    
     list_data
   }
 
@@ -1266,7 +1255,10 @@ CompareRatios <-
     nick_name <- NULL
     setProgress(2, detail = paste("building list", ratio1file))
     if(num != 0){
+      upratio <- filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
+    } else {
       upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
+    }
     
     if (n_distinct(upratio$gene) > 0) {
       nick_name1 <-
@@ -1316,7 +1308,11 @@ CompareRatios <-
         )
     }
     setProgress(3, detail = paste("building list", ratio2file))
-    upratio <- filter(outlist[[1]], Ratio < num & Ratio != 0)
+    if(num != 0){
+      upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
+    }  else {
+      upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
+    } 
     if (n_distinct(upratio$gene) > 0) {
       nick_name2 <-
         paste("Ratio_Down_file1\nn =", n_distinct(upratio$gene))
@@ -1365,6 +1361,7 @@ CompareRatios <-
         )
     }
     setProgress(4, detail = paste("building list: no change"))
+    if(num != 0){
       upratio <-
         filter(outlist[[1]], Ratio <= num &
                  Ratio >= 1 / num | Ratio == 0)
@@ -1424,9 +1421,9 @@ CompareRatios <-
     } else {
       mytint <- 0
     }
-    list_data$data_for_plots$boxRatio <- NULL
+    list_data$gene_file$boxRatio <- NULL
     for (nn in nick_name) {
-      list_data$data_for_plots$boxRatio <- bind_rows(list_data$data_for_plots$boxRatio,list_data$gene_file[[nn]]$full)
+      list_data$gene_file$boxRatio <- bind_rows(list_data$gene_file$boxRatio,list_data$gene_file[[nn]]$full)
       list_data$gene_info[[nn]] <-
         lapply(setNames(
           names(list_data$gene_info[[1]]),
@@ -2566,7 +2563,7 @@ server <- function(input, output, session) {
       if (sum(grepl("Sort n =", names(LIST_DATA$gene_file))) > 0) {
         output$valueboxsort <- renderValueBox({
           valueBox(
-            n_distinct(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$use),
+            n_distinct(LIST_DATA$gene_file[[last(grep("Sort n", names(LIST_DATA$gene_info)))]]$use),
             "Gene List Sort",
             icon = icon("list"),
             color = "green"
@@ -3000,7 +2997,6 @@ server <- function(input, output, session) {
       show("filegene1")
       show("checkboxconvert")
       show("downloadGeneList")
-      show("checkboxsavesplit")
       show("filecolor")
       show("hiddensave")
       show("startoff")
@@ -3142,7 +3138,12 @@ server <- function(input, output, session) {
         paste(Sys.Date(), ".color.txt", sep = "")
       } else if (input$radiogroupsave == "Save full Table file"){
         paste(input$selectdataoption, ".table", sep = "")
-        } else {
+        } else if(input$radiogroupsave == "Save Gene list as bed"){
+          paste(gsub("\nn = ", " n = ", input$selectgenelistoptions),
+                Sys.Date(),
+                ".bed",
+                sep = "_")
+         } else {
         paste(gsub("\nn = ", " n = ", input$selectgenelistoptions),
               Sys.Date(),
               ".txt",
@@ -3162,6 +3163,15 @@ server <- function(input, output, session) {
       } else if (input$radiogroupsave == "Save full Table file"){
         new_comments <- LIST_DATA$table_file[[input$selectdataoption]] %>% select(-set)
         write_tsv(new_comments, file)
+      } else if (input$radiogroupsave == "Save Gene list as bed") {
+        new_comments <-
+          gsub("(:|;)", "*",
+               LIST_DATA$gene_file[[1]]$use$gene) %>% 
+          sub("-","*",.) %>%  
+          sub("(?=[-+])","*",.,perl=TRUE) %>% 
+          str_split_fixed(.,"\\*",5) %>% as_tibble() %>% 
+          mutate(score=0) %>% select(V1,V2,V3,V5,score,V4)
+        write_tsv(new_comments,file,col_names = FALSE)
       } else {
         new_comments <- paste("#", Sys.Date(), "\n# File(s) used:")
         new_comments <-
@@ -3175,18 +3185,8 @@ server <- function(input, output, session) {
             "\nn = ", " n = ",
             paste(LIST_DATA$gene_file[[input$selectgenelistoptions]]$info)
           )))
-        
-        if (input$checkboxsavesplit) {
-          new_comments <-
-            c(new_comments, gsub(
-              ";|\\+;|\\-;|\\|",
-              "\t",
-              pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use)
-            ))
-        } else {
           new_comments <-
             c(new_comments, pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use))
-        }
         write_lines(new_comments, file)
       }
     }
@@ -4495,7 +4495,7 @@ server <- function(input, output, session) {
       if (any(grep("Sort n", names(LIST_DATA$gene_info)) > 0)) {
         output$valueboxsort <- renderValueBox({
           valueBox(
-            n_distinct(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$use),
+            n_distinct(LIST_DATA$gene_file[[last(grep("Sort n", names(LIST_DATA$gene_info)))]]$use),
             "Gene List Sort",
             icon = icon("list"),
             color = "green"
@@ -4538,14 +4538,14 @@ server <- function(input, output, session) {
     # print("show data table")
     if (any(grep("Sort n", names(LIST_DATA$gene_info)) > 0)) {
       newnames <-
-        gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full))
+        gsub("(.{20})", "\\1... ", names(LIST_DATA$gene_file[[last(grep("Sort n", names(LIST_DATA$gene_info)))]]$full))
       dt <- datatable(
-        rowid_to_column(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full),
+        rowid_to_column(LIST_DATA$gene_file[[last(grep("Sort n", names(LIST_DATA$gene_info)))]]$full),
         rownames = FALSE,
         colnames = c("ID", strtrim(newnames, 30)),
         class = 'cell-border stripe compact',
         filter = 'top',
-        caption = LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$info,
+        caption = LIST_DATA$gene_file[[last(grep("Sort n", names(LIST_DATA$gene_info)))]]$info,
         options = list(
           pageLength = 15,
           scrollX = TRUE,
@@ -4566,7 +4566,7 @@ server <- function(input, output, session) {
           )
         )
         
-      ) %>% formatPercentage(names(LIST_DATA$gene_file[[grep("Sort n", names(LIST_DATA$gene_info))]]$full)[-1])
+      ) %>% formatPercentage(names(LIST_DATA$gene_file[[last(grep("Sort n", names(LIST_DATA$gene_info)))]]$full)[-1])
     } else {
       dt <- datatable(
         LIST_DATA$gene_file[[1]]$empty,
@@ -4594,7 +4594,7 @@ server <- function(input, output, session) {
                    paste("Sort n =",
                          length(input$sorttable_rows_all))
                  oldname <-
-                   grep("Sort n =", names(LIST_DATA$gene_file))
+                   last(grep("Sort n", names(LIST_DATA$gene_info)))
                  if (newname != names(LIST_DATA$gene_file)[oldname]) {
                    # print("sort filter $use")
                    names(LIST_DATA$gene_file)[oldname] <<- newname
@@ -4902,8 +4902,8 @@ server <- function(input, output, session) {
                    color = "yellow")
         })
       }
-      if(!is.null(LIST_DATA$data_for_plots$boxRatio)){
-        my_range <- range(LIST_DATA$data_for_plots$boxRatio$Ratio,na.rm = T) 
+      if(!is.null(LIST_DATA$gene_file$boxRatio)){
+        my_range <- range(LIST_DATA$gene_file$boxRatio$Ratio,na.rm = T) 
         updateNumericInput(session, "textboxmaxratio",
                            value = my_range[2])
         updateNumericInput(session, "textboxminratio",
@@ -5119,19 +5119,19 @@ server <- function(input, output, session) {
   # update Ratio boxplot
   observeEvent(c(input$textboxmaxratio, input$textboxminratio,
                  input$checkboxoutlierratio),ignoreInit = TRUE, ignoreNULL = TRUE,{
-                   if(!is.null(LIST_DATA$data_for_plots$boxRatio)){
+                   if(!is.null(LIST_DATA$gene_file$boxRatio)){
                      my_range <- c(ceiling(input$textboxmaxratio), floor(input$textboxminratio)) 
                      if(input$checkboxoutlierratio){
-                       gb <- ggboxplot(LIST_DATA$data_for_plots$boxRatio, x= "set", y = "Ratio", 
+                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
                                        color="set",short.panel.labs = FALSE, notch = T,
                                        outlier.shape = NA)
                      } else{
-                       gb <- ggboxplot(LIST_DATA$data_for_plots$boxRatio, x= "set", y = "Ratio", 
+                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
                                        color="set",short.panel.labs = FALSE, notch = T)
                      }
-                     if(n_distinct(LIST_DATA$data_for_plots$boxRatio$set)>1){
+                     if(n_distinct(LIST_DATA$gene_file$boxRatio$set)>1){
                        # add remove outlier and set range
-                       combn(unique(LIST_DATA$data_for_plots$boxRatio$set),2) -> tt
+                       combn(unique(LIST_DATA$gene_file$boxRatio$set),2) -> tt
                        my_comparisons2 <- list()
                        for(i in 1:ncol(tt)){
                          my_comparisons2[[i]] <- (c(tt[1,i],tt[2,i]))
@@ -6778,6 +6778,7 @@ ui <- dashboardPage(
                                  radioGroupButtons(
                                      inputId = "radiogroupsave",
                                      choices = c("Save Gene list", 
+                                                 "Save Gene list as bed",
                                                  "Save full Table file", 
                                                  "Save common color - file pair"),
                                      checkIcon = list(
@@ -6786,8 +6787,7 @@ ui <- dashboardPage(
                                        no = tags$i(class = "fa fa-square-o", 
                                                    style = "color: steelblue"))
                                    ),
-                                 downloadButton("downloadGeneList", "Save List"),
-                                   checkboxInput("checkboxsavesplit", "split location and name")
+                                 downloadButton("downloadGeneList", "Save List")
                                  ))
                                )))
                 ),
