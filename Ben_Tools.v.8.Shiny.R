@@ -1369,7 +1369,7 @@ CompareRatios <-
                  Ratio >= 1 / num | Ratio == 0)
     } else {
       upratio <- outlist[[1]]
-      }
+    }
     
     if (n_distinct(upratio$gene) > 0) {
       nick_name3 <-
@@ -1936,18 +1936,18 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT) {
     }
     
     if (!is.null(names(gene_info_tt))) {
-        my_lines <-
-          match(gene_info_tt$myline, kLineOptions)
-        my_dots <-
-          match(gene_info_tt$mydot, kDotOptions)
-        options_main_tt <-
-          bind_rows(gene_info_tt) %>%
-          mutate(
-            myline = if_else(my_lines > 6, 0, as.double(my_lines)),
-            mydot = if_else(my_dots == 1, 0, my_dots + 13),
-            mysizedot = if_else(my_dots == 1, 0.01, 4.5),
-            set = set
-            )
+      my_lines <-
+        match(gene_info_tt$myline, kLineOptions)
+      my_dots <-
+        match(gene_info_tt$mydot, kDotOptions)
+      options_main_tt <-
+        bind_rows(gene_info_tt) %>%
+        mutate(
+          myline = if_else(my_lines > 6, 0, as.double(my_lines)),
+          mydot = if_else(my_dots == 1, 0, my_dots + 13),
+          mysizedot = if_else(my_dots == 1, 0.01, 4.5),
+          set = set
+        )
       ldf <- duplicated(options_main_tt$mycol)
       for (i in seq_along(options_main_tt$mycol)) {
         if (ldf[i]) {
@@ -2400,14 +2400,14 @@ GGplotLineDot <-
       names(use_col_tt) <- plot_options$options_main_tt$set
       names(use_line_tt) <- plot_options$options_main_tt$set
       gp2 <- ggplot(bind_rows(LIST_DATA$ttest$use), aes(y=p.value,x=bin,
-                                                    color=set,
-                                                    shape = set,
-                                                    size = set,
-                                                    linetype = set)) + 
+                                                        color=set,
+                                                        shape = set,
+                                                        size = set,
+                                                        linetype = set)) + 
         geom_line(size = line_list$mysize[6],alpha=0.8) +
         scale_color_manual(values = use_col_tt) +
         scale_linetype_manual(values = use_line_tt)+
-        geom_hline(yintercept = plot_options$hlineTT,color="black") + 
+        geom_hline(yintercept = plot_options$hlineTT,color="blue") + 
         theme_bw() +
         geom_vline(
           data = line_list$myline,
@@ -2922,7 +2922,7 @@ server <- function(input, output, session) {
                            input$myMath,
                            input$selectplotnrom,
                            as.numeric(input$selectplotBinNorm),
-                                      input$switchttest,
+                           input$switchttest,
                            input$selectttestlog
                          )
                      })
@@ -3215,12 +3215,12 @@ server <- function(input, output, session) {
         paste(Sys.Date(), ".color.txt", sep = "")
       } else if (input$radiogroupsave == "Save full Table file"){
         paste(input$selectdataoption, ".table", sep = "")
-        } else if(input$radiogroupsave == "Save Gene list as bed"){
-          paste(gsub("\nn = ", " n = ", input$selectgenelistoptions),
-                Sys.Date(),
-                ".bed",
-                sep = "_")
-         } else {
+      } else if(input$radiogroupsave == "Save Gene list as bed"){
+        paste(gsub("\nn = ", " n = ", input$selectgenelistoptions),
+              Sys.Date(),
+              ".bed",
+              sep = "_")
+      } else {
         paste(gsub("\nn = ", " n = ", input$selectgenelistoptions),
               Sys.Date(),
               ".txt",
@@ -3262,8 +3262,8 @@ server <- function(input, output, session) {
             "\nn = ", " n = ",
             paste(LIST_DATA$gene_file[[input$selectgenelistoptions]]$info)
           )))
-          new_comments <-
-            c(new_comments, pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use))
+        new_comments <-
+          c(new_comments, pull(LIST_DATA$gene_file[[input$selectgenelistoptions]]$use))
         write_lines(new_comments, file)
       }
     }
@@ -3601,7 +3601,7 @@ server <- function(input, output, session) {
       reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
     }
   })
-
+  
   # y slider t.test is trigger ----
   observeEvent(input$sliderplotYRangeTT, ignoreInit = T, {
     # print("y slider")
@@ -3627,7 +3627,7 @@ server <- function(input, output, session) {
         )
     }
   })
-
+  
   # t.test select file ----
   observeEvent(input$selectttestitem, ignoreInit = T, {
     # print("t.test select")
@@ -3645,7 +3645,7 @@ server <- function(input, output, session) {
     # print("t.test select")
     if (input$selectttestitem != "none"& !is.null(LIST_DATA$ttest$gene_info)) {
       LIST_DATA$ttest$gene_info <<- LIST_DATA$ttest$gene_info %>% 
-          mutate(myline=ifelse(set == input$selectttestitem,input$selectlinettest,myline))
+        mutate(myline=ifelse(set == input$selectttestitem,input$selectlinettest,myline))
       LIST_DATA$ttest$gene_info <<- LIST_DATA$ttest$gene_info %>% 
         mutate(mycol=ifelse(set == input$selectttestitem,input$selectcolorttest,mycol))
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
@@ -3685,7 +3685,8 @@ server <- function(input, output, session) {
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
-      mm <- c(min(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T),max(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T))
+      bind_rows(LIST_DATA$ttest$use)$p.value %>% na_if(Inf) -> my_p
+      mm <- c(min(my_p,na.rm = T),max(my_p,na.rm = T))
       updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                         max = mm[2],value = mm)
     }
@@ -4011,7 +4012,8 @@ server <- function(input, output, session) {
                        )
                    })
       if (!is.null(reactive_values$Apply_Math)) {
-        mm <- c(min(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T),max(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T))
+        bind_rows(LIST_DATA$ttest$use)$p.value %>% na_if(Inf) -> my_p
+        mm <- c(min(my_p,na.rm = T),max(my_p,na.rm = T))
         updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                           max = mm[2],value = mm)
         
@@ -4259,17 +4261,17 @@ server <- function(input, output, session) {
   
   observeEvent(c(input$pickernumerator, input$adddata,
                  input$pickerdenominator), {
-    if (input$pickernumerator != "") {
-      updateTextInput(session, "textnromname",value = paste(input$pickernumerator, input$adddata,
-                                                            input$pickerdenominator))
-      output$valueboxnormfile <- renderValueBox({
-        valueBox("0%",
-                 "Done",
-                 icon = icon("cogs"),
-                 color = "yellow")
-      })
-    }
-  })
+                   if (input$pickernumerator != "") {
+                     updateTextInput(session, "textnromname",value = paste(input$pickernumerator, input$adddata,
+                                                                           input$pickerdenominator))
+                     output$valueboxnormfile <- renderValueBox({
+                       valueBox("0%",
+                                "Done",
+                                icon = icon("cogs"),
+                                color = "yellow")
+                     })
+                   }
+                 })
   
   # create norm file ----
   observeEvent(input$actionnorm, ignoreInit = TRUE, {
@@ -5319,8 +5321,8 @@ server <- function(input, output, session) {
                      reactive_values$Plot_controler_ratio <- gb +
                        coord_cartesian(ylim = my_range)
                    } 
-    
-  })
+                   
+                 })
   
   # cluster tool picker control ----
   observeEvent(input$selectclusterfile, ignoreInit = TRUE, {
@@ -6954,7 +6956,7 @@ ui <- dashboardPage(
                                  hidden(div(
                                    id = "hiddensave",
                                    style = "padding: 5px 15px;",
-                                 radioGroupButtons(
+                                   radioGroupButtons(
                                      inputId = "radiogroupsave",
                                      choices = c("Save Gene list", 
                                                  "Save Gene list as bed",
@@ -6966,7 +6968,7 @@ ui <- dashboardPage(
                                        no = tags$i(class = "fa fa-square-o", 
                                                    style = "color: steelblue"))
                                    ),
-                                 downloadButton("downloadGeneList", "Save List")
+                                   downloadButton("downloadGeneList", "Save List")
                                  ))
                                )))
                 ),
@@ -7092,9 +7094,9 @@ ui <- dashboardPage(
                 )
               ),
               fluidRow(
-                     textInput("textnromname", "Norm file name",
-                               width = "90%",))
-              ),
+                textInput("textnromname", "Norm file name",
+                          width = "90%",))
+          ),
           awesomeRadio(
             "radiogenebygene",
             label = "",
@@ -7437,10 +7439,10 @@ ui <- dashboardPage(
                          checkboxInput("checkboxlog2", label = "log2")),
                   column(8, 
                          selectInput("myMath",
-                    label = " ",
-                    choices = c("mean", "sum", "median", "var"),
-                    selected = "mean"
-                  ))
+                                     label = " ",
+                                     choices = c("mean", "sum", "median", "var"),
+                                     selected = "mean"
+                         ))
                 ),
                 box(
                   title = "t.test",
@@ -7467,7 +7469,7 @@ ui <- dashboardPage(
                                       min = -50,
                                       max = 50,
                                       step = .5)
-                         ),
+                  ),
                   column(6,
                          numericInput(
                            inputId = 'selectttestlinesize',
@@ -7476,7 +7478,7 @@ ui <- dashboardPage(
                            min = .5,
                            max = 10,
                            step = .5)
-                         ),
+                  ),
                   column(12,
                          sliderInput(
                            "sliderplotYRangeTT",
@@ -7855,14 +7857,14 @@ ui <- dashboardPage(
                 )
               ),
               column(
-              5,
-              sliderInput(
-                "sliderbincdf2",
-                label = "Select denominator Bin Range:",
-                min = 0,
-                max = 80,
-                value = c(0, 80)
-              )
+                5,
+                sliderInput(
+                  "sliderbincdf2",
+                  label = "Select denominator Bin Range:",
+                  min = 0,
+                  max = 80,
+                  value = c(0, 80)
+                )
               )
             ),
             column(
