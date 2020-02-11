@@ -3685,8 +3685,7 @@ server <- function(input, output, session) {
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
-      bind_rows(LIST_DATA$ttest$use)$p.value %>% na_if(Inf) -> my_p
-      mm <- c(min(my_p,na.rm = T),max(my_p,na.rm = T))
+      mm <- round(extendrange(range(c(bind_rows(LIST_DATA$ttest$use)$p.value,Inf),na.rm = T,finite=T),f = .1),digits = 2)
       updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                         max = mm[2],value = mm)
     }
@@ -4012,8 +4011,7 @@ server <- function(input, output, session) {
                        )
                    })
       if (!is.null(reactive_values$Apply_Math)) {
-        bind_rows(LIST_DATA$ttest$use)$p.value %>% na_if(Inf) -> my_p
-        mm <- c(min(my_p,na.rm = T),max(my_p,na.rm = T))
+        mm <- round(extendrange(range(c(bind_rows(LIST_DATA$ttest$use)$p.value,Inf),na.rm = T,finite=T),f = .1),digits = 2)
         updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                           max = mm[2],value = mm)
         
