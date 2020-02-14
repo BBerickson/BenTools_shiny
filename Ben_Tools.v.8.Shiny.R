@@ -1725,7 +1725,7 @@ CumulativeDistribution <-
   }
 
 # makes sure t test wont crash on an error
-try_t_test <- function(db,my_set,my_math){
+try_t_test <- function(db,my_set,my_math,my_test="t.test",padjust=TRUE){
   
   combn(unique(db$set),2) -> my_comparisons
   my_comparisons2 <- list()
@@ -1739,14 +1739,18 @@ try_t_test <- function(db,my_set,my_math){
     kk <- select(db, gene,bin,i) %>% rename(score.x=names(.)[3], score.y=names(.)[4]) %>% 
       replace_na(list(score.x = 0)) %>% replace_na(list(score.y = 0))
     #need to add set
-    # myVtest <- try(group_by(kk, bin) %>% summarise(p.value=suppressMessages(var.test(score.x,score.y)$p.value)))
-    myTtest <- try(group_by(kk, bin) %>% summarise(p.value=suppressMessages(t.test(score.x,score.y,paired=TRUE)$p.value))) 
+    myTtest <- try(group_by(kk, bin) %>% summarise(p.value=suppressMessages(get(my_test)(score.x,score.y,paired=TRUE)$p.value))) 
     if (inherits(myTtest, "try-error")){
       cat(myTtest)
       myTtest <- dplyr::select(kk,bin) %>% mutate(p.value=1)
     }
+    if(padjust){
+      myTtest <- myTtest %>% mutate(p.value=p.adjust(p.value))
+    }
     if(my_math =="-log"){
       myTtest <- myTtest %>% mutate(p.value=-log(p.value))
+    } else if(my_math =="-log10"){
+      myTtest <- myTtest %>% mutate(p.value=-log10(p.value))
     }
     db_out[[str_c(i,collapse = "-")]] <- myTtest%>% 
       mutate(., set = paste(
@@ -1768,7 +1772,9 @@ ApplyMath <-
            relative_frequency,
            normbin,
            switchttest,
-           use_tmath) {
+           use_tmath,
+           switchttesttype,
+           padjust) {
     # print("apply math fun")
     table_file = list_data$table_file
     gene_file = list_data$gene_file
@@ -1848,7 +1854,7 @@ ApplyMath <-
           ungroup()
       }
       if(length(unique(list_data_frame[[i]]$set))>1 & switchttest != "by lists"){
-        LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(list_data_frame[[i]], i,use_tmath))
+        LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(list_data_frame[[i]], i,use_tmath,switchttesttype,padjust))
         my_nn <- bind_rows(LIST_DATA$ttest$use)%>% distinct(set) %>% n_distinct()
         LIST_DATA$ttest$gene_info <<- bind_rows(LIST_DATA$ttest$use) %>%
           distinct(set) %>% 
@@ -1866,7 +1872,7 @@ ApplyMath <-
       for(i in unique(mm$set2)){
         mmm[[i]] <- filter(mm, set2==i)
         if(length(unique(mmm[[i]]$set))>1){
-          LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(mmm[[i]], i,use_tmath))
+          LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(mmm[[i]], i,use_tmath,switchttesttype,padjust))
         } else {
           LIST_DATA$ttest$use[[i]] <<- NULL
         }
@@ -1963,6 +1969,9 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT) {
     if(my_ttest_log == "-log"){
       list_data_frame$hlineTT <- -log(hlineTT)
       list_data_frame$ylabTT <- "-log(p.value)"
+    } else if(my_ttest_log == "-log10"){
+      list_data_frame$hlineTT <- -log10(hlineTT)
+      list_data_frame$ylabTT <- "-log10(p.value)"
     } else{
       list_data_frame$hlineTT <- hlineTT
       list_data_frame$ylabTT <- "p.value"
@@ -2923,7 +2932,9 @@ server <- function(input, output, session) {
                            input$selectplotnrom,
                            as.numeric(input$selectplotBinNorm),
                            input$switchttest,
-                           input$selectttestlog
+                           input$selectttestlog,
+                           input$switchttesttype,
+                           input$padjust
                          )
                      })
         if (!is.null(reactive_values$Apply_Math)) {
@@ -3469,7 +3480,9 @@ server <- function(input, output, session) {
                        input$selectplotnrom,
                        as.numeric(input$selectplotBinNorm),
                        input$switchttest,
-                       input$selectttestlog
+                       input$selectttestlog,
+                       input$switchttesttype,
+                       input$padjust
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
@@ -3570,7 +3583,9 @@ server <- function(input, output, session) {
                                       input$selectplotnrom,
                                       as.numeric(input$selectplotBinNorm),
                                       input$switchttest,
-                                      input$selectttestlog
+                                      input$selectttestlog,
+                                      input$switchttesttype,
+                                      input$padjust
                                     )
                                 })
                  }
@@ -3668,7 +3683,10 @@ server <- function(input, output, session) {
   })
   
   # t.test my_math ----
-  observeEvent(input$selectttestlog, ignoreInit = T, {
+  observeEvent(c(input$selectttestlog,
+                 input$switchttesttype,input$padjust), ignoreInit = T, {
+    if (!is.null(reactive_values$Apply_Math) &
+                       LIST_DATA$STATE[2] != 2 & input$switchttest != "none"){
     # print("t.test select")
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
@@ -3681,13 +3699,16 @@ server <- function(input, output, session) {
                        input$selectplotnrom,
                        as.numeric(input$selectplotBinNorm),
                        input$switchttest,
-                       input$selectttestlog
+                       input$selectttestlog,
+                       input$switchttesttype,
+                       input$padjust
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
       mm <- round(extendrange(range(c(bind_rows(LIST_DATA$ttest$use)$p.value,Inf),na.rm = T,finite=T),f = .1),digits = 2)
       updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                         max = mm[2],value = mm)
+    }
     }
   })
   
@@ -4007,7 +4028,9 @@ server <- function(input, output, session) {
                          input$selectplotnrom,
                          as.numeric(input$selectplotBinNorm),
                          input$switchttest,
-                         input$selectttestlog
+                         input$selectttestlog,
+                         input$switchttesttype,
+                         input$padjust
                        )
                    })
       if (!is.null(reactive_values$Apply_Math)) {
@@ -5400,7 +5423,9 @@ server <- function(input, output, session) {
                                       input$radioplotnromcluster,
                                       as.numeric(input$selectplotBinNormcluster),
                                       input$switchttest,
-                                      input$selectttestlog
+                                      input$selectttestlog,
+                                      input$switchttesttype,
+                                      input$padjust
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5518,7 +5543,9 @@ server <- function(input, output, session) {
                                       input$radioplotnromcluster,
                                       as.numeric(input$selectplotBinNormcluster),
                                       input$switchttest,
-                                      input$selectttestlog
+                                      input$selectttestlog,
+                                      input$switchttesttype,
+                                      input$padjust
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5632,7 +5659,9 @@ server <- function(input, output, session) {
                                       input$radioplotnromcluster,
                                       as.numeric(input$selectplotBinNormcluster),
                                       input$switchttest,
-                                      input$selectttestlog
+                                      input$selectttestlog,
+                                      input$switchttesttype,
+                                      input$padjust
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5747,7 +5776,9 @@ server <- function(input, output, session) {
                                       input$radioplotnromcluster,
                                       as.numeric(input$selectplotBinNormcluster),
                                       input$switchttest,
-                                      input$selectttestlog
+                                      input$selectttestlog,
+                                      input$switchttesttype,
+                                      input$padjust
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -6046,7 +6077,9 @@ server <- function(input, output, session) {
                                     input$radioplotnromcluster,
                                     as.numeric(input$selectplotBinNormcluster),
                                     input$switchttest,
-                                    input$selectttestlog
+                                    input$selectttestlog,
+                                    input$switchttesttype,
+                                    input$padjust
                                   )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -6375,7 +6408,9 @@ server <- function(input, output, session) {
                        input$radioplotnromcluster,
                        as.numeric(input$selectplotBinNormcluster),
                        input$switchttest,
-                       input$selectttestlog
+                       input$selectttestlog,
+                       input$switchttesttype,
+                       input$padjust
                      )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -7449,26 +7484,46 @@ ui <- dashboardPage(
                   width = 12,
                   status = "primary",
                   solidHeader = T,
-                  column(6,
+                  column(3,
                          selectInput(inputId = "switchttest",
                                      label = "Plot t.test",
                                      choices = c("none","by files", "by lists"),
                                      selected = "none"
+                         )
                          ),
+                  column(3,
+                         selectInput(inputId = "switchttesttype",
+                                     label = "pick test",
+                                     choices = c("t.test","ks.test", "wilcox.test"),
+                                     selected = "ks.test")
+                         ),
+                  column(3,
                          selectInput(inputId = "selectttestlog",
                                      label = "log p.value",
                                      # choices = c("none","log","-log", "log2", "log10"),
-                                     choices = c("none","-log"),
-                                     selected = "-log"
+                                     choices = c("none","-log", "-log10"),
+                                     selected = "-log10")
                          ),
-                         numericInput("hlinettest",
-                                      "horizontal line p.val 0.05 {-log(.05) = 2.996}",
-                                      value = 0.05,
-                                      min = -50,
-                                      max = 50,
-                                      step = .5)
-                  ),
+                column(3,
+                         checkboxInput("padjust",
+                                       label = "p.adjust?",value = TRUE)
+                ),
+                column(12,
+                         sliderInput(
+                           "sliderplotYRangeTT",
+                           label = "Plot Y height for p.value",
+                           min = 0,
+                           max = 1,
+                           step = 0.01,
+                           value = c(0, 0.06))
+                       ),
                   column(6,
+                         selectInput(inputId = "selectttestitem",
+                                     label = "Select to modify",
+                                     choices = c("none"),
+                                     selected = "none"),
+                         
+                         selectInput("selectlinettest", "Select line type", choices = c("Select", kLineOptions)),
                          numericInput(
                            inputId = 'selectttestlinesize',
                            "Set plot line size",
@@ -7476,26 +7531,20 @@ ui <- dashboardPage(
                            min = .5,
                            max = 10,
                            step = .5)
+                        
                   ),
-                  column(12,
-                         sliderInput(
-                           "sliderplotYRangeTT",
-                           label = "Plot Y height for p.value",
-                           min = 0,
-                           max = 1,
-                           step = 0.01,
-                           value = c(0, 0.06)
-                         )),
-                  column(6,
-                         selectInput(inputId = "selectttestitem",
-                                     label = "Select to modify",
-                                     choices = c("none"),
-                                     selected = "none"
-                         ),
-                         colourInput("selectcolorttest", "Select color HEX"),
-                         selectInput("selectlinettest", "Select line type", choices = c("Select", kLineOptions)),
-                         actionButton("actionttest","set options")
-                  )
+                column(6,
+                       colourInput("selectcolorttest", "Select color HEX"),
+                       actionButton("actionttest","set options")
+                ),
+                column(6,
+                       numericInput("hlinettest",
+                                    "horizontal line p.val 0.05 {-log10(.05) = 1.301}",
+                                    value = 0.05,
+                                    min = -50,
+                                    max = 50,
+                                    step = .5)
+                )
                 )
               ))),
       # main gene lists tab ----
