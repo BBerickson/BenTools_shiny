@@ -1853,7 +1853,7 @@ ApplyMath <-
           mutate(value = value / sum(value)) %>%
           ungroup()
       }
-      if(length(unique(list_data_frame[[i]]$set))>1 & switchttest != "by lists"){
+      if(length(unique(list_data_frame[[i]]$set))>1 & switchttest == "by files"){
         LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(list_data_frame[[i]], i,use_tmath,switchttesttype,padjust))
         my_nn <- bind_rows(LIST_DATA$ttest$use)%>% distinct(set) %>% n_distinct()
         LIST_DATA$ttest$gene_info <<- bind_rows(LIST_DATA$ttest$use) %>%
@@ -3706,6 +3706,18 @@ server <- function(input, output, session) {
                  })
     if (!is.null(reactive_values$Apply_Math)) {
       mm <- round(extendrange(range(c(bind_rows(LIST_DATA$ttest$use)$p.value,Inf),na.rm = T,finite=T),f = .1),digits = 2)
+      p_cutoff <- 0.05
+      if(input$selectttestlog =="-log"){
+        p_cutoff <-  -log(0.05)
+      } else if(input$selectttestlog =="-log10"){
+        p_cutoff <-  -log10(0.05)
+      }
+      if(mm[1]>0){
+        mm[1] <- 0
+      }
+      if(mm[2]<p_cutoff){
+        mm[2] <- p_cutoff
+      }
       updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                         max = mm[2],value = mm)
     }
