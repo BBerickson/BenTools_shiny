@@ -31,6 +31,7 @@ suppressPackageStartupMessages(my_packages(
     "shinyWidgets",
     "shinycssloaders",
     "tidyverse",
+    "tidyselect",
     "fastcluster",
     "shinyjs",
     "colourpicker",
@@ -1725,32 +1726,44 @@ CumulativeDistribution <-
   }
 
 # makes sure t test wont crash on an error
-try_t_test <- function(db,my_set,my_math,my_test="t.test",padjust=TRUE){
-  
+try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE){
+  print("try t.test")
   combn(unique(db$set),2) -> my_comparisons
   my_comparisons2 <- list()
   db_out <- list()
   for(cc in 1:ncol(my_comparisons)){
     my_comparisons2[[cc]] <- (c(my_comparisons[1,cc],my_comparisons[2,cc]))
   }
-  db <- spread(db,set,score)
-  
+  db <- spread(db,set,score) 
   for(i in my_comparisons2){
-    kk <- select(db, gene,bin,i) %>% rename(score.x=names(.)[3], score.y=names(.)[4]) %>% 
-      replace_na(list(score.x = 0)) %>% replace_na(list(score.y = 0))
-    #need to add set
-    myTtest <- try(group_by(kk, bin) %>% summarise(p.value=suppressMessages(get(my_test)(score.x,score.y,paired=TRUE)$p.value))) 
-    if (inherits(myTtest, "try-error")){
-      cat(myTtest)
-      myTtest <- dplyr::select(kk,bin) %>% mutate(p.value=1)
+    if(my_test!="ks.test"){
+      db2 <- select(db, gene,bin,i) %>% 
+        rename(score.x=all_of(names(.)[3]), score.y=all_of(names(.)[4])) %>% 
+        replace_na(list(score.x = 0)) %>% replace_na(list(score.y = 0))
+    } else {
+      db2 <- select(db, gene,bin,i) %>% 
+        rename(score.x=all_of(names(.)[3]), score.y=all_of(names(.)[4]))
+      }
+    
+    myTtest <- tibble(bin=NA,p.value=NA)
+    
+    for(t in unique(db2$bin)){
+      x.score <- filter(db2, bin ==t & !is.na(score.x))
+      y.score <- filter(db2, bin ==t & !is.na(score.y))
+      kk <- suppressMessages(try(get(my_test)(x.score$score.x,y.score$score.y,paired=TRUE)$p.value))
+      if(!is.numeric(kk)){
+        kk <-1
+      }
+      myTtest <- myTtest %>% add_row(bin = t, p.value=kk)
     }
+    myTtest <- myTtest %>% filter(!is.na(bin))
     if(padjust){
       myTtest <- myTtest %>% mutate(p.value=p.adjust(p.value))
     }
     if(my_math =="-log"){
-      myTtest <- myTtest %>% mutate(p.value=-log(p.value))
+      myTtest <- myTtest %>% mutate(p.value=if_else(p.value==0,2.2e-16,p.value)) %>% mutate(p.value=-log(p.value))
     } else if(my_math =="-log10"){
-      myTtest <- myTtest %>% mutate(p.value=-log10(p.value))
+      myTtest <- myTtest %>% mutate(p.value=if_else(p.value==0,2.2e-16,p.value)) %>% mutate(p.value=-log10(p.value))
     }
     db_out[[str_c(i,collapse = "-")]] <- myTtest%>% 
       mutate(., set = paste(
@@ -1775,7 +1788,7 @@ ApplyMath <-
            use_tmath,
            switchttesttype,
            padjust) {
-    # print("apply math fun")
+    print("apply math fun")
     table_file = list_data$table_file
     gene_file = list_data$gene_file
     gene_info = list_data$gene_info
@@ -1853,7 +1866,9 @@ ApplyMath <-
           mutate(value = value / sum(value)) %>%
           ungroup()
       }
+      # LIST_DATA$mytt[[i]] <<- list_data_frame[[i]]
       if(length(unique(list_data_frame[[i]]$set))>1 & switchttest == "by files"){
+        print(length(unique(list_data_frame[[i]]$set)))
         LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(list_data_frame[[i]], i,use_tmath,switchttesttype,padjust))
         my_nn <- bind_rows(LIST_DATA$ttest$use)%>% distinct(set) %>% n_distinct()
         LIST_DATA$ttest$gene_info <<- bind_rows(LIST_DATA$ttest$use) %>%
@@ -1895,7 +1910,7 @@ ApplyMath <-
   }
 
 # gather relavent plot option data
-MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT) {
+MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT,pajust,ttype) {
   # print("plot options fun")
   gene_info <- list_data$gene_info
   gene_info_tt <- list_data$ttest$gene_info
@@ -1966,15 +1981,20 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT) {
     list_data_frame$options_main_tt <- options_main_tt
     list_data_frame$options_main <- options_main
     list_data_frame$ylimTT <- Y_Axis_TT
+    if(pajust){
+      pp <- "p.adjust"
+    } else{
+      pp <- "p.value"
+    }
     if(my_ttest_log == "-log"){
       list_data_frame$hlineTT <- -log(hlineTT)
-      list_data_frame$ylabTT <- "-log(p.value)"
+      list_data_frame$ylabTT <- paste0(my_ttest_log,"(",pp,")"," ",ttype)
     } else if(my_ttest_log == "-log10"){
       list_data_frame$hlineTT <- -log10(hlineTT)
-      list_data_frame$ylabTT <- "-log10(p.value)"
+      list_data_frame$ylabTT <- paste0(my_ttest_log,"(",pp,")"," ",ttype)
     } else{
       list_data_frame$hlineTT <- hlineTT
-      list_data_frame$ylabTT <- "p.value"
+      list_data_frame$ylabTT <- paste0(pp," ",ttype)
     }
     
     return(list_data_frame)
@@ -2432,7 +2452,7 @@ GGplotLineDot <-
         scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
                            labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
         theme(axis.title.x = element_text(size =  line_list$mysize[3], vjust = .5)) +
-        theme(axis.title.y = element_text(size =  line_list$mysize[4] + 4, margin = margin(2, 10, 2, 2))) +
+        theme(axis.title.y = element_text(size =  line_list$mysize[4], margin = margin(2, 10, 2, 2))) +
         theme(axis.text.y = element_text(size = line_list$mysize[4],
                                          face = 'bold'))+
         theme(
@@ -2607,7 +2627,7 @@ server <- function(input, output, session) {
     }
     if (input$tabs == "genelists" &
         length(LIST_DATA$gene_file) != 0) {
-      hide('actiongenelistsdatatable')
+      shinyjs::hide('actiongenelistsdatatable')
       if (length(LIST_DATA$gene_file) > 1) {
         og <- input$pickergenelists
         if (!all(NULL %in% names(LIST_DATA$gene_file))) {
@@ -2655,7 +2675,7 @@ server <- function(input, output, session) {
           )
         })
       } else {
-        hide('actionsortdatatable')
+        shinyjs::hide('actionsortdatatable')
         output$valueboxsort <- renderValueBox({
           valueBox(0,
                    "Gene List Sort",
@@ -2695,7 +2715,7 @@ server <- function(input, output, session) {
         ), sep = ":"))
       )
       if (sum(grepl("Ratio_", names(LIST_DATA$gene_file))) == 0) {
-        hide('actionratiodatatable')
+        shinyjs::hide('actionratiodatatable')
       }
       
       if (any(grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info)) > 0)) {
@@ -2792,8 +2812,8 @@ server <- function(input, output, session) {
           )
         })
       } else{
-        hide("plotcluster")
-        hide('actionclusterdatatable')
+        shinyjs::hide("plotcluster")
+        shinyjs::hide('actionclusterdatatable')
         output$valueboxcluster1 <- renderValueBox({
           valueBox(0,
                    "Cluster 1",
@@ -2902,8 +2922,8 @@ server <- function(input, output, session) {
         output$plotcdf <- renderPlot({
           NULL
         })
-        hide('plotcdf')
-        hide('actioncdfdatatable')
+        shinyjs::hide('plotcdf')
+        shinyjs::hide('actioncdfdatatable')
         my_count <- 0
       } else {
         my_count <-
@@ -2940,10 +2960,11 @@ server <- function(input, output, session) {
         if (!is.null(reactive_values$Apply_Math)) {
           reactive_values$Y_Axis_Lable <- YAxisLable()
           reactive_values$Plot_Options <-
-            MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+            MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,
+                                input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         }
       } else if (LIST_DATA$STATE[2] == 2) {
-        show("actionmyplotshow")
+        shinyjs::show("actionmyplotshow")
         reactive_values$Apply_Math <- NULL
       }
     }
@@ -3044,7 +3065,7 @@ server <- function(input, output, session) {
   # loads data file(s) ----
   observeEvent(input$filetable, {
     # print("load file")
-    disable("startoff")
+    shinyjs::disable("startoff")
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -3082,12 +3103,12 @@ server <- function(input, output, session) {
     )
     
     if (LIST_DATA$STATE[1] == 0) {
-      show("filegene1")
-      show("checkboxconvert")
-      show("downloadGeneList")
-      show("filecolor")
-      show("hiddensave")
-      show("startoff")
+      shinyjs::show("filegene1")
+      shinyjs::show("checkboxconvert")
+      shinyjs::show("downloadGeneList")
+      shinyjs::show("filecolor")
+      shinyjs::show("hiddensave")
+      shinyjs::show("startoff")
       # print("1st slider and plot lines Ylable")
       reactive_values$binset <- TRUE
       shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
@@ -3113,7 +3134,7 @@ server <- function(input, output, session) {
       LIST_DATA$STATE[1] <<- 1
     }
     
-    enable("startoff")
+    shinyjs::enable("startoff")
     reset("filetable")
     ff <- names(LIST_DATA$table_file)
     updateSelectInput(session,
@@ -3163,7 +3184,7 @@ server <- function(input, output, session) {
     if (LIST_DATA$STATE[1] != 0 &
         !is.null(reactive_values$Apply_Math) &
         LIST_DATA$STATE[2] != 2) {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
@@ -3203,19 +3224,19 @@ server <- function(input, output, session) {
                                    "selectline",
                                    selected = paste(LIST_DATA$gene_info[[my_list]][[my_sel]]["myline"]))
                  if (my_list == names(LIST_DATA$gene_info)[1]) {
-                   enable("normfactor")
-                   disable("actionremovegene")
-                   hide("BttnTint")
-                   enable("kbrewer")
-                   enable("textnickname")
-                   enable("actionoptions")
+                   shinyjs::enable("normfactor")
+                   shinyjs::disable("actionremovegene")
+                   shinyjs::hide("BttnTint")
+                   shinyjs::enable("kbrewer")
+                   shinyjs::enable("textnickname")
+                   shinyjs::enable("actionoptions")
                  } else {
-                   disable("normfactor")
-                   enable("actionremovegene")
-                   show("BttnTint")
-                   disable("kbrewer")
-                   disable("textnickname")
-                   disable("actionoptions")
+                   shinyjs::disable("normfactor")
+                   shinyjs::enable("actionremovegene")
+                   shinyjs::show("BttnTint")
+                   shinyjs::disable("kbrewer")
+                   shinyjs::disable("textnickname")
+                   shinyjs::disable("actionoptions")
                  }
                })
   
@@ -3332,7 +3353,7 @@ server <- function(input, output, session) {
         if (LIST_DATA$STATE[1] != 0 &
             !is.null(reactive_values$Apply_Math) &
             LIST_DATA$STATE[2] != 2) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
           reactive_values$Plot_controler <-
             GGplotLineDot(
               reactive_values$Apply_Math,
@@ -3359,7 +3380,7 @@ server <- function(input, output, session) {
         if (LIST_DATA$STATE[1] != 0 &
             !is.null(reactive_values$Apply_Math) &
             LIST_DATA$STATE[2] != 2) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
           reactive_values$Plot_controler <-
             GGplotLineDot(
               reactive_values$Apply_Math,
@@ -3396,7 +3417,7 @@ server <- function(input, output, session) {
         if (LIST_DATA$STATE[1] != 0 &
             !is.null(reactive_values$Apply_Math) &
             LIST_DATA$STATE[2] != 2) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
           reactive_values$Plot_controler <-
             GGplotLineDot(
               reactive_values$Apply_Math,
@@ -3456,10 +3477,10 @@ server <- function(input, output, session) {
                  
                  if (LIST_DATA$STATE[2] != 0) {
                    # print("toggle on/off")
-                   show("actionmyplotshow")
-                   disable("numericYRangeHigh")
-                   disable("numericYRangeLow")
-                   disable("checkboxyrange")
+                   shinyjs::show("actionmyplotshow")
+                   shinyjs::disable("numericYRangeHigh")
+                   shinyjs::disable("numericYRangeLow")
+                   shinyjs::disable("checkboxyrange")
                    LIST_DATA$STATE[2] <<- 2
                  } else {
                    LIST_DATA$STATE[2] <<- 1
@@ -3486,7 +3507,7 @@ server <- function(input, output, session) {
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
       LIST_DATA$STATE[2] <<- 1
       if(input$switchttest!="none"){
         updateSelectInput(session,"selectttestitem", choices = LIST_DATA$ttest$gene_info$set)
@@ -3509,10 +3530,10 @@ server <- function(input, output, session) {
         theme_void()
       return()
     }
-    hide("actionmyplotshow")
-    enable("numericYRangeHigh")
-    enable("numericYRangeLow")
-    enable("checkboxyrange")
+    shinyjs::hide("actionmyplotshow")
+    shinyjs::enable("numericYRangeHigh")
+    shinyjs::enable("numericYRangeLow")
+    shinyjs::enable("checkboxyrange")
   })
   
   # updates y axis limits
@@ -3621,14 +3642,15 @@ server <- function(input, output, session) {
   observeEvent(input$sliderplotYRangeTT, ignoreInit = T, {
     # print("y slider")
     if (!is.null(reactive_values$Apply_Math)& input$switchttest != "none") {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
       if(input$switchttest!="none"){
         updateSelectInput(session,"selectttestitem", choices = LIST_DATA$ttest$gene_info$set)
       }else{
         updateSelectInput(session,"selectttestitem", choices = "none",
                           selected="none")
       }
-      
+    }
+    if (!is.null(reactive_values$Apply_Math)) {
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
@@ -3663,7 +3685,7 @@ server <- function(input, output, session) {
         mutate(myline=ifelse(set == input$selectttestitem,input$selectlinettest,myline))
       LIST_DATA$ttest$gene_info <<- LIST_DATA$ttest$gene_info %>% 
         mutate(mycol=ifelse(set == input$selectttestitem,input$selectcolorttest,mycol))
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
       if(reactive_values$Lines_Lables_List$mysize[6] == as.numeric(input$selectttestlinesize)){
         reactive_values$Plot_controler <-
           GGplotLineDot(
@@ -3704,13 +3726,13 @@ server <- function(input, output, session) {
                        input$padjust
                      )
                  })
-    if (!is.null(reactive_values$Apply_Math)) {
-      mm <- round(extendrange(range(c(bind_rows(LIST_DATA$ttest$use)$p.value,Inf),na.rm = T,finite=T),f = .1),digits = 2)
-      p_cutoff <- 0.05
+    if (!is.null(reactive_values$Apply_Math)& !is.null(LIST_DATA$ttest$use)) {
+      mm <- round(extendrange(range(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T,finite=T),f = .1),digits = 2)
+      p_cutoff <- input$hlinettest
       if(input$selectttestlog =="-log"){
-        p_cutoff <-  -log(0.05)
+        p_cutoff <-  -log(input$hlinettest)
       } else if(input$selectttestlog =="-log10"){
-        p_cutoff <-  -log10(0.05)
+        p_cutoff <-  -log10(input$hlinettest)
       }
       if(mm[1]>0){
         mm[1] <- 0
@@ -3720,6 +3742,9 @@ server <- function(input, output, session) {
       }
       updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                         max = mm[2],value = mm)
+    }else if (!is.null(reactive_values$Apply_Math)& is.null(LIST_DATA$ttest$use)){
+      updateSliderInput(session, "sliderplotYRangeTT", min = 0,
+                        max = 1,value = c(0,0))
     }
     }
   })
@@ -3905,11 +3930,11 @@ server <- function(input, output, session) {
       updateTextInput(session, "landlposition", value = my_pos)
     }
     if (length(my_pos) == length(my_label)) {
-      enable("actionlineslabels")
+      shinyjs::enable("actionlineslabels")
       updateActionButton(session, "actionlineslabels", label = "Plot with new Lines and Labels")
     } else {
       updateActionButton(session, "actionlineslabels", label = "Labels must equel # of positions")
-      disable("actionlineslabels")
+      shinyjs::disable("actionlineslabels")
     }
     if (LIST_DATA$STATE[2] == 0) {
       if (length(my_pos) == 0) {
@@ -4045,12 +4070,27 @@ server <- function(input, output, session) {
                          input$padjust
                        )
                    })
-      if (!is.null(reactive_values$Apply_Math)) {
-        mm <- round(extendrange(range(c(bind_rows(LIST_DATA$ttest$use)$p.value,Inf),na.rm = T,finite=T),f = .1),digits = 2)
+      if (!is.null(reactive_values$Apply_Math)& !is.null(LIST_DATA$ttest$use)) {
+        mm <- round(extendrange(range(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T,finite=T),f = .1),digits = 2)
+        p_cutoff <- input$hlinettest
+        if(input$selectttestlog =="-log"){
+          p_cutoff <-  -log(input$hlinettest)
+        } else if(input$selectttestlog =="-log10"){
+          p_cutoff <-  -log10(input$hlinettest)
+        }
+        if(mm[1]>0){
+          mm[1] <- 0
+        }
+        if(mm[2]<p_cutoff){
+          mm[2] <- p_cutoff
+        }
         updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
                           max = mm[2],value = mm)
         
-      } 
+      } else if (!is.null(reactive_values$Apply_Math)& is.null(LIST_DATA$ttest$use)){
+        updateSliderInput(session, "sliderplotYRangeTT", min = 0,
+                          max = 1,value = c(0,0))
+      }
     }
   })
   
@@ -4120,7 +4160,7 @@ server <- function(input, output, session) {
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math) &
           LIST_DATA$STATE[2] == 1) {
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
@@ -4155,7 +4195,7 @@ server <- function(input, output, session) {
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math) &
           LIST_DATA$STATE[2] != 2) {
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
@@ -4231,29 +4271,29 @@ server <- function(input, output, session) {
       updateSelectInput(session,
                         "selectgenelistoptions",
                         choices = 'Load Data File')
-      hide("filegene1")
-      hide("checkboxconvert")
-      hide("downloadGeneList")
-      hide("checkboxsavesplit")
-      hide("filecolor")
-      hide("hiddensave")
-      hide("startoff")
-      hide('actiongenelistsdatatable')
-      hide('genelists1table')
-      hide('genelists2table')
-      hide('genelists3table')
-      hide('actionsortdatatable')
-      hide('sorttable')
-      hide('ratio1table')
-      hide('ratio2table')
-      hide('ratio3table')
-      hide('plotcluster')
-      hide("cluster1table")
-      hide("cluster2table")
-      hide("cluster3table")
-      hide("cluster4table")
-      hide('cdftable')
-      hide('plotcdf')
+      shinyjs::hide("filegene1")
+      shinyjs::hide("checkboxconvert")
+      shinyjs::hide("downloadGeneList")
+      shinyjs::hide("checkboxsavesplit")
+      shinyjs::hide("filecolor")
+      shinyjs::hide("hiddensave")
+      shinyjs::hide("startoff")
+      shinyjs::hide('actiongenelistsdatatable')
+      shinyjs::hide('genelists1table')
+      shinyjs::hide('genelists2table')
+      shinyjs::hide('genelists3table')
+      shinyjs::hide('actionsortdatatable')
+      shinyjs::hide('sorttable')
+      shinyjs::hide('ratio1table')
+      shinyjs::hide('ratio2table')
+      shinyjs::hide('ratio3table')
+      shinyjs::hide('plotcluster')
+      shinyjs::hide("cluster1table")
+      shinyjs::hide("cluster2table")
+      shinyjs::hide("cluster3table")
+      shinyjs::hide("cluster4table")
+      shinyjs::hide('cdftable')
+      shinyjs::hide('plotcdf')
       reactive_values$Apply_Math <- NULL
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
       updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
@@ -4266,22 +4306,22 @@ server <- function(input, output, session) {
   # Remove gene list ----
   observeEvent(input$actionremovegene, ignoreInit = TRUE, {
     # print("remove gene list")
-    hide('actiongenelistsdatatable')
-    hide('genelists1table')
-    hide('genelists2table')
-    hide('genelists3table')
-    hide('actionsortdatatable')
-    hide('sorttable')
-    hide('ratio1table')
-    hide('ratio2table')
-    hide('ratio3table')
-    hide('plotcluster')
-    hide("cluster1table")
-    hide("cluster2table")
-    hide("cluster3table")
-    hide("cluster4table")
-    hide('cdftable')
-    hide('plotcdf')
+    shinyjs::hide('actiongenelistsdatatable')
+    shinyjs::hide('genelists1table')
+    shinyjs::hide('genelists2table')
+    shinyjs::hide('genelists3table')
+    shinyjs::hide('actionsortdatatable')
+    shinyjs::hide('sorttable')
+    shinyjs::hide('ratio1table')
+    shinyjs::hide('ratio2table')
+    shinyjs::hide('ratio3table')
+    shinyjs::hide('plotcluster')
+    shinyjs::hide("cluster1table")
+    shinyjs::hide("cluster2table")
+    shinyjs::hide("cluster3table")
+    shinyjs::hide("cluster4table")
+    shinyjs::hide('cdftable')
+    shinyjs::hide('plotcdf')
     LIST_DATA <<-
       RemoveGeneList(LIST_DATA, input$selectgenelistoptions)
     updateSelectInput(
@@ -4366,10 +4406,10 @@ server <- function(input, output, session) {
   # Gene action ----
   observeEvent(input$actiongenelists, {
     # print("gene lists action")
-    hide('actiongenelistsdatatable')
-    hide('genelists1table')
-    hide('genelists2table')
-    hide('genelists3table')
+    shinyjs::hide('actiongenelistsdatatable')
+    shinyjs::hide('genelists1table')
+    shinyjs::hide('genelists2table')
+    shinyjs::hide('genelists3table')
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
                  value = 0,
@@ -4391,7 +4431,7 @@ server <- function(input, output, session) {
         choices = names(LIST_DATA$gene_file),
         selected = ol
       )
-      show('actiongenelistsdatatable')
+      shinyjs::show('actiongenelistsdatatable')
       if (any(grep("Gene_List_intersect\nn =", names(LIST_DATA$gene_info)) > 0)) {
         output$valueboxgene1 <- renderValueBox({
           valueBox(
@@ -4471,7 +4511,7 @@ server <- function(input, output, session) {
   # Gene lists show gene list ----
   observeEvent(input$actiongenelistsdatatable, ignoreInit = TRUE, {
     # print("generiate gene lists table")
-    hide('actiongenelistsdatatable')
+    shinyjs::hide('actiongenelistsdatatable')
     if (any(grep("Gene_List_intersect\nn =", names(LIST_DATA$gene_info)) >
             0)) {
       newnames1 <-
@@ -4519,7 +4559,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show('genelists1table')
+      shinyjs::show('genelists1table')
     } else {
       output$genelists1table <-
         DT::renderDataTable(
@@ -4578,7 +4618,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show('genelists2table')
+      shinyjs::show('genelists2table')
     } else {
       output$genelists2table <-
         DT::renderDataTable(
@@ -4639,7 +4679,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show('genelists3table')
+      shinyjs::show('genelists3table')
     } else {
       output$genelists3table <-
         DT::renderDataTable(
@@ -4676,8 +4716,8 @@ server <- function(input, output, session) {
   # sort tool action ----
   observeEvent(input$actionsorttool, {
     # print("sort tool")
-    hide('actionsortdatatable')
-    hide('sorttable')
+    shinyjs::hide('actionsortdatatable')
+    shinyjs::hide('sorttable')
     
     if (input$slidersortpercent < 50 &
         input$selectsorttop == "Middle%") {
@@ -4699,7 +4739,7 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
-      show('actionsortdatatable')
+      shinyjs::show('actionsortdatatable')
       if (any(grep("Sort n", names(LIST_DATA$gene_info)) > 0)) {
         output$valueboxsort <- renderValueBox({
           valueBox(
@@ -4789,8 +4829,8 @@ server <- function(input, output, session) {
                  {
                    output$sorttable <- DT::renderDataTable(dt)
                  })
-    hide('actionsortdatatable')
-    show('sorttable')
+    shinyjs::hide('actionsortdatatable')
+    shinyjs::show('sorttable')
   })
   
   # sort tool gene list $use ----
@@ -4996,9 +5036,9 @@ server <- function(input, output, session) {
   # Ratio tool action ----
   observeEvent(input$actionratiotool, ignoreInit = TRUE, {
     # print("ratio tool action")
-    hide('ratio1table')
-    hide('ratio2table')
-    hide('ratio3table')
+    shinyjs::hide('ratio1table')
+    shinyjs::hide('ratio2table')
+    shinyjs::hide('ratio3table')
     if (is.numeric(input$numericratio)) {
       if (input$numericratio < 0) {
         updateNumericInput(session, "numericratio", value = 2)
@@ -5039,7 +5079,7 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
-      show('actionratiodatatable')
+      shinyjs::show('actionratiodatatable')
       
       ol <- input$selectratiofile
       if (!ol %in% names(LIST_DATA$gene_file)) {
@@ -5148,7 +5188,7 @@ server <- function(input, output, session) {
   # Ratio show gene list ----
   observeEvent(input$actionratiodatatable, ignoreInit = TRUE, {
     # print("generiate ratio table")
-    hide('actionratiodatatable')
+    shinyjs::hide('actionratiodatatable')
     if (any(grep("Ratio_Up_file1\nn =", names(LIST_DATA$gene_info)) > 0)) {
       newnames1 <-
         gsub("\n", " ", grep(
@@ -5192,7 +5232,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show('ratio1table')
+      shinyjs::show('ratio1table')
     } else {
       output$ratio1table <-
         DT::renderDataTable(
@@ -5249,7 +5289,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show('ratio2table')
+      shinyjs::show('ratio2table')
     } else {
       output$ratio2table <-
         DT::renderDataTable(
@@ -5306,7 +5346,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show('ratio3table')
+      shinyjs::show('ratio3table')
     } else {
       output$ratio3table <-
         DT::renderDataTable(
@@ -5360,11 +5400,11 @@ server <- function(input, output, session) {
   # cluster tool picker control ----
   observeEvent(input$selectclusterfile, ignoreInit = TRUE, {
     # print("cluster picker update")
-    hide('plotcluster')
-    hide("cluster1table")
-    hide("cluster2table")
-    hide("cluster3table")
-    hide("cluster4table")
+    shinyjs::hide('plotcluster')
+    shinyjs::hide("cluster1table")
+    shinyjs::hide("cluster2table")
+    shinyjs::hide("cluster3table")
+    shinyjs::hide("cluster4table")
     updatePickerInput(
       session,
       "pickerclusterfile",
@@ -5442,7 +5482,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -5562,7 +5602,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -5678,7 +5718,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -5795,7 +5835,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -5851,11 +5891,11 @@ server <- function(input, output, session) {
   # Cluster tool action ----
   observeEvent(input$actionclustertool, ignoreInit = TRUE, {
     # print("cluster tool action")
-    hide('plotcluster')
-    hide("cluster1table")
-    hide("cluster2table")
-    hide("cluster3table")
-    hide("cluster4table")
+    shinyjs::hide('plotcluster')
+    shinyjs::hide("cluster1table")
+    shinyjs::hide("cluster2table")
+    shinyjs::hide("cluster3table")
+    shinyjs::hide("cluster4table")
     reactive_values$clustergroups <- NULL
     if (n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4) {
       reactive_values$clustergroups <- "Cluster_"
@@ -5885,11 +5925,11 @@ server <- function(input, output, session) {
   # Group tool action ----
   observeEvent(input$actiongroupstool, ignoreInit = TRUE, {
     # print("group tool action")
-    hide('plotcluster')
-    hide("cluster1table")
-    hide("cluster2table")
-    hide("cluster3table")
-    hide("cluster4table")
+    shinyjs::hide('plotcluster')
+    shinyjs::hide("cluster1table")
+    shinyjs::hide("cluster2table")
+    shinyjs::hide("cluster3table")
+    shinyjs::hide("cluster4table")
     reactive_values$clustergroups <- NULL
     if (n_distinct(LIST_DATA$gene_file[[input$selectclusterfile]]$use) < 4) {
       reactive_values$clustergroups <- "Group_"
@@ -5924,8 +5964,8 @@ server <- function(input, output, session) {
                  if (is.null(reactive_values$clustergroups)) {
                    return()
                  }
-                 hide('actionclusterdatatable')
-                 hide('actionclusterplot')
+                 shinyjs::hide('actionclusterdatatable')
+                 shinyjs::hide('actionclusterplot')
                  withProgress(message = 'Calculation in progress',
                               detail = 'This may take a while...',
                               value = 0,
@@ -5943,12 +5983,12 @@ server <- function(input, output, session) {
                               })
                  if (!is_empty(LD$table_file)) {
                    LIST_DATA <<- LD
-                   show('actionclusterdatatable')
-                   show('actionclusterplot')
-                   hide("cluster1table")
-                   hide("cluster2table")
-                   hide("cluster3table")
-                   hide("cluster4table")
+                   shinyjs::show('actionclusterdatatable')
+                   shinyjs::show('actionclusterplot')
+                   shinyjs::hide("cluster1table")
+                   shinyjs::hide("cluster2table")
+                   shinyjs::hide("cluster3table")
+                   shinyjs::hide("cluster4table")
                    ol <- input$selectclusterfile
                    if (!ol %in% names(LIST_DATA$gene_file)) {
                      ol <-
@@ -6096,7 +6136,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -6123,7 +6163,7 @@ server <- function(input, output, session) {
                          )
                        )
                    }
-                   show('plotcluster')
+                   shinyjs::show('plotcluster')
                  } else {
                    output$valueboxcluster1 <- renderValueBox({
                      valueBox(0,
@@ -6201,7 +6241,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show("cluster1table")
+      shinyjs::show("cluster1table")
     } else {
       output$cluster1table <-
         DT::renderDataTable(
@@ -6258,7 +6298,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show("cluster2table")
+      shinyjs::show("cluster2table")
     } else {
       output$cluster2table <-
         DT::renderDataTable(
@@ -6315,7 +6355,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show("cluster3table")
+      shinyjs::show("cluster3table")
     } else {
       output$cluster3table <-
         DT::renderDataTable(
@@ -6372,7 +6412,7 @@ server <- function(input, output, session) {
                          )
                        )
                    })
-      show("cluster4table")
+      shinyjs::show("cluster4table")
     } else {
       output$cluster4table <-
         DT::renderDataTable(
@@ -6384,13 +6424,13 @@ server <- function(input, output, session) {
           )
         )
     }
-    hide('actionclusterdatatable')
+    shinyjs::hide('actionclusterdatatable')
   })
   
   # creat and show cluster plot ----
   observeEvent(input$actionclusterplot, {
     # print("cluster plot button")
-    show('plotcluster')
+    shinyjs::show('plotcluster')
     if (!is.null(reactive_values$clustergroups) & any(grep(
       paste0(reactive_values$clustergroups, "1\nn ="),
       names(LIST_DATA$gene_info)
@@ -6427,7 +6467,7 @@ server <- function(input, output, session) {
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
-          MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest)
+          MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         Y_Axis_Cluster_numbers <-
           MyXSetValues(
             reactive_values$Apply_Cluster_Math,
@@ -6475,8 +6515,8 @@ server <- function(input, output, session) {
       ungroup()
     newname <- paste("CDF ", n_distinct(gene_list$gene))
     if (newname != names(LIST_DATA$gene_info)[oldname]) {
-      hide('cdftable')
-      show('actioncdfdatatable')
+      shinyjs::hide('cdftable')
+      shinyjs::show('actioncdfdatatable')
       names(LIST_DATA$gene_file)[oldname] <<- newname
       names(LIST_DATA$gene_info)[oldname] <<- newname
       LIST_DATA$gene_file[[newname]]$use <<- gene_list
@@ -6535,7 +6575,7 @@ server <- function(input, output, session) {
       output$plotcdf <- renderPlot({
         mycdf
       })
-      show('plotcdf')
+      shinyjs::show('plotcdf')
     }
   })
   
@@ -6603,8 +6643,8 @@ server <- function(input, output, session) {
                  {
                    output$cdftable <- DT::renderDataTable(dt)
                  })
-    hide('actioncdfdatatable')
-    show('cdftable')
+    shinyjs::hide('actioncdfdatatable')
+    shinyjs::show('cdftable')
   })
   
   
@@ -6688,8 +6728,8 @@ server <- function(input, output, session) {
   # CDF tool action ----
   observeEvent(input$actioncdftool, ignoreInit = TRUE, {
     # print("CDF tool action")
-    hide('cdftable')
-    hide('plotcdf')
+    shinyjs::hide('cdftable')
+    shinyjs::hide('plotcdf')
     if (any(between(
       input$sliderbincdf1,
       input$sliderbincdf2[1],
@@ -6751,8 +6791,8 @@ server <- function(input, output, session) {
                  })
     if (!is_empty(LD$table_file)) {
       LIST_DATA <<- LD
-      show('actioncdfdatatable')
-      show('plotcdf')
+      shinyjs::show('actioncdfdatatable')
+      shinyjs::show('plotcdf')
       newname <-
         grep("CDF ", names(LIST_DATA$gene_info), value = TRUE)
       df_options <-
@@ -7551,7 +7591,7 @@ ui <- dashboardPage(
                 ),
                 column(6,
                        numericInput("hlinettest",
-                                    "horizontal line p.val 0.05 {-log10(.05) = 1.301}",
+                                    "horizontal line p.val 0.05",
                                     value = 0.05,
                                     min = -50,
                                     max = 50,
