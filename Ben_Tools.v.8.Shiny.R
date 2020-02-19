@@ -1727,7 +1727,7 @@ CumulativeDistribution <-
 
 # makes sure t test wont crash on an error
 try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE){
-  print("try t.test")
+  # print("try t.test")
   combn(unique(db$set),2) -> my_comparisons
   my_comparisons2 <- list()
   db_out <- list()
@@ -1788,7 +1788,7 @@ ApplyMath <-
            use_tmath,
            switchttesttype,
            padjust) {
-    print("apply math fun")
+    # print("apply math fun")
     table_file = list_data$table_file
     gene_file = list_data$gene_file
     gene_info = list_data$gene_info
