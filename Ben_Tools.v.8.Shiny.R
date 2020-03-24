@@ -1982,21 +1982,21 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT,pajust
     list_data_frame$options_main <- options_main
     list_data_frame$ylimTT <- Y_Axis_TT
     if(pajust){
-      pp <- "p.adjust"
+      pp <- "FDR"
     } else{
       pp <- "p.value"
     }
     if(my_ttest_log == "-log"){
       list_data_frame$hlineTT <- -log(hlineTT)
-      list_data_frame$ylabTT <- paste0(my_ttest_log,"(",pp,")"," ",ttype)
+      list_data_frame$ylabTT <- paste0(my_ttest_log,"(",pp,")"," ")
     } else if(my_ttest_log == "-log10"){
       list_data_frame$hlineTT <- -log10(hlineTT)
-      list_data_frame$ylabTT <- paste0(my_ttest_log,"(",pp,")"," ",ttype)
+      list_data_frame$ylabTT <- paste0(my_ttest_log,"(",pp,")"," ")
     } else{
       list_data_frame$hlineTT <- hlineTT
-      list_data_frame$ylabTT <- paste0(pp," ",ttype)
+      list_data_frame$ylabTT <- paste0(pp," ")
     }
-    
+    list_data_frame$theader <- ttype
     return(list_data_frame)
   } else {
     # print("no options")
@@ -2438,6 +2438,7 @@ GGplotLineDot <-
         scale_linetype_manual(values = use_line_tt)+
         geom_hline(yintercept = plot_options$hlineTT,color="blue") + 
         theme_bw() +
+        ggtitle(plot_options$theader)+
         geom_vline(
           data = line_list$myline,
           aes(xintercept = use_virtical_line),
@@ -2457,7 +2458,7 @@ GGplotLineDot <-
                                          face = 'bold'))+
         theme(
           axis.text.x = element_text(
-            color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+            # color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
             size = line_list$mysize[3],
             angle = -45,
             hjust = .1,
@@ -2486,7 +2487,7 @@ GGplotLineDot <-
         theme(
           axis.text.x = element_text(
             #fix for coord_cartesian [between(line_list$mybrakes, xBinRange[1], xBinRange[2])]
-            color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+            # color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
             size = line_list$mysize[3],
             angle = -45,
             hjust = .1,
@@ -2960,7 +2961,7 @@ server <- function(input, output, session) {
         if (!is.null(reactive_values$Apply_Math)) {
           reactive_values$Y_Axis_Lable <- YAxisLable()
           reactive_values$Plot_Options <-
-            MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,
+            MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),
                                 input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         }
       } else if (LIST_DATA$STATE[2] == 2) {
@@ -3184,7 +3185,7 @@ server <- function(input, output, session) {
     if (LIST_DATA$STATE[1] != 0 &
         !is.null(reactive_values$Apply_Math) &
         LIST_DATA$STATE[2] != 2) {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
@@ -3353,7 +3354,7 @@ server <- function(input, output, session) {
         if (LIST_DATA$STATE[1] != 0 &
             !is.null(reactive_values$Apply_Math) &
             LIST_DATA$STATE[2] != 2) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
           reactive_values$Plot_controler <-
             GGplotLineDot(
               reactive_values$Apply_Math,
@@ -3380,7 +3381,7 @@ server <- function(input, output, session) {
         if (LIST_DATA$STATE[1] != 0 &
             !is.null(reactive_values$Apply_Math) &
             LIST_DATA$STATE[2] != 2) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
           reactive_values$Plot_controler <-
             GGplotLineDot(
               reactive_values$Apply_Math,
@@ -3417,7 +3418,7 @@ server <- function(input, output, session) {
         if (LIST_DATA$STATE[1] != 0 &
             !is.null(reactive_values$Apply_Math) &
             LIST_DATA$STATE[2] != 2) {
-          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+          reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
           reactive_values$Plot_controler <-
             GGplotLineDot(
               reactive_values$Apply_Math,
@@ -3481,6 +3482,8 @@ server <- function(input, output, session) {
                    shinyjs::disable("numericYRangeHigh")
                    shinyjs::disable("numericYRangeLow")
                    shinyjs::disable("checkboxyrange")
+                   shinyjs::disable("numericYRangeHighpval")
+                   shinyjs::disable("numericYRangeLowpval")
                    LIST_DATA$STATE[2] <<- 2
                  } else {
                    LIST_DATA$STATE[2] <<- 1
@@ -3507,7 +3510,7 @@ server <- function(input, output, session) {
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
       LIST_DATA$STATE[2] <<- 1
       if(input$switchttest!="none"){
         updateSelectInput(session,"selectttestitem", choices = LIST_DATA$ttest$gene_info$set)
@@ -3534,6 +3537,8 @@ server <- function(input, output, session) {
     shinyjs::enable("numericYRangeHigh")
     shinyjs::enable("numericYRangeLow")
     shinyjs::enable("checkboxyrange")
+    shinyjs::enable("numericYRangeHighpval")
+    shinyjs::enable("numericYRangeLowpval")
   })
   
   # updates y axis limits
@@ -3564,6 +3569,7 @@ server <- function(input, output, session) {
                        "numericYRangeLow",
                        value = round(min(reactive_values$Y_Axis_numbers), 4),
                        step = my_step)
+    
   })
   
   # renders plot ----
@@ -3638,33 +3644,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # y slider t.test is trigger ----
-  observeEvent(input$sliderplotYRangeTT, ignoreInit = T, {
-    # print("y slider")
-    if (!is.null(reactive_values$Apply_Math)& input$switchttest != "none") {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
-      if(input$switchttest!="none"){
-        updateSelectInput(session,"selectttestitem", choices = LIST_DATA$ttest$gene_info$set)
-      }else{
-        updateSelectInput(session,"selectttestitem", choices = "none",
-                          selected="none")
-      }
-    }
-    if (!is.null(reactive_values$Apply_Math)) {
-      reactive_values$Plot_controler <-
-        GGplotLineDot(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-          reactive_values$Plot_Options,
-          reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
-          input$checkboxsmooth, input$switchttest,
-          input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
-        )
-    }
-  })
-  
   # t.test select file ----
   observeEvent(input$selectttestitem, ignoreInit = T, {
     # print("t.test select")
@@ -3685,7 +3664,7 @@ server <- function(input, output, session) {
         mutate(myline=ifelse(set == input$selectttestitem,input$selectlinettest,myline))
       LIST_DATA$ttest$gene_info <<- LIST_DATA$ttest$gene_info %>% 
         mutate(mycol=ifelse(set == input$selectttestitem,input$selectcolorttest,mycol))
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
       if(reactive_values$Lines_Lables_List$mysize[6] == as.numeric(input$selectttestlinesize)){
         reactive_values$Plot_controler <-
           GGplotLineDot(
@@ -3706,9 +3685,9 @@ server <- function(input, output, session) {
   
   # t.test my_math ----
   observeEvent(c(input$selectttestlog,
-                 input$switchttesttype,input$padjust), ignoreInit = T, {
+                 input$switchttesttype,input$padjust,input$switchttest), ignoreInit = T, {
     if (!is.null(reactive_values$Apply_Math) &
-                       LIST_DATA$STATE[2] != 2 & input$switchttest != "none"){
+                       LIST_DATA$STATE[2] != 2){
     # print("t.test select")
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
@@ -3727,6 +3706,7 @@ server <- function(input, output, session) {
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)& !is.null(LIST_DATA$ttest$use)) {
+      
       mm <- round(extendrange(range(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T,finite=T),f = .1),digits = 2)
       p_cutoff <- input$hlinettest
       if(input$selectttestlog =="-log"){
@@ -3740,13 +3720,41 @@ server <- function(input, output, session) {
       if(mm[2]<p_cutoff){
         mm[2] <- p_cutoff
       }
-      updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
-                        max = mm[2],value = mm)
+      updateNumericInput(session,
+                         "numericYRangeHighpval",
+                         value = round(max(mm), 4))
+      updateNumericInput(session,
+                         "numericYRangeLowpval",
+                         value = round(min(mm), 4))
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+        if(input$switchttest!="none"){
+          updateSelectInput(session,"selectttestitem", choices = LIST_DATA$ttest$gene_info$set)
+        }else{
+          updateSelectInput(session,"selectttestitem", choices = "none",
+                            selected="none")
+        }
     }else if (!is.null(reactive_values$Apply_Math)& is.null(LIST_DATA$ttest$use)){
-      updateSliderInput(session, "sliderplotYRangeTT", min = 0,
-                        max = 1,value = c(0,0))
+      updateNumericInput(session,
+                         "numericYRangeHighpval",
+                         value = 0)
+      updateNumericInput(session,
+                         "numericYRangeLowpval",
+                         value = 0)
     }
     }
+                   if (!is.null(reactive_values$Apply_Math)){
+                     reactive_values$Plot_controler <-
+                       GGplotLineDot(
+                         reactive_values$Apply_Math,
+                         input$sliderplotBinRange,
+                         reactive_values$Plot_Options,
+                         reactive_values$Y_Axis_numbers,
+                         reactive_values$Lines_Lables_List,
+                         input$checkboxsmooth, input$switchttest,
+                         input$checkboxlog2,
+                         reactive_values$Y_Axis_Lable
+                       )
+                   }
   })
   
   # y box check box trigger
@@ -4048,52 +4056,6 @@ server <- function(input, output, session) {
     }
   })
   
-  
-  # replot with t.test update ----
-  observeEvent(input$switchttest, ignoreInit = TRUE, {
-    if (!is.null(reactive_values$Apply_Math) &
-        LIST_DATA$STATE[2] != 2){
-      
-      withProgress(message = 'Calculation in progress',
-                   detail = 'This may take a while...',
-                   value = 0,
-                   {
-                     reactive_values$Apply_Math <-
-                       ApplyMath(
-                         LIST_DATA,
-                         input$myMath,
-                         input$selectplotnrom,
-                         as.numeric(input$selectplotBinNorm),
-                         input$switchttest,
-                         input$selectttestlog,
-                         input$switchttesttype,
-                         input$padjust
-                       )
-                   })
-      if (!is.null(reactive_values$Apply_Math)& !is.null(LIST_DATA$ttest$use)) {
-        mm <- round(extendrange(range(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T,finite=T),f = .1),digits = 2)
-        p_cutoff <- input$hlinettest
-        if(input$selectttestlog =="-log"){
-          p_cutoff <-  -log(input$hlinettest)
-        } else if(input$selectttestlog =="-log10"){
-          p_cutoff <-  -log10(input$hlinettest)
-        }
-        if(mm[1]>0){
-          mm[1] <- 0
-        }
-        if(mm[2]<p_cutoff){
-          mm[2] <- p_cutoff
-        }
-        updateSliderInput(session, "sliderplotYRangeTT", min = mm[1],
-                          max = mm[2],value = mm)
-        
-      } else if (!is.null(reactive_values$Apply_Math)& is.null(LIST_DATA$ttest$use)){
-        updateSliderInput(session, "sliderplotYRangeTT", min = 0,
-                          max = 1,value = c(0,0))
-      }
-    }
-  })
-  
   # replot with log2 update ----
   observeEvent(input$checkboxlog2, ignoreInit = TRUE, {
     if (!is.null(reactive_values$Apply_Math) &
@@ -4160,7 +4122,7 @@ server <- function(input, output, session) {
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math) &
           LIST_DATA$STATE[2] == 1) {
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
@@ -4195,7 +4157,7 @@ server <- function(input, output, session) {
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math) &
           LIST_DATA$STATE[2] != 2) {
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
@@ -5482,7 +5444,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+                       MakePlotOptionFrame(LD,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -5602,7 +5564,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+                       MakePlotOptionFrame(LD,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -5718,7 +5680,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+                       MakePlotOptionFrame(LD,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -5835,7 +5797,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+                       MakePlotOptionFrame(LD,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -6136,7 +6098,7 @@ server <- function(input, output, session) {
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
                      reactive_values$Plot_Cluster_Options <-
-                       MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+                       MakePlotOptionFrame(LD,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                      Y_Axis_Cluster_numbers <-
                        MyXSetValues(
                          reactive_values$Apply_Cluster_Math,
@@ -6467,7 +6429,7 @@ server <- function(input, output, session) {
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
         reactive_values$Plot_Cluster_Options <-
-          MakePlotOptionFrame(LD,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+          MakePlotOptionFrame(LD,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
         Y_Axis_Cluster_numbers <-
           MyXSetValues(
             reactive_values$Apply_Cluster_Math,
@@ -7531,7 +7493,7 @@ ui <- dashboardPage(
                 ),
                 box(
                   title = "t.test",
-                  collapsed = F,
+                  collapsed = T,
                   collapsible = T,
                   width = 12,
                   status = "primary",
@@ -7560,16 +7522,25 @@ ui <- dashboardPage(
                          checkboxInput("padjust",
                                        label = "p.adjust?",value = TRUE)
                 ),
-                column(12,
-                         sliderInput(
-                           "sliderplotYRangeTT",
-                           label = "Plot Y height for p.value",
-                           min = 0,
-                           max = 1,
-                           step = 0.01,
-                           value = c(0, 0.06))
-                       ),
-                  column(6,
+                
+                hr(style = "color: #fff; background-color: #337ab7; border-color: #2e6da4;"),
+                
+                  column(
+                    4,
+                    numericInput("numericYRangeLowpval", label = "p.value Y min:", value = 0)
+                  ),
+                  column(
+                    4,
+                    numericInput("numericYRangeHighpval", label = "p.value Y max:", value = 0)
+                  ),
+                column(
+                  4,
+                  actionButton("actionttest","replot")
+                ),
+                  column(4,
+                         colourInput("selectcolorttest", "Select color HEX")
+                  ),
+                  column(4,
                          selectInput(inputId = "selectttestitem",
                                      label = "Select to modify",
                                      choices = c("none"),
@@ -7585,11 +7556,7 @@ ui <- dashboardPage(
                            step = .5)
                         
                   ),
-                column(6,
-                       colourInput("selectcolorttest", "Select color HEX"),
-                       actionButton("actionttest","set options")
-                ),
-                column(6,
+                column(3,
                        numericInput("hlinettest",
                                     "horizontal line p.val 0.05",
                                     value = 0.05,
