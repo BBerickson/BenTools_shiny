@@ -3663,7 +3663,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # y slider t.test is trigger ----
+  # y slider t.test is trigger ---- 
   observeEvent(c(input$sliderplotYRangeTT,
                  input$sliderplotOccupancy), ignoreInit = T, {
     # print("y slider")
