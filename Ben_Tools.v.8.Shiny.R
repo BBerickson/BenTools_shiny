@@ -1726,8 +1726,11 @@ CumulativeDistribution <-
   }
 
 # makes sure t test wont crash on an error
-try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE){
+try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE,
+                       alternative="two.sided", exact=FALSE, paired=FALSE){
   # print("try t.test")
+  exact <- if_else(exact=="TRUE",TRUE,FALSE)
+  paired <- if_else(paired=="TRUE",TRUE,FALSE)
   combn(unique(db$set),2) -> my_comparisons
   my_comparisons2 <- list()
   db_out <- list()
@@ -1738,8 +1741,7 @@ try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE){
   for(i in my_comparisons2){
     if(my_test!="ks.test"){
       db2 <- select(db, gene,bin,i) %>% 
-        rename(score.x=all_of(names(.)[3]), score.y=all_of(names(.)[4])) %>% 
-        replace_na(list(score.x = 0)) %>% replace_na(list(score.y = 0))
+        rename(score.x=all_of(names(.)[3]), score.y=all_of(names(.)[4])) 
     } else {
       db2 <- select(db, gene,bin,i) %>% 
         rename(score.x=all_of(names(.)[3]), score.y=all_of(names(.)[4]))
@@ -1748,9 +1750,12 @@ try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE){
     myTtest <- tibble(bin=NA,p.value=NA)
     
     for(t in unique(db2$bin)){
-      x.score <- filter(db2, bin ==t & !is.na(score.x))
-      y.score <- filter(db2, bin ==t & !is.na(score.y))
-      kk <- suppressMessages(try(get(my_test)(x.score$score.x,y.score$score.y,paired=TRUE)$p.value))
+      x.score <- filter(db2, bin ==t)
+      y.score <- filter(db2, bin ==t)
+      kk <- suppressMessages(try(get(my_test)(x.score$score.x,y.score$score.y,
+                                              alternative = alternative, 
+                                              exact=exact, 
+                                              paired=paired)$p.value))
       if(!is.numeric(kk)){
         kk <-1
       }
@@ -1787,7 +1792,7 @@ ApplyMath <-
            switchttest,
            use_tmath,
            switchttesttype,
-           padjust) {
+           padjust,my_alt, my_exact, my_paired) {
     # print("apply math fun")
     table_file = list_data$table_file
     gene_file = list_data$gene_file
@@ -1869,7 +1874,9 @@ ApplyMath <-
       # LIST_DATA$mytt[[i]] <<- list_data_frame[[i]]
       if(length(unique(list_data_frame[[i]]$set))>1 & switchttest == "by files"){
         print(length(unique(list_data_frame[[i]]$set)))
-        LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(list_data_frame[[i]], i,use_tmath,switchttesttype,padjust))
+        LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(list_data_frame[[i]], i,
+                                                          use_tmath,switchttesttype,padjust,
+                                                          my_alt, noquote(my_exact), noquote(my_paired)))
         my_nn <- bind_rows(LIST_DATA$ttest$use)%>% distinct(set) %>% n_distinct()
         LIST_DATA$ttest$gene_info <<- bind_rows(LIST_DATA$ttest$use) %>%
           distinct(set) %>% 
@@ -1887,7 +1894,8 @@ ApplyMath <-
       for(i in unique(mm$set2)){
         mmm[[i]] <- filter(mm, set2==i)
         if(length(unique(mmm[[i]]$set))>1){
-          LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(mmm[[i]], i,use_tmath,switchttesttype,padjust))
+          LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(mmm[[i]], i,use_tmath,switchttesttype,padjust,
+                                                            my_alt, noquote(my_exact), noquote(my_paired)))
         } else {
           LIST_DATA$ttest$use[[i]] <<- NULL
         }
@@ -2349,7 +2357,8 @@ GGplotLineDot <-
            use_smooth,
            plot_ttest,
            use_log2,
-           use_y_label) {
+           use_y_label,
+           plot_occupancy) {
     # print("ggplot")
     use_col <- plot_options$options_main$mycol
     use_dot <- plot_options$options_main$mydot
@@ -2472,9 +2481,10 @@ GGplotLineDot <-
           legend.text = element_text(size = line_list$mysize[5], face = 'bold')
         ) +
         coord_cartesian(xlim = xBinRange, ylim = plot_options$ylimTT)
+      my_occupancy <- c(6 - plot_occupancy, plot_occupancy + .5)
       gp <- gp + coord_cartesian(xlim = xBinRange, ylim = unlist(yBinRange))
-      suppressMessages(print(gp + gp2 + plot_layout(ncol = 1, heights = c(5, 1.5))))
-      return(suppressMessages(gp+ gp2 + plot_layout(ncol = 1, heights = c(5, 1.5))))
+      suppressMessages(print(gp + gp2 + plot_layout(ncol = 1, heights = my_occupancy)))
+      return(suppressMessages(gp+ gp2 + plot_layout(ncol = 1, heights = my_occupancy)))
     } else{
       gp <- gp + 
         xlab(paste(Sys.Date(), paste(unique(
@@ -2954,7 +2964,10 @@ server <- function(input, output, session) {
                            input$switchttest,
                            input$selectttestlog,
                            input$switchttesttype,
-                           input$padjust
+                           input$padjust,
+                           input$selectttestalt,
+                           input$selectttestexact,
+                           input$selectttestpaired
                          )
                      })
         if (!is.null(reactive_values$Apply_Math)) {
@@ -3194,7 +3207,8 @@ server <- function(input, output, session) {
           reactive_values$Lines_Lables_List,
           input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
+          reactive_values$Y_Axis_Lable,
+          input$sliderplotOccupancy
         )
     }
     reset("filecolor")
@@ -3227,6 +3241,7 @@ server <- function(input, output, session) {
                    shinyjs::enable("normfactor")
                    shinyjs::disable("actionremovegene")
                    shinyjs::hide("BttnTint")
+                   shinyjs::hide("BttnNewColor")
                    shinyjs::enable("kbrewer")
                    shinyjs::enable("textnickname")
                    shinyjs::enable("actionoptions")
@@ -3234,6 +3249,7 @@ server <- function(input, output, session) {
                    shinyjs::disable("normfactor")
                    shinyjs::enable("actionremovegene")
                    shinyjs::show("BttnTint")
+                   shinyjs::show("BttnNewColor")
                    shinyjs::disable("kbrewer")
                    shinyjs::disable("textnickname")
                    shinyjs::disable("actionoptions")
@@ -3363,7 +3379,8 @@ server <- function(input, output, session) {
               reactive_values$Lines_Lables_List,
               input$checkboxsmooth, input$switchttest,
               input$checkboxlog2,
-              reactive_values$Y_Axis_Lable
+              reactive_values$Y_Axis_Lable,
+              input$sliderplotOccupancy
             )
         }
       }
@@ -3390,7 +3407,8 @@ server <- function(input, output, session) {
               reactive_values$Lines_Lables_List,
               input$checkboxsmooth, input$switchttest,
               input$checkboxlog2,
-              reactive_values$Y_Axis_Lable
+              reactive_values$Y_Axis_Lable,
+              input$sliderplotOccupancy
             )
         }
       }
@@ -3427,7 +3445,8 @@ server <- function(input, output, session) {
               reactive_values$Lines_Lables_List,
               input$checkboxsmooth, input$switchttest,
               input$checkboxlog2,
-              reactive_values$Y_Axis_Lable
+              reactive_values$Y_Axis_Lable,
+              input$sliderplotOccupancy
             )
         }
         reactive_values$Picker_controler <-
@@ -3503,7 +3522,10 @@ server <- function(input, output, session) {
                        input$switchttest,
                        input$selectttestlog,
                        input$switchttesttype,
-                       input$padjust
+                       input$padjust,
+                       input$selectttestalt,
+                       input$selectttestexact,
+                       input$selectttestpaired
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
@@ -3606,7 +3628,10 @@ server <- function(input, output, session) {
                                       input$switchttest,
                                       input$selectttestlog,
                                       input$switchttesttype,
-                                      input$padjust
+                                      input$padjust,
+                                      input$selectttestalt,
+                                      input$selectttestexact,
+                                      input$selectttestpaired
                                     )
                                 })
                  }
@@ -3639,10 +3664,13 @@ server <- function(input, output, session) {
   })
   
   # y slider t.test is trigger ----
-  observeEvent(input$sliderplotYRangeTT, ignoreInit = T, {
+  observeEvent(c(input$sliderplotYRangeTT,
+                 input$sliderplotOccupancy), ignoreInit = T, {
     # print("y slider")
     if (!is.null(reactive_values$Apply_Math)& input$switchttest != "none") {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,
+                                                          input$selectttestlog,input$hlinettest,
+                                                          input$padjust,input$switchttesttype)
       if(input$switchttest!="none"){
         updateSelectInput(session,"selectttestitem", choices = LIST_DATA$ttest$gene_info$set)
       }else{
@@ -3660,7 +3688,8 @@ server <- function(input, output, session) {
           reactive_values$Lines_Lables_List,
           input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
+          reactive_values$Y_Axis_Lable,
+          input$sliderplotOccupancy
         )
     }
   })
@@ -3696,7 +3725,8 @@ server <- function(input, output, session) {
             reactive_values$Lines_Lables_List,
             input$checkboxsmooth, input$switchttest,
             input$checkboxlog2,
-            reactive_values$Y_Axis_Lable
+            reactive_values$Y_Axis_Lable,
+            input$sliderplotOccupancy
           )
       }else{
         reactive_values$Lines_Lables_List$mysize[6] <- as.numeric(input$selectttestlinesize)
@@ -3706,7 +3736,11 @@ server <- function(input, output, session) {
   
   # t.test my_math ----
   observeEvent(c(input$selectttestlog,
-                 input$switchttesttype,input$padjust), ignoreInit = T, {
+                 input$switchttesttype,input$padjust,
+                 input$selectttestalt,
+                 input$selectttestexact,
+                 input$selectttestpaired,
+                 input$sliderplotOccupancy), ignoreInit = T, {
     if (!is.null(reactive_values$Apply_Math) &
                        LIST_DATA$STATE[2] != 2 & input$switchttest != "none"){
     # print("t.test select")
@@ -3723,7 +3757,10 @@ server <- function(input, output, session) {
                        input$switchttest,
                        input$selectttestlog,
                        input$switchttesttype,
-                       input$padjust
+                       input$padjust,
+                       input$selectttestalt,
+                       input$selectttestexact,
+                       input$selectttestpaired
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)& !is.null(LIST_DATA$ttest$use)) {
@@ -3765,7 +3802,8 @@ server <- function(input, output, session) {
           reactive_values$Lines_Lables_List,
           input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
+          reactive_values$Y_Axis_Lable,
+          input$sliderplotOccupancy
         )
     }
     updateCheckboxInput(session, "checkboxyrange", value = FALSE)
@@ -3805,7 +3843,8 @@ server <- function(input, output, session) {
             reactive_values$Lines_Lables_List,
             input$checkboxsmooth, input$switchttest,
             input$checkboxlog2,
-            reactive_values$Y_Axis_Lable
+            reactive_values$Y_Axis_Lable,
+            input$sliderplotOccupancy
           )
       }
     }
@@ -4043,7 +4082,8 @@ server <- function(input, output, session) {
           reactive_values$Lines_Lables_List,
           input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
+          reactive_values$Y_Axis_Lable,
+          input$sliderplotOccupancy
         )
     }
   })
@@ -4067,7 +4107,10 @@ server <- function(input, output, session) {
                          input$switchttest,
                          input$selectttestlog,
                          input$switchttesttype,
-                         input$padjust
+                         input$padjust,
+                         input$selectttestalt,
+                         input$selectttestexact,
+                         input$selectttestpaired
                        )
                    })
       if (!is.null(reactive_values$Apply_Math)& !is.null(LIST_DATA$ttest$use)) {
@@ -4133,7 +4176,8 @@ server <- function(input, output, session) {
           reactive_values$Lines_Lables_List,
           input$checkboxsmooth, input$switchttest,
           input$checkboxlog2,
-          reactive_values$Y_Axis_Lable
+          reactive_values$Y_Axis_Lable,
+          input$sliderplotOccupancy
         )
     }
   })
@@ -4170,12 +4214,49 @@ server <- function(input, output, session) {
             reactive_values$Lines_Lables_List,
             input$checkboxsmooth, input$switchttest,
             input$checkboxlog2,
-            reactive_values$Y_Axis_Lable
+            reactive_values$Y_Axis_Lable,
+            input$sliderplotOccupancy
           )
       }
       updateSelectInput(session, "kbrewer", selected = "select")
       reactive_values$Picker_controler <-
         paste("color", c(sapply(LIST_DATA$gene_info[[1]], "[[", 4)), sep = ":")
+    }
+  })
+ 
+  
+  # new gene list color set quick fix
+  observeEvent(input$BttnNewColor, ignoreInit = TRUE,{
+    
+    kListColorSet2 <- brewer.pal(8, "Spectral")
+    if (length(LIST_DATA$gene_info) > 1) {
+      common_name <- names(LIST_DATA$gene_info)[1]
+      lapply(seq_along(LIST_DATA$gene_info[[input$selectgenelistoptions]]), function(j) {
+        color_safe <- j %% length(kListColorSet2)
+        if (color_safe == 0) {
+          color_safe <- 1
+        }
+        LIST_DATA$gene_info[[input$selectgenelistoptions]][[j]][4] <<-
+          kListColorSet2[color_safe]
+      })
+      updateColourInput(session, "colourhex", value =
+                          paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
+      if (!is.null(reactive_values$Apply_Math) &
+          LIST_DATA$STATE[2] != 2) {
+        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,input$sliderplotYRangeTT,input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+        reactive_values$Plot_controler <-
+          GGplotLineDot(
+            reactive_values$Apply_Math,
+            input$sliderplotBinRange,
+            reactive_values$Plot_Options,
+            reactive_values$Y_Axis_numbers,
+            reactive_values$Lines_Lables_List,
+            input$checkboxsmooth, input$switchttest,
+            input$checkboxlog2,
+            reactive_values$Y_Axis_Lable,
+            input$sliderplotOccupancy
+          )
+      }
     }
   })
   
@@ -4205,7 +4286,8 @@ server <- function(input, output, session) {
             reactive_values$Lines_Lables_List,
             input$checkboxsmooth, input$switchttest,
             input$checkboxlog2,
-            reactive_values$Y_Axis_Lable
+            reactive_values$Y_Axis_Lable,
+            input$sliderplotOccupancy
           )
       }
     }
@@ -5477,7 +5559,10 @@ server <- function(input, output, session) {
                                       input$switchttest,
                                       input$selectttestlog,
                                       input$switchttesttype,
-                                      input$padjust
+                                      input$padjust,
+                                      input$selectttestalt,
+                                      input$selectttestexact,
+                                      input$selectttestpaired
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5506,7 +5591,8 @@ server <- function(input, output, session) {
                              input$checkboxsmoothcluster,
                              input$checkboxlog2cluster
                            )
-                         )
+                         ),
+                         input$sliderplotOccupancy
                        )
                    }
                    
@@ -5597,7 +5683,10 @@ server <- function(input, output, session) {
                                       input$switchttest,
                                       input$selectttestlog,
                                       input$switchttesttype,
-                                      input$padjust
+                                      input$padjust,
+                                      input$selectttestalt,
+                                      input$selectttestexact,
+                                      input$selectttestpaired
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5626,7 +5715,8 @@ server <- function(input, output, session) {
                              input$checkboxsmoothcluster,
                              input$checkboxlog2cluster
                            )
-                         )
+                         ),
+                         input$sliderplotOccupancy
                        )
                    }
                    
@@ -5713,7 +5803,10 @@ server <- function(input, output, session) {
                                       input$switchttest,
                                       input$selectttestlog,
                                       input$switchttesttype,
-                                      input$padjust
+                                      input$padjust,
+                                      input$selectttestalt,
+                                      input$selectttestexact,
+                                      input$selectttestpaired
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5742,7 +5835,8 @@ server <- function(input, output, session) {
                              input$checkboxsmoothcluster,
                              input$checkboxlog2cluster
                            )
-                         )
+                         ),
+                         input$sliderplotOccupancy
                        )
                    }
                    
@@ -5830,7 +5924,10 @@ server <- function(input, output, session) {
                                       input$switchttest,
                                       input$selectttestlog,
                                       input$switchttesttype,
-                                      input$padjust
+                                      input$padjust,
+                                      input$selectttestalt,
+                                      input$selectttestexact,
+                                      input$selectttestpaired
                                     )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -5859,7 +5956,8 @@ server <- function(input, output, session) {
                              input$checkboxsmoothcluster,
                              input$checkboxlog2cluster
                            )
-                         )
+                         ),
+                         input$sliderplotOccupancy
                        )
                    }
                    
@@ -6131,7 +6229,10 @@ server <- function(input, output, session) {
                                     input$switchttest,
                                     input$selectttestlog,
                                     input$switchttesttype,
-                                    input$padjust
+                                    input$padjust,
+                                    input$selectttestalt,
+                                    input$selectttestexact,
+                                    input$selectttestpaired
                                   )
                                 })
                    if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -6160,7 +6261,8 @@ server <- function(input, output, session) {
                              input$checkboxsmoothcluster,
                              input$checkboxlog2cluster
                            )
-                         )
+                         ),
+                         input$sliderplotOccupancy
                        )
                    }
                    shinyjs::show('plotcluster')
@@ -6462,7 +6564,10 @@ server <- function(input, output, session) {
                        input$switchttest,
                        input$selectttestlog,
                        input$switchttesttype,
-                       input$padjust
+                       input$padjust,
+                       input$selectttestalt,
+                       input$selectttestexact,
+                       input$selectttestpaired
                      )
                    })
       if (!is.null(reactive_values$Apply_Cluster_Math)) {
@@ -6490,7 +6595,8 @@ server <- function(input, output, session) {
               input$checkboxsmoothcluster,
               input$checkboxlog2cluster
             )
-          )
+          ),
+          input$sliderplotOccupancy
         )
       }
     }
@@ -7075,7 +7181,9 @@ ui <- dashboardPage(
                         c(choices = "select", kBrewerList)
                       )),
                       column(4, style = "padding-top:5%;",
-                             actionButton("BttnTint", "tint gene list", ))
+                             actionButton("BttnTint", "tint gene list")),
+                      column(3, style = "padding-top:5%;",
+                             actionButton("BttnNewColor", "New color set"))
                     )
                   ),
                   box(
@@ -7560,7 +7668,25 @@ ui <- dashboardPage(
                          checkboxInput("padjust",
                                        label = "p.adjust?",value = TRUE)
                 ),
-                column(12,
+                column(4,
+                       selectInput(inputId = "selectttestalt",
+                                   label = "alternative",
+                                   choices = c("two.sided", "less", "greater"),
+                                   selected = "two.sided")
+                ),
+                column(4,
+                       selectInput(inputId = "selectttestpaired",
+                                   label = "Paired",
+                                   choices = c("TRUE", "FALSE"),
+                                   selected = "FALSE")
+                ),
+                column(4,
+                         selectInput(inputId = "selectttestexact",
+                                     label = "exact",
+                                     choices = c("NULL", "TRUE", "FALSE"),
+                                     selected = "FALSE")
+                ),
+                column(6,
                          sliderInput(
                            "sliderplotYRangeTT",
                            label = "Plot Y height for p.value",
@@ -7569,6 +7695,15 @@ ui <- dashboardPage(
                            step = 0.01,
                            value = c(0, 0.06))
                        ),
+                column(6,
+                      sliderInput(
+                        "sliderplotOccupancy",
+                        label = "p.value plot occupancy",
+                        min = 1,
+                        max = 3,
+                        step = 0.5,
+                        value = 1)
+                ),
                   column(6,
                          selectInput(inputId = "selectttestitem",
                                      label = "Select to modify",
