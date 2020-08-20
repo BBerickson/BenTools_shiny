@@ -3525,16 +3525,44 @@ server <- function(input, output, session) {
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
-      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
-      LIST_DATA$STATE[2] <<- 1
+      if(!is.null(LIST_DATA$ttest$use)){
+      mm <- round(extendrange(range(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T,finite=T),f = .1),digits = 2)
+      p_cutoff <- input$hlinettest
+      if(input$selectttestlog =="-log"){
+        p_cutoff <-  -log(input$hlinettest)
+      } else if(input$selectttestlog =="-log10"){
+        p_cutoff <-  -log10(input$hlinettest)
+      }
+      if(mm[1]>0){
+        mm[1] <- 0
+      }
+      if(mm[2]<p_cutoff){
+        mm[2] <- p_cutoff
+      }
+      updateNumericInput(session,
+                         "numericYRangeHighpval",
+                         value = round(max(mm), 4))
+      updateNumericInput(session,
+                         "numericYRangeLowpval",
+                         value = round(min(mm), 4))
+      }
       if(input$switchttest!="none"){
         updateSelectInput(session,"selectttestitem", choices = LIST_DATA$ttest$gene_info$set)
       }else{
         updateSelectInput(session,"selectttestitem", choices = "none",
                           selected="none")
       }
-      
-    } else{
+      reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(round(min(mm), 4),round(max(mm), 4)),
+                                                          input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
+      LIST_DATA$STATE[2] <<- 1
+    } else if (!is.null(reactive_values$Apply_Math)& is.null(LIST_DATA$ttest$use)){
+      updateNumericInput(session,
+                         "numericYRangeHighpval",
+                         value = 0)
+      updateNumericInput(session,
+                         "numericYRangeLowpval",
+                         value = 0)
+    } else {
       LIST_DATA$STATE[2] <<- 2
       text = paste("Nothing selected to plot.\n")
       reactive_values$Plot_controler <- ggplot() +
@@ -3661,7 +3689,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # y slider t.test is trigger ----
+  # occupancy slider t.test is trigger ----
   observeEvent(input$sliderplotOccupancy, ignoreInit = T, {
     # print("y slider")
     if (!is.null(reactive_values$Apply_Math)& input$switchttest != "none") {
@@ -3706,7 +3734,10 @@ server <- function(input, output, session) {
   # t.test select plot options change ----
   observeEvent(input$actionttest, ignoreInit = T, {
     # print("t.test select")
-    if (input$selectttestitem != "none"& !is.null(LIST_DATA$ttest$gene_info)) {
+    if (LIST_DATA$STATE[2] !=2 & 
+        !is.null(LIST_DATA$ttest$use) &
+        input$selectttestitem != "none" & 
+        !is.null(LIST_DATA$ttest$gene_info)) {
       LIST_DATA$ttest$gene_info <<- LIST_DATA$ttest$gene_info %>% 
         mutate(myline=ifelse(set == input$selectttestitem,input$selectlinettest,myline))
       LIST_DATA$ttest$gene_info <<- LIST_DATA$ttest$gene_info %>% 
@@ -3739,8 +3770,8 @@ server <- function(input, output, session) {
                  input$selectttestpaired,
                  input$sliderplotOccupancy,
                  input$switchttest), ignoreInit = T, {
-    if (!is.null(reactive_values$Apply_Math) &
-                       LIST_DATA$STATE[2] != 2 & input$switchttest != "none"){
+    if (LIST_DATA$STATE[2] != 2 & 
+        input$switchttest != "none"){
     # print("t.test select")
     withProgress(message = 'Calculation in progress',
                  detail = 'This may take a while...',
@@ -3761,7 +3792,8 @@ server <- function(input, output, session) {
                        input$selectttestpaired
                      )
                  })
-    if (!is.null(reactive_values$Apply_Math)& !is.null(LIST_DATA$ttest$use)) {
+      mm <- 0
+    if (!is.null(reactive_values$Apply_Math) & !is.null(LIST_DATA$ttest$use)) {
       mm <- round(extendrange(range(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T,finite=T),f = .1),digits = 2)
       p_cutoff <- input$hlinettest
       if(input$selectttestlog =="-log"){
@@ -3798,7 +3830,8 @@ server <- function(input, output, session) {
     }
       reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(round(min(mm), 4),round(max(mm), 4)),
                                                           input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
-    if(reactive_values$Lines_Lables_List$mysize[6] == as.numeric(input$selectttestlinesize)){
+    if(!is.null(LIST_DATA$ttest$use) & 
+       reactive_values$Lines_Lables_List$mysize[6] == as.numeric(input$selectttestlinesize)){
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
@@ -7637,7 +7670,7 @@ ui <- dashboardPage(
                          selectInput(inputId = "switchttesttype",
                                      label = "pick test",
                                      choices = c("t.test","ks.test", "wilcox.test"),
-                                     selected = "ks.test")
+                                     selected = "wilcox.test")
                          ),
                   column(3,
                          selectInput(inputId = "selectttestalt",
