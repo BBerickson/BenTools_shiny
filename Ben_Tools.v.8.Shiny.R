@@ -1767,10 +1767,12 @@ try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE,
     }
     db_out[[str_c(i,collapse = "-")]] <- myTtest%>% 
       mutate(., set = paste(
-        gsub("(.{17})", "\\1\n", str_c(i,collapse = "-")),
-        paste(gsub("(.{17})", "\\1\n", 
+        gsub("(.{20})", "\\1\n", 
+             str_split_fixed(str_c(i,collapse = "-"), "\n",n=2)[,1]),
+        str_split_fixed(str_c(i,collapse = "-"), "\n",n=2)[,2],
+        gsub("(.{20})", "\\1\n", 
                    str_split_fixed(my_set, "\n", n=2)[,1]),
-              str_split_fixed(my_set, "\n", n=2)[,2], sep = "\n"),
+              str_split_fixed(my_set, "\n", n=2)[,2],
         sep = '\n'
       ))
   }
@@ -1834,10 +1836,12 @@ ApplyMath <-
           summarise(value = get(use_math)(score, na.rm = T), y = mean(score)) %>%
           ungroup() %>%
           mutate(.,set = paste(
-            gsub("(.{17})", "\\1\n", i),
-            paste(gsub("(.{17})", "\\1\n", 
+            gsub("(.{20})", "\\1\n", 
+                 str_split_fixed(i, "\n", n=2)[,1]),
+            str_split_fixed(i, "\n", n=2)[,2],
+            gsub("(.{20})", "\\1\n", 
                        str_split_fixed(set, "\n", n=2)[,1]),
-                  str_split_fixed(set, "\n", n=2)[,2], sep = "\n"),
+                  str_split_fixed(set, "\n", n=2)[,2],
             sep = '\n'
           ))
       } else {
@@ -1847,10 +1851,12 @@ ApplyMath <-
           summarise(value = get(use_math)(score, na.rm = T),y = mean(score)) %>%
           ungroup() %>%
           mutate(., set = paste(
-            gsub("(.{17})", "\\1\n", i),
-            paste(gsub("(.{17})", "\\1\n", 
+            gsub("(.{20})", "\\1\n", 
+                 str_split_fixed(i, "\n", n=2)[,1]), 
+            str_split_fixed(i, "\n", n=2)[,2],
+            gsub("(.{20})", "\\1\n", 
                        str_split_fixed(set, "\n", n=2)[,1]),
-                  str_split_fixed(set, "\n", n=2)[,2], sep = "\n"),
+                  str_split_fixed(set, "\n", n=2)[,2],
             sep = '\n'
           ))
       }
@@ -1937,10 +1943,12 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT,pajust
           mydot = if_else(my_dots == 1, 0, my_dots + 13),
           mysizedot = if_else(my_dots == 1, 0.01, 4.5),
           set = paste(
-            gsub("(.{17})", "\\1\n", i),
-            paste(gsub("(.{17})", "\\1\n", 
-                       str_split_fixed(set, "\n", n=2)[,1]),
-                  str_split_fixed(set, "\n", n=2)[,2], sep = "\n"),
+            gsub("(.{20})", "\\1\n", 
+                 str_split_fixed(i, "\n", n=2)[,1]),
+            str_split_fixed(i, "\n", n=2)[,2],
+            gsub("(.{20})", "\\1\n", 
+                 str_split_fixed(set, "\n", n=2)[,1]),
+            str_split_fixed(set, "\n", n=2)[,2],
             sep = '\n'
           ),
           mysub = paste(list_data$gene_file[[i]]$sub)
@@ -3525,6 +3533,7 @@ server <- function(input, output, session) {
                      )
                  })
     if (!is.null(reactive_values$Apply_Math)) {
+      mm <- 0
       if(!is.null(LIST_DATA$ttest$use)){
       mm <- round(extendrange(range(bind_rows(LIST_DATA$ttest$use)$p.value,na.rm = T,finite=T),f = .1),digits = 2)
       p_cutoff <- input$hlinettest
@@ -6651,7 +6660,7 @@ server <- function(input, output, session) {
         ) %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set2),
+          gsub("(.{20})", "\\1\n", set2),
           sep = '\n'
         ))
       if (any(duplicated(df_options$mycol))) {
@@ -6663,7 +6672,7 @@ server <- function(input, output, session) {
                        by = "gene") %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set2),
+          gsub("(.{20})", "\\1\n", set2),
           sep = '\n'
         ))
       use_header <- pull(distinct(df_options, myheader))
@@ -6796,7 +6805,7 @@ server <- function(input, output, session) {
                      ) %>%
                      mutate(set = paste(
                        sub("\n", " ", newname),
-                       gsub("(.{17})", "\\1\n", set2),
+                       gsub("(.{20})", "\\1\n", set2),
                        sep = '\n'
                      ))
                    if (any(duplicated(df_options$mycol))) {
@@ -6809,7 +6818,7 @@ server <- function(input, output, session) {
                                 by = "gene") %>%
                      mutate(set = paste(
                        sub("\n", " ", newname),
-                       gsub("(.{17})", "\\1\n", set2),
+                       gsub("(.{20})", "\\1\n", set2),
                        sep = '\n'
                      ))
                    use_header <-
@@ -6924,7 +6933,7 @@ server <- function(input, output, session) {
         ) %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set2),
+          gsub("(.{20})", "\\1\n", set2),
           sep = '\n'
         ))
       # fix same color problems
@@ -6935,7 +6944,7 @@ server <- function(input, output, session) {
       df <- LIST_DATA$gene_file[[newname]]$full %>%
         mutate(set = paste(
           sub("\n", " ", newname),
-          gsub("(.{17})", "\\1\n", set2),
+          gsub("(.{20})", "\\1\n", set2),
           sep = '\n'
         ))
       use_header <- pull(distinct(df_options, myheader))
