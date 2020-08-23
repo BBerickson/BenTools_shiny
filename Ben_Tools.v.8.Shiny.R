@@ -1726,7 +1726,7 @@ CumulativeDistribution <-
   }
 
 # makes sure t test wont crash on an error
-try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE,
+try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust="fdr",
                        alternative="two.sided", exact=FALSE, paired=FALSE){
   # print("try t.test")
   exact <- if_else(exact=="TRUE",TRUE,FALSE)
@@ -1757,8 +1757,8 @@ try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust=TRUE,
       myTtest <- myTtest %>% add_row(bin = t, p.value=kk)
     }
     myTtest <- myTtest %>% filter(!is.na(bin))
-    if(padjust){
-      myTtest <- myTtest %>% mutate(p.value=p.adjust(p.value))
+    if(padjust != "NO"){
+      myTtest <- myTtest %>% mutate(p.value=p.adjust(p.value,method = padjust))
     }
     if(my_math =="-log"){
       myTtest <- myTtest %>% mutate(p.value=if_else(p.value==0,2.2e-16,p.value)) %>% mutate(p.value=-log(p.value))
@@ -1991,8 +1991,8 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT,pajust
     list_data_frame$options_main_tt <- options_main_tt
     list_data_frame$options_main <- options_main
     list_data_frame$ylimTT <- Y_Axis_TT
-    if(pajust){
-      pp <- "p.adjust"
+    if(pajust != "none"){
+      pp <- paste0("p.adjust:", pajust)
     } else{
       pp <- "p.value"
     }
@@ -7707,8 +7707,11 @@ ui <- dashboardPage(
                                      selected = "-log10")
                          ),
                 column(2,
-                         checkboxInput("padjust",
-                                       label = "p.adjust?",value = TRUE)
+                       selectInput("padjust",
+                                       label = "p.adjust?",
+                                   choices = c("NO", "holm", "hochberg", "hommel", "bonferroni", "BH", "BY",
+                                                 "fdr", "none"),
+                                   selected = "fdr")
                 ),
                 column(
                   2,
