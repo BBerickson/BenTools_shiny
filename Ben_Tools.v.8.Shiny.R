@@ -427,7 +427,7 @@ LoadTableFile <-
         }
         # tests for problems with file
         all_empty_bin <-
-          group_by(tablefile, bin) %>% summarise(mytest = sum(score) == 0) %>% pull(mytest)
+          group_by(tablefile, bin) %>% summarise(mytest = sum(score) == 0,.groups="drop") %>% pull(mytest)
         if (any(all_empty_bin)) {
           showModal(
             modalDialog(
@@ -457,7 +457,7 @@ LoadTableFile <-
       setProgress(3, detail = "Checking form problems")
       # remove genes with no signal
       zero_genes <-
-        group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T)) %>% filter(test != 0)
+        group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T),.groups="drop") %>% filter(test != 0)
       tablefile <- semi_join(tablefile, zero_genes, by = "gene")
       # handling building a list of list varibles existing or first time
       if (file_count > 0) {
@@ -1035,7 +1035,7 @@ SortTop <-
         semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene')
       apply_bins <- group_by(apply_bins, gene) %>%
         filter(bin %in% start_bin:end_bin) %>%
-        summarise(mysums = sum(score, na.rm = TRUE)) %>%
+        summarise(mysums = sum(score, na.rm = TRUE),.groups="drop") %>%
         mutate(myper = as.numeric(strtrim(cume_dist(mysums), 5))) %>%
         arrange(desc(mysums))
       gene_count <- nrow(apply_bins)
@@ -1168,12 +1168,12 @@ CompareRatios <-
           arrange(bin) %>%
           mutate(score = score / nth(score, normbin)) %>%
           summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>%
           ungroup()
       } else {
         df <- group_by(df, gene) %>%
           summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>%
           ungroup()
       }
       # if min/2 find Na's and 0's, and replace
@@ -1204,12 +1204,12 @@ CompareRatios <-
             arrange(bin) %>%
             mutate(score = score / nth(score, normbin)) %>%
             summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                      sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+                      sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>%
             ungroup()
         } else {
           df <- group_by(df, gene) %>%
             summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                      sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>%
+                      sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>%
             ungroup()
         }
         lc <<- lc + 1
@@ -1588,7 +1588,7 @@ FindGroups <- function(list_data,
   list_data$clust <- list()
   list_data$clust$full <- group_by(df, gene) %>%
     filter(bin %in% start_bin:end_bin) %>%
-    summarise(cm = sum(score, na.rm = TRUE))
+    summarise(cm = sum(score, na.rm = TRUE),.groups="drop")
   list_data$clust$use <- distinct(df, gene)
   list_data
 }
@@ -1627,7 +1627,7 @@ CumulativeDistribution <-
           semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>%
           group_by(gene) %>%
           summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T)) %>% ungroup()
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% ungroup()
         # calculate diff and change Inf's and 0's to NA's
         outlist[[paste0(list_name, "-", j)]] <<-
           transmute(df, gene = gene, value = sum1 / sum2) %>%
@@ -1635,7 +1635,7 @@ CumulativeDistribution <-
         # remove NA's, sort, add row numbers and DF layout
         outlist[[paste0(list_name, "-", j)]] <<-
           group_by(outlist[[paste0(list_name, "-", j)]], gene) %>%
-          summarise(test = sum(value)) %>%
+          summarise(test = sum(value),.groups="drop") %>%
           filter(!is.na(test)) %>%
           semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
           arrange((value)) %>%
@@ -1833,8 +1833,7 @@ ApplyMath <-
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
           ungroup() %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T), y = mean(score)) %>%
-          ungroup() %>%
+          summarise(value = get(use_math)(score, na.rm = T), y = mean(score),.groups="drop") %>%
           mutate(.,set = paste(
             gsub("(.{20})", "\\1\n", 
                  str_split_fixed(i, "\n", n=2)[,1]),
@@ -1848,8 +1847,7 @@ ApplyMath <-
         list_long_data_frame[[i]] <-
           (list_data_frame[[i]]) %>%
           group_by(set, bin) %>%
-          summarise(value = get(use_math)(score, na.rm = T),y = mean(score)) %>%
-          ungroup() %>%
+          summarise(value = get(use_math)(score, na.rm = T),y = mean(score),.groups="drop") %>%
           mutate(., set = paste(
             gsub("(.{20})", "\\1\n", 
                  str_split_fixed(i, "\n", n=2)[,1]), 
@@ -2338,7 +2336,7 @@ MyXSetValues <-
     tt <- group_by(apply_math, set) %>%
       filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
       ungroup() %>%
-      summarise(min(value, na.rm = T), max(value, na.rm = T)) %>%
+      summarise(min(value, na.rm = T), max(value, na.rm = T),.groups="drop") %>%
       unlist(., use.names = FALSE)
     tt <-
       c(tt[1] + (tt[1] * (yBinRange[1] / 100)), tt[2] + (tt[2] * ((yBinRange[2] -
