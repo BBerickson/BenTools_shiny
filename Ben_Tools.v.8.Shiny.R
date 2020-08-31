@@ -37,6 +37,7 @@ suppressPackageStartupMessages(my_packages(
     "colourpicker",
     "RColorBrewer",
     "patchwork",
+    "zip",
     "ggpubr"
   )
 ))
@@ -1739,7 +1740,7 @@ try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust="fdr",
   }
   db <- spread(db,set,score) 
   for(i in my_comparisons2){
-    db2 <- select(db, gene,bin,i) %>% 
+    db2 <- select(db, gene,bin,all_of(i)) %>% 
         rename(score.x=all_of(names(.)[3]), score.y=all_of(names(.)[4])) 
     
     myTtest <- tibble(bin=NA,p.value=NA)
@@ -1960,7 +1961,7 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT,pajust
     for (i in seq_along(options_main$mycol)) {
       if (ldf[i]) {
         options_main$mycol[i] <-
-          RgbToHex(my_hex = options_main$mycol[i], tint = log10(i))
+          RgbToHex(my_hex = options_main$mycol[i], tint = log(i,10))
       }
     }
     
@@ -1981,7 +1982,7 @@ MakePlotOptionFrame <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT,pajust
       for (i in seq_along(options_main_tt$mycol)) {
         if (ldf[i]) {
           options_main_tt$mycol[i] <-
-            RgbToHex(my_hex = options_main$mycol[i], tint = log10(i))
+            RgbToHex(my_hex = options_main$mycol[i], tint = log(i,10))
         }
       }
       
@@ -3240,17 +3241,14 @@ server <- function(input, output, session) {
                  if (my_list == names(LIST_DATA$gene_info)[1]) {
                    shinyjs::enable("normfactor")
                    shinyjs::disable("actionremovegene")
-                   shinyjs::hide("BttnTint")
-                   shinyjs::hide("BttnNewColor")
-                   shinyjs::enable("kbrewer")
+                   # shinyjs::hide("BttnNewColor")
+                   updateActionButton(session,"BttnNewColor",label = "Set all lists same color")
                    shinyjs::enable("textnickname")
                    shinyjs::enable("actionoptions")
                  } else {
                    shinyjs::disable("normfactor")
                    shinyjs::enable("actionremovegene")
-                   shinyjs::show("BttnTint")
-                   shinyjs::show("BttnNewColor")
-                   shinyjs::disable("kbrewer")
+                   updateActionButton(session,"BttnNewColor",label = "Set color same as common")
                    shinyjs::disable("textnickname")
                    shinyjs::disable("actionoptions")
                  }
@@ -4210,18 +4208,15 @@ server <- function(input, output, session) {
     if (!is.null(LIST_DATA$gene_info[[1]]) &
         input$kbrewer != "select") {
       kListColorSet <<- brewer.pal(8, input$kbrewer)
-      common_name <- names(LIST_DATA$gene_info)[1]
       # print("kbrewer update")
-      lapply(names(LIST_DATA$gene_info), function(i) {
-        lapply(seq_along(LIST_DATA$gene_info[[i]]), function(j) {
+      lapply(seq_along(LIST_DATA$gene_info[[input$selectgenelistoptions]]), function(j) {
           color_safe <- j %% length(kListColorSet)
           if (color_safe == 0) {
             color_safe <- 1
           }
-          LIST_DATA$gene_info[[i]][[j]][4] <<-
+          LIST_DATA$gene_info[[input$selectgenelistoptions]][[j]][4] <<-
             kListColorSet[color_safe]
         })
-      })
       updateColourInput(session, "colourhex", value =
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math) &
@@ -4242,58 +4237,28 @@ server <- function(input, output, session) {
       }
       updateSelectInput(session, "kbrewer", selected = "select")
       reactive_values$Picker_controler <-
-        paste("color", c(sapply(LIST_DATA$gene_info[[1]], "[[", 4)), sep = ":")
+        paste("color", c(sapply(LIST_DATA$gene_info[[input$selectgenelistoptions]], "[[", 4)), sep = ":")
     }
   })
  
   
   # new gene list color set quick fix
   observeEvent(input$BttnNewColor, ignoreInit = TRUE,{
-    
     kListColorSet2 <- brewer.pal(8, "Spectral")
     if (length(LIST_DATA$gene_info) > 1) {
-      common_name <- names(LIST_DATA$gene_info)[1]
+      if(input$selectgenelistoptions == names(LIST_DATA$gene_info)[1]){
+        lapply(names(LIST_DATA$gene_info)[-1], function(i) {
+          lapply(seq_along(LIST_DATA$gene_info[[i]]), function(j) {
+            LIST_DATA$gene_info[[i]][[j]][4] <<-
+              LIST_DATA$gene_info[[1]][[j]]$mycol
+          })
+        })
+      } else {
       lapply(seq_along(LIST_DATA$gene_info[[input$selectgenelistoptions]]), function(j) {
-        color_safe <- j %% length(kListColorSet2)
-        if (color_safe == 0) {
-          color_safe <- 1
-        }
         LIST_DATA$gene_info[[input$selectgenelistoptions]][[j]][4] <<-
-          kListColorSet2[color_safe]
+          LIST_DATA$gene_info[[1]][[j]]$mycol
       })
-      updateColourInput(session, "colourhex", value =
-                          paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
-      if (!is.null(reactive_values$Apply_Math) &
-          LIST_DATA$STATE[2] != 2) {
-        reactive_values$Plot_Options <- MakePlotOptionFrame(LIST_DATA,c(input$numericYRangeLowpval,input$numericYRangeHighpval),input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
-        reactive_values$Plot_controler <-
-          GGplotLineDot(
-            reactive_values$Apply_Math,
-            input$sliderplotBinRange,
-            reactive_values$Plot_Options,
-            reactive_values$Y_Axis_numbers,
-            reactive_values$Lines_Lables_List,
-            input$checkboxsmooth, input$switchttest,
-            input$checkboxlog2,
-            reactive_values$Y_Axis_Lable,
-            input$sliderplotOccupancy
-          )
-      }
     }
-  })
-  
-  # gene list tint ----
-  observeEvent(input$BttnTint, ignoreInit = TRUE, {
-    # print("tint")
-    if (length(LIST_DATA$gene_info) > 1) {
-      common_name <- names(LIST_DATA$gene_info)[1]
-      lapply(seq_along(LIST_DATA$gene_info[[input$selectgenelistoptions]]), function(j) {
-        nn <-
-          which(names(LIST_DATA$gene_info) == input$selectgenelistoptions)
-        LIST_DATA$gene_info[[input$selectgenelistoptions]][[j]][4] <<-
-          RgbToHex(my_hex = LIST_DATA$gene_info[[1]][[j]]$mycol,
-                   tint = nn * .1)
-      })
       updateColourInput(session, "colourhex", value =
                           paste(LIST_DATA$gene_info[[input$selectgenelistoptions]][[input$selectdataoption]]["mycol"]))
       if (!is.null(reactive_values$Apply_Math) &
@@ -7202,10 +7167,8 @@ ui <- dashboardPage(
                         "color brewer theme",
                         c(choices = "select", kBrewerList)
                       )),
-                      column(4, style = "padding-top:5%;",
-                             actionButton("BttnTint", "tint gene list")),
                       column(3, style = "padding-top:5%;",
-                             actionButton("BttnNewColor", "New color set"))
+                             actionButton("BttnNewColor", "Set color same as common"))
                     )
                   ),
                   box(
