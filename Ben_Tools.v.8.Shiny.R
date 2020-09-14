@@ -106,7 +106,7 @@ kBrewerList <-
 kLinesandlables <- c(
   "543 bins 20,20,40",
   "5' 1k 1k 80bins",
-  "543 bins 10,10,20",
+  "3' 1k 9k 100bins",
   "5' .25k 10k 205bins",
   "5'",
   "4",
@@ -1425,9 +1425,9 @@ CompareRatios <-
     } else {
       mytint <- 0
     }
-    list_data$gene_file$boxRatio <- NULL
+    list_data$boxRatio <- NULL
     for (nn in nick_name) {
-      list_data$gene_file$boxRatio <- bind_rows(list_data$gene_file$boxRatio,list_data$gene_file[[nn]]$full)
+      list_data$boxRatio <- bind_rows(list_data$boxRatio,list_data$gene_file[[nn]]$full)
       list_data$gene_info[[nn]] <-
         lapply(setNames(
           names(list_data$gene_info[[1]]),
@@ -2054,6 +2054,7 @@ LinesLablesListset <- function(body1bin = 20,
                                totbins = 80,
                                everybin = 5) {
   # print("lines and lables fun")
+  # I creat this in steps bin 1 to next land mark (TSS TES) then go from there to next land mark until end of bins
   everybp <- everybin * binbp
   if (everybp > 0) {
     my_5prim <- NULL
@@ -2072,7 +2073,7 @@ LinesLablesListset <- function(body1bin = 20,
       }
       my_5prim <-
         tibble(lloc = TSSloc, lname = as.character(TSSname))
-      # tss to next
+      # keep distance between TSS and numbers
       nextStart <- tssbin + everybin
       if (body1bin > 0 & tesbin > 0 & body2bin > 0) {
         nextEnd <- body1bin
@@ -2114,6 +2115,9 @@ LinesLablesListset <- function(body1bin = 20,
       }
       if (nextStart <= tesbin) {
         TESname <-  abs(seq((nextStart - tesbin) * binbp, 0, by = everybp))
+        if(nextStart == 1){
+          TESname <- TESname + binbp
+        }
         TESloc <-
           seq(nextStart,
               by = everybin,
@@ -2278,13 +2282,13 @@ LinesLablesListPlot <-
 
 # lines and labels preset helper
 LinesLablesPreSet <- function(mytype) {
-  # 5|4, 4|3, tss, pA, bp/bin, every bin
+  # 5|4, 4|3, tss, pA, bp/bin, max bins, every bin
   if (mytype == kLinesandlables[1]) {
     tt <- c(20, 40, 15, 45, 100, LIST_DATA$x_plot_range[2], 10)
-  } else if (mytype == kLinesandlables[3]) {
-    tt <- c(10, 20, 5, 25, 100, LIST_DATA$x_plot_range[2], 5)
   } else if (mytype == kLinesandlables[2]) {
     tt <- c(0, 0, 40, 0, 25, LIST_DATA$x_plot_range[2], 20)
+  } else if (mytype == kLinesandlables[3]) {
+    tt <- c(0, 0, 0, 10, 100, LIST_DATA$x_plot_range[2], 10)
   } else if (mytype == kLinesandlables[4]) {
     tt <- c(0, 0, 5, 0, 50, LIST_DATA$x_plot_range[2], 10)
   } else if (mytype == kLinesandlables[5]) {
@@ -5219,8 +5223,8 @@ server <- function(input, output, session) {
                    color = "yellow")
         })
       }
-      if(!is.null(LIST_DATA$gene_file$boxRatio)){
-        my_range <- range(LIST_DATA$gene_file$boxRatio$Ratio,na.rm = T) 
+      if(!is.null(LIST_DATA$boxRatio)){
+        my_range <- range(LIST_DATA$boxRatio$Ratio,na.rm = T) 
         updateNumericInput(session, "textboxmaxratio",
                            value = my_range[2])
         updateNumericInput(session, "textboxminratio",
@@ -5436,19 +5440,19 @@ server <- function(input, output, session) {
   # update Ratio boxplot ----
   observeEvent(c(input$textboxmaxratio, input$textboxminratio,
                  input$checkboxoutlierratio),ignoreInit = TRUE, ignoreNULL = TRUE,{
-                   if(!is.null(LIST_DATA$gene_file$boxRatio)){
+                   if(!is.null(LIST_DATA$boxRatio)){
                      my_range <- c(ceiling(input$textboxmaxratio), floor(input$textboxminratio)) 
                      if(input$checkboxoutlierratio){
-                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
+                       gb <- ggboxplot(LIST_DATA$boxRatio, x= "set", y = "Ratio", 
                                        color="set",short.panel.labs = FALSE, notch = T,
                                        outlier.shape = NA)
                      } else{
-                       gb <- ggboxplot(LIST_DATA$gene_file$boxRatio, x= "set", y = "Ratio", 
+                       gb <- ggboxplot(LIST_DATA$boxRatio, x= "set", y = "Ratio", 
                                        color="set",short.panel.labs = FALSE, notch = T)
                      }
-                     if(n_distinct(LIST_DATA$gene_file$boxRatio$set)>1){
+                     if(n_distinct(LIST_DATA$boxRatio$set)>1){
                        # add remove outlier and set range
-                       combn(unique(LIST_DATA$gene_file$boxRatio$set),2) -> tt
+                       combn(unique(LIST_DATA$boxRatio$set),2) -> tt
                        my_comparisons2 <- list()
                        for(i in 1:ncol(tt)){
                          my_comparisons2[[i]] <- (c(tt[1,i],tt[2,i]))
