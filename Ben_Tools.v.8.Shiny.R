@@ -2052,7 +2052,9 @@ LinesLablesListset <- function(body1bin = 20,
                                tesbin = 45,
                                binbp = 100,
                                totbins = 80,
-                               everybin = 5) {
+                               everybin = 5,
+                               tssname = "TSS",
+                               tesname = "pA") {
   # print("lines and lables fun")
   # I creat this in steps bin 1 to next land mark (TSS TES) then go from there to next land mark until end of bins
   everybp <- everybin * binbp
@@ -2066,10 +2068,13 @@ LinesLablesListset <- function(body1bin = 20,
       # make sure TSS is included
       if (any(TSSname == 0)) {
         TSSloc[TSSname == 0] <- tssbin + .5
-        TSSname[TSSname == 0] <- "TSS"
+        TSSname[TSSname == 0] <- tssname
+      } else if(any(TSSloc == tssbin)){
+        TSSname[TSSloc == tssbin] <- tssname
+        TSSloc[TSSloc == tssbin] <- tssbin + .5
       } else {
         TSSloc <- sort(c(TSSloc, tssbin + .5))
-        TSSname <- append(TSSname, "TSS")
+        TSSname <- append(TSSname, tssname)
       }
       my_5prim <-
         tibble(lloc = TSSloc, lname = as.character(TSSname))
@@ -2125,15 +2130,18 @@ LinesLablesListset <- function(body1bin = 20,
         # make sure TES is included
         if (any(TESname == 0)) {
           TESloc[TESname == 0] <- tesbin + .5
-          TESname[TESname == 0] <- "pA"
-        } else {
+          TESname[TESname == 0] <- tesname
+        } else if(any(TESloc == tesbin)){
+          TESname[TESloc == tesbin] <- tesname
+          TESloc[TESloc == tesbin] <- tesbin + .5
+        }else {
           TESloc <- sort(c(TESloc, tesbin + .5))
-          TESname <- append(TESname, "pA")
+          TESname <- append(TESname, tesname)
         }
         my_3prim <-
           tibble(lloc = TESloc, lname = as.character(TESname))
       } else {
-        my_3prim <- tibble(lloc = tesbin + .5, lname = "pA")
+        my_3prim <- tibble(lloc = tesbin + .5, lname = tesname)
       }
       # TES to end
       nextStart <- tesbin + everybin
@@ -3978,7 +3986,9 @@ server <- function(input, output, session) {
       input$numericbody1,
       input$numericbody2,
       input$numerictss,
+      input$numerictssname,
       input$numerictes,
+      input$numerictesname,
       input$numericbinsize,
       input$numericlabelspaceing
     ),
@@ -4005,15 +4015,15 @@ server <- function(input, output, session) {
           updateNumericInput(session, "numericlabelspaceing", value = myset[6])
         }
       }
-      
-      
       Lines_Lables_List <- LinesLablesListset(myset[1],
                                               myset[2],
                                               myset[3],
                                               myset[4],
                                               myset[5],
                                               LIST_DATA$x_plot_range[2],
-                                              myset[6])
+                                              myset[6],
+                                              input$numerictssname,
+                                              input$numerictesname)
       if (input$selectlineslables != "" & LIST_DATA$STATE[2] != 0) {
         updateSelectInput(session, "selectlineslables", selected = "")
         my_pos <-
@@ -4091,6 +4101,15 @@ server <- function(input, output, session) {
       my_label <- "none"
       my_pos <- LIST_DATA$x_plot_range[2] * 2
     }
+    
+    # if tss or tes location make sure there is text
+    if(nchar(trimws(input$numerictssname)) == 0 & input$numerictss > 0){
+      updateTextInput(session, "numerictssname", value = "TSS")
+    }
+    if(nchar(trimws(input$numerictesname)) == 0 & input$numerictes > 0){
+      updateTextInput(session, "numerictesname", value = "pA")
+    }
+    
     reactive_values$Lines_Lables_List <-
       LinesLablesListPlot(
         input$numericbody1,
@@ -7308,7 +7327,8 @@ ui <- dashboardPage(
                     )
                   )
                 )
-              )),
+              )
+              ),
               div(id = "showmainplot",  fluidRow(
                 box(
                   title = "Lines and Labels",
@@ -7317,166 +7337,18 @@ ui <- dashboardPage(
                   solidHeader = T,
                   collapsible = TRUE,
                   collapsed = TRUE,
-                  column(
-                    12,
-                    div(
-                      style = "padding-left: -5px; display:inline-block;",
-                      dropdownButton(
-                        tags$h3("Set TSS Options"),
-                        
-                        selectInput(
-                          inputId = 'selecttsscolor',
-                          label = 'TSS line and lable color',
-                          choices = c("red", "green", "blue", "brown", "black", "white"),
-                          selected = "green"
-                        ),
-                        selectInput(
-                          inputId = 'selecttssline',
-                          label = 'TSS line type',
-                          choices = c("dotted", "solid"),
-                          selected = "dotted"
-                        ),
-                        icon = icon("bars"),
-                        status = "success",
-                        tooltip = tooltipOptions(title = "TSS Options")
-                      )
-                    ),
-                    div(
-                      style = "padding-left: 20px; display:inline-block;",
-                      dropdownButton(
-                        tags$h3("Set 5|4 Options"),
-                        
-                        selectInput(
-                          inputId = 'selectbody1color',
-                          label = '5|4 line and lable color',
-                          choices = c("red", "green", "blue", "brown", "black", "white"),
-                          selected = "black"
-                        ),
-                        selectInput(
-                          inputId = 'selectbody1line',
-                          label = '5|4 line type',
-                          choices = c("dotted", "solid"),
-                          selected = "solid"
-                        ),
-                        icon = icon("bars"),
-                        tooltip = tooltipOptions(title = "5|4 Options")
-                      )
-                    ),
-                    div(
-                      style = "padding-left: 20px; display:inline-block;",
-                      dropdownButton(
-                        tags$h3("Set 4|3 Options"),
-                        
-                        selectInput(
-                          inputId = 'selectbody2color',
-                          label = '4|3 line and lable color',
-                          choices = c("red", "green", "blue", "brown", "black", "white"),
-                          selected = "black"
-                        ),
-                        selectInput(
-                          inputId = 'selectbody2line',
-                          label = '4|3 line type',
-                          choices = c("dotted", "solid"),
-                          selected = "solid"
-                        ),
-                        icon = icon("bars"),
-                        tooltip = tooltipOptions(title = "4|3 Options")
-                      )
-                    ),
-                    div(
-                      style = "padding-left: 25px; display:inline-block;",
-                      dropdownButton(
-                        tags$h3("Set TES Options"),
-                        
-                        selectInput(
-                          inputId = 'selecttescolor',
-                          label = 'TES line and lable color',
-                          choices = c("red", "green", "blue", "brown", "black", "white"),
-                          selected = "red"
-                        ),
-                        selectInput(
-                          inputId = 'selecttesline',
-                          label = 'TES line type',
-                          choices = c("dotted", "solid"),
-                          selected = "dotted"
-                        ),
-                        icon = icon("bars"),
-                        status = "danger",
-                        tooltip = tooltipOptions(title = "TES Options")
-                      )
-                    ),
-                    div(
-                      style = "padding-left: 25px; display:inline-block;",
-                      dropdownButton(
-                        tags$h3("Set font Options"),
-                        
-                        numericInput(
-                          inputId = 'selectvlinesize',
-                          "Set vertcal line size",
-                          value = 2,
-                          min = .5,
-                          max = 10,
-                          step = .5
-                        ),
-                        numericInput(
-                          inputId = 'selectfontsizex',
-                          "Set X axis font size",
-                          value = 13,
-                          min = 1,
-                          max = 30,
-                          step = 1
-                        ),
-                        numericInput(
-                          inputId = 'selectfontsizey',
-                          "Set Y axis font size",
-                          value = 13,
-                          min = 1,
-                          max = 30,
-                          step = 1
-                        ),
-                        icon = icon("bars"),
-                        status = "warning",
-                        tooltip = tooltipOptions(title = "Font Options")
-                      )
-                    ),
-                    div(
-                      style = "padding-left: 25px; display:inline-block;",
-                      dropdownButton(
-                        tags$h3("Set line Options"),
-                        
-                        numericInput(
-                          inputId = 'selectlinesize',
-                          "Set plot line size",
-                          value = 2.5,
-                          min = .5,
-                          max = 10,
-                          step = .5
-                        ),
-                        numericInput(
-                          inputId = 'selectlegendsize',
-                          "Set plot line size",
-                          value = 10,
-                          min = 1,
-                          max = 20,
-                          step = 1
-                        ),
-                        icon = icon("bars"),
-                        status = "warning",
-                        tooltip = tooltipOptions(title = "Line Options")
-                      )
-                    ),
-                    div(
-                      style = "padding-left: 25px; display:inline-block;",
-                      selectInput(
-                        selectize = T,
-                        "selectlineslables",
-                        width = "130px",
-                        label = "quick set lines and labels",
-                        choices = c("Choose one" = "",
-                                    kLinesandlables)
-                      )
-                    )
-                  ), 
+                         div(
+                           style = "padding-left: 25px; display:inline-block;",
+                           selectInput(
+                             selectize = T,
+                             "selectlineslables",
+                             width = "200px",
+                             label = "quick set lines and labels",
+                             choices = c("Choose one" = "",
+                                         kLinesandlables)
+                           )
+                         ),
+                  column(12,
                   div(
                     style = "padding:2px; display:inline-block;",
                     numericInput(
@@ -7486,6 +7358,10 @@ ui <- dashboardPage(
                       min = 0,
                       max = 100
                     )
+                  ),
+                  div(
+                    style = "padding:2px; display:inline-block;",
+                    textInput("numerictssname", value = "TSS", label = "lable",width = "50px"),
                   ),
                   div(
                     style = "padding:2px; display:inline-block;",
@@ -7519,6 +7395,10 @@ ui <- dashboardPage(
                   ),
                   div(
                     style = "padding:2px; display:inline-block;",
+                    textInput("numerictesname", value = "pA", label = "lable",width = "50px"),
+                  ),
+                  div(
+                    style = "padding:2px; display:inline-block;",
                     numericInput(
                       "numericbinsize",
                       "bp/bin",
@@ -7529,7 +7409,7 @@ ui <- dashboardPage(
                     )
                   ),
                   div(
-                    style = "padding:2px; display:inline-block;",
+                    style = "padding:2px 8px 2px 2px; display:inline-block;",
                     numericInput(
                       "numericlabelspaceing",
                       "every bin",
@@ -7538,14 +7418,162 @@ ui <- dashboardPage(
                       max = 100
                     )
                   ),
+                  actionButton("actionlineslabels", "UPDATE PLOT")
+                  ),
                   helpText("For 543 style 0 > TSS < 5|4 < 4|3 < pA < max bin"),
                   div(
                     textInput("landlnames", "", label = "Yaxis lables"),
                     textInput("landlposition", "", label = "Yaxis lable position (numbers only)")
                   ),
-                  div(
-                    style = "padding-left:33%;",
-                    actionButton("actionlineslabels", "UPDATE PLOT")
+                  helpText("select buttons for more options"),
+                  column(
+                    12,
+                    div(
+                      style = "padding-left: -5px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set TSS Options"),
+                        
+                        selectInput(
+                          inputId = 'selecttsscolor',
+                          label = 'TSS line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "green"
+                        ),
+                        selectInput(
+                          inputId = 'selecttssline',
+                          label = 'TSS line type',
+                          choices = c("dotted", "solid"),
+                          selected = "dotted"
+                        ),
+                        icon = icon("sliders"),
+                        status = "success",
+                        tooltip = tooltipOptions(title = "TSS Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 20px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set 5|4 Options"),
+                        
+                        selectInput(
+                          inputId = 'selectbody1color',
+                          label = '5|4 line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "black"
+                        ),
+                        selectInput(
+                          inputId = 'selectbody1line',
+                          label = '5|4 line type',
+                          choices = c("dotted", "solid"),
+                          selected = "solid"
+                        ),
+                        icon = icon("sliders"),
+                        tooltip = tooltipOptions(title = "5|4 Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 20px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set 4|3 Options"),
+                        
+                        selectInput(
+                          inputId = 'selectbody2color',
+                          label = '4|3 line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "black"
+                        ),
+                        selectInput(
+                          inputId = 'selectbody2line',
+                          label = '4|3 line type',
+                          choices = c("dotted", "solid"),
+                          selected = "solid"
+                        ),
+                        icon = icon("sliders"),
+                        tooltip = tooltipOptions(title = "4|3 Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 25px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set TES Options"),
+                        
+                        selectInput(
+                          inputId = 'selecttescolor',
+                          label = 'TES line and lable color',
+                          choices = c("red", "green", "blue", "brown", "black", "white"),
+                          selected = "red"
+                        ),
+                        selectInput(
+                          inputId = 'selecttesline',
+                          label = 'TES line type',
+                          choices = c("dotted", "solid"),
+                          selected = "dotted"
+                        ),
+                        icon = icon("sliders"),
+                        status = "danger",
+                        tooltip = tooltipOptions(title = "TES Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 25px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set font Options"),
+                        
+                        numericInput(
+                          inputId = 'selectvlinesize',
+                          "Set vertcal line size",
+                          value = 2,
+                          min = .5,
+                          max = 10,
+                          step = .5
+                        ),
+                        numericInput(
+                          inputId = 'selectfontsizex',
+                          "Set X axis font size",
+                          value = 13,
+                          min = 1,
+                          max = 30,
+                          step = 1
+                        ),
+                        numericInput(
+                          inputId = 'selectfontsizey',
+                          "Set Y axis font size",
+                          value = 13,
+                          min = 1,
+                          max = 30,
+                          step = 1
+                        ),
+                        icon = icon("sliders"),
+                        status = "warning",
+                        tooltip = tooltipOptions(title = "Font Options")
+                      )
+                    ),
+                    div(
+                      style = "padding-left: 25px; display:inline-block;",
+                      dropdownButton(
+                        tags$h3("Set line Options"),
+                        
+                        numericInput(
+                          inputId = 'selectlinesize',
+                          "Set plot line size",
+                          value = 2.5,
+                          min = .5,
+                          max = 10,
+                          step = .5
+                        ),
+                        numericInput(
+                          inputId = 'selectlegendsize',
+                          "Set plot line size",
+                          value = 10,
+                          min = 1,
+                          max = 20,
+                          step = 1
+                        ),
+                        icon = icon("sliders"),
+                        status = "warning",
+                        tooltip = tooltipOptions(title = "Line Options")
+                      )
+                    )
                   )
                 ),
                 box(
