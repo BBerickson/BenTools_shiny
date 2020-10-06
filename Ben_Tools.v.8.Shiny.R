@@ -390,7 +390,7 @@ LoadTableFile <-
             ) %>%
               gather(., bin, score, 2:(num_bins))
           ) %>%
-            select(gene, bin, score) %>%
+            dplyr::select(gene, bin, score) %>%
             mutate(set = legend_nickname,
                    bin = as.numeric(bin),
                    score = as.numeric(score)) %>%
@@ -422,7 +422,7 @@ LoadTableFile <-
             suppressMessages(read_tsv(file_path[x],
                                       comment = "#",
                                       col_names = col_names)) %>%
-            select(gene, bin, score) %>%
+            dplyr::select(gene, bin, score) %>%
             mutate(set = legend_nickname) %>% na_if(Inf) %>%
             replace_na(list(score = 0)) %>% distinct(gene,bin,.keep_all = T)
         }
@@ -458,7 +458,7 @@ LoadTableFile <-
       setProgress(3, detail = "Checking form problems")
       # remove genes with no signal
       zero_genes <-
-        group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T),.groups="drop") %>% filter(test != 0)
+        group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T),.groups="drop") %>% dplyr::filter(test != 0)
       tablefile <- semi_join(tablefile, zero_genes, by = "gene")
       # handling building a list of list varibles existing or first time
       if (file_count > 0) {
@@ -533,14 +533,14 @@ LoadTableFile <-
       sapply(seq_along(list_data$gene_file)[-1], function(g) {
         oldname <- grep("CDF ", names(list_data$gene_info)[g])
         if (!is_empty(oldname)) {
-          dt <- select(list_data$gene_file[[g]]$full, -bin, -set) %>%
-            spread(., set2, value) %>% select(., gene)
+          dt <- dplyr::select(list_data$gene_file[[g]]$full, -bin, -set) %>%
+            spread(., set2, value) %>% dplyr::select(., gene)
           enesg <- inner_join(dt,
                               list_data$gene_file[[1]]$use,
                               by = "gene")
         } else {
           enesg <-
-            inner_join(select(list_data$gene_file[[g]]$full, gene),
+            inner_join(dplyr::select(list_data$gene_file[[g]]$full, gene),
                        list_data$gene_file[[1]]$use,
                        by = "gene")
         }
@@ -821,7 +821,7 @@ MakeNormFile <-
           )
         )
       }
-      list_data$gene_file[[g]]$use <<- select(enesg, gene)
+      list_data$gene_file[[g]]$use <<- dplyr::select(enesg, gene)
       my_name_g <-
         sub(
           "([0-9]+)",
@@ -881,7 +881,7 @@ RemoveFile <- function(list_data, file_name, remove_all) {
                    list_data$gene_file[[1]]$use,
                    by = "gene")
       list_data$gene_file[[g]]$use <<-
-        select(list_data$gene_file[[g]]$full, gene)
+        dplyr::select(list_data$gene_file[[g]]$full, gene)
       my_name_g <-
         sub(
           "([0-9]+)",
@@ -939,7 +939,7 @@ IntersectGeneLists <-
       # recored for info
       nick_name <- c(nick_name, nick_name1)
       list_data$gene_file[[nick_name1]]$full <- Total
-      list_data$gene_file[[nick_name1]]$use <- select(Total, gene)
+      list_data$gene_file[[nick_name1]]$use <- dplyr::select(Total, gene)
       list_data$gene_file[[nick_name1]]$info <-
         paste("Gene_List_Total",
               "from",
@@ -949,7 +949,7 @@ IntersectGeneLists <-
         paste("Gene_List_Total")
     }
     setProgress(3, detail = paste("building intersect list"))
-    intersect <- filter(outlist, duplicated(gene))
+    intersect <- dplyr::filter(outlist, duplicated(gene))
     if (n_distinct(intersect$gene) > 0) {
       nick_name1 <-
         paste("Gene_List_intersect\nn =", n_distinct(intersect$gene))
@@ -957,7 +957,7 @@ IntersectGeneLists <-
       nick_name <- c(nick_name, nick_name1)
       list_data$gene_file[[nick_name1]]$full <- intersect
       list_data$gene_file[[nick_name1]]$use <-
-        select(intersect, gene)
+        dplyr::select(intersect, gene)
       list_data$gene_file[[nick_name1]]$info <-
         paste("Gene_List_intersect",
               "from",
@@ -974,7 +974,7 @@ IntersectGeneLists <-
         nick_name <- c(nick_name, nick_name1)
         list_data$gene_file[[nick_name1]]$full <- exclusive
         list_data$gene_file[[nick_name1]]$use <-
-          select(exclusive, gene)
+          dplyr::select(exclusive, gene)
         list_data$gene_file[[nick_name1]]$info <-
           paste("Gene_List_exclusive",
                 "from",
@@ -1035,7 +1035,7 @@ SortTop <-
       apply_bins <-
         semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene')
       apply_bins <- group_by(apply_bins, gene) %>%
-        filter(bin %in% start_bin:end_bin) %>%
+        dplyr::filter(bin %in% start_bin:end_bin) %>%
         summarise(mysums = sum(score, na.rm = TRUE),.groups="drop") %>%
         mutate(myper = as.numeric(strtrim(cume_dist(mysums), 5))) %>%
         arrange(desc(mysums))
@@ -1061,7 +1061,7 @@ SortTop <-
       }
       nickname <- list_data$gene_info[[1]][[j]]$set
       outlist2 <- mutate(apply_bins,!!nickname := myper) %>%
-        select(gene,!!nickname) %>%
+        dplyr::select(gene,!!nickname) %>%
         slice(num2[1]:num2[2])
       if (lc > 0) {
         outlist <<- inner_join(outlist, outlist2, by = 'gene')
@@ -1081,7 +1081,7 @@ SortTop <-
                    paste0("Sort n = ", n_distinct(outlist$gene))), 33)
     topbottom2 <- paste(str_remove(topbottom,"%"), paste0(num, "%"))
     list_data$gene_file[[nick_name]]$full <- outlist
-    list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
+    list_data$gene_file[[nick_name]]$use <- dplyr::select(outlist, gene)
     list_data$gene_file[[nick_name]]$info <-
       paste(
         "Sort",
@@ -1190,7 +1190,7 @@ CompareRatios <-
       }
       outlist[[1]] <-
         transmute(df, gene = gene, Ratio = sum1 / sum2) %>%
-        na_if(Inf) %>% select(gene, Ratio)
+        na_if(Inf) %>% dplyr::select(gene, Ratio)
     } else {
       lc <- 0
       lapply(c(ratio1file, ratio2file), function(j) {
@@ -1239,12 +1239,12 @@ CompareRatios <-
             outlist[[1]] <<-
               inner_join(outlist[[1]], outlist[[2]], by = 'gene') %>%
               transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
-              na_if(Inf)  %>% select(gene, Ratio)
+              na_if(Inf)  %>% dplyr::select(gene, Ratio)
           } else {
             outlist[[1]] <<-
               inner_join(outlist[[1]], outlist[[2]], by = 'gene') %>%
               transmute(gene = gene, Ratio = sum1.x / sum1.y) %>%
-              na_if(Inf)  %>% select(gene, Ratio)
+              na_if(Inf)  %>% dplyr::select(gene, Ratio)
           }
         }
       })
@@ -1259,9 +1259,9 @@ CompareRatios <-
     nick_name <- NULL
     setProgress(2, detail = paste("building list", ratio1file))
     if(num != 0){
-      upratio <- filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
+      upratio <- dplyr::filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
     } else {
-      upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
+      upratio <- dplyr::filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
     }
     
     if (n_distinct(upratio$gene) > 0) {
@@ -1269,7 +1269,7 @@ CompareRatios <-
         paste("Ratio_Up_file1\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name1)
       list_data$gene_file[[nick_name1]]$full <- upratio %>% mutate(set=nick_name1)
-      list_data$gene_file[[nick_name1]]$use <- select(upratio, gene)
+      list_data$gene_file[[nick_name1]]$use <- dplyr::select(upratio, gene)
       list_data$gene_file[[nick_name1]]$info <-
         paste(
           "Ratio_Up_file1",
@@ -1313,16 +1313,16 @@ CompareRatios <-
     }
     setProgress(3, detail = paste("building list", ratio2file))
     if(num != 0){
-      upratio <- filter(outlist[[1]], Ratio > num & Ratio != 0)
+      upratio <- dplyr::filter(outlist[[1]], Ratio > num & Ratio != 0)
     }  else {
-      upratio <- filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
+      upratio <- dplyr::filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
     } 
     if (n_distinct(upratio$gene) > 0) {
       nick_name2 <-
         paste("Ratio_Down_file1\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name2)
       list_data$gene_file[[nick_name2]]$full <- upratio %>% mutate(set=nick_name2)
-      list_data$gene_file[[nick_name2]]$use <- select(upratio, gene)
+      list_data$gene_file[[nick_name2]]$use <- dplyr::select(upratio, gene)
       list_data$gene_file[[nick_name2]]$info <-
         paste(
           "Ratio_Up_file1",
@@ -1367,7 +1367,7 @@ CompareRatios <-
     setProgress(4, detail = paste("building list: no change"))
     if(num != 0){
       upratio <-
-        filter(outlist[[1]], Ratio <= num &
+        dplyr::filter(outlist[[1]], Ratio <= num &
                  Ratio >= 1 / num | Ratio == 0)
     } else {
       upratio <- outlist[[1]]
@@ -1378,7 +1378,7 @@ CompareRatios <-
         paste("Ratio_No_Diff\nn =", n_distinct(upratio$gene))
       nick_name <- c(nick_name, nick_name3)
       list_data$gene_file[[nick_name3]]$full <- upratio %>% mutate(set=nick_name3)
-      list_data$gene_file[[nick_name3]]$use <- select(upratio, gene)
+      list_data$gene_file[[nick_name3]]$use <- dplyr::select(upratio, gene)
       list_data$gene_file[[nick_name3]]$info <-
         paste(
           "Ratio_Up_file1",
@@ -1490,11 +1490,11 @@ ClusterNumList <- function(list_data,
     list_name <- 1
   }
   for (nn in 1:num) {
-    outlist <- filter(gene_list, cm == nn)
+    outlist <- dplyr::filter(gene_list, cm == nn)
     nick_name <-
       paste(paste0(myname, nn, "\nn ="), n_distinct(outlist$gene))
     list_data$gene_file[[nick_name]]$full <- outlist
-    list_data$gene_file[[nick_name]]$use <- select(outlist, gene)
+    list_data$gene_file[[nick_name]]$use <- dplyr::select(outlist, gene)
     list_data$gene_file[[nick_name]]$info <-
       paste(
         nick_name,
@@ -1588,7 +1588,7 @@ FindGroups <- function(list_data,
   setProgress(2, detail = "finding groups")
   list_data$clust <- list()
   list_data$clust$full <- group_by(df, gene) %>%
-    filter(bin %in% start_bin:end_bin) %>%
+    dplyr::filter(bin %in% start_bin:end_bin) %>%
     summarise(cm = sum(score, na.rm = TRUE),.groups="drop")
   list_data$clust$use <- distinct(df, gene)
   list_data
@@ -1637,7 +1637,7 @@ CumulativeDistribution <-
         outlist[[paste0(list_name, "-", j)]] <<-
           group_by(outlist[[paste0(list_name, "-", j)]], gene) %>%
           summarise(test = sum(value),.groups="drop") %>%
-          filter(!is.na(test)) %>%
+          dplyr::filter(!is.na(test)) %>%
           semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
           arrange((value)) %>%
           mutate(
@@ -1651,7 +1651,7 @@ CumulativeDistribution <-
           genelist <<-
             semi_join(genelist, outlist[[paste0(list_name, "-", j)]], by = "gene")
         } else {
-          genelist <<- select(outlist[[paste0(list_name, "-", j)]], gene)
+          genelist <<- dplyr::select(outlist[[paste0(list_name, "-", j)]], gene)
         }
       })
     }
@@ -1669,7 +1669,7 @@ CumulativeDistribution <-
     setProgress(2, detail = paste("building list"))
     # removes top and bottom %
     gene_list <-
-      group_by(outlist, gene) %>% filter(all(between(bin, num[1], num[2]))) %>%
+      group_by(outlist, gene) %>% dplyr::filter(all(between(bin, num[1], num[2]))) %>%
       distinct(gene) %>%
       ungroup()
     if (n_distinct(gene_list$gene) > 0) {
@@ -1740,14 +1740,14 @@ try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust="fdr",
   }
   db <- spread(db,set,score) 
   for(i in my_comparisons2){
-    db2 <- select(db, gene,bin,all_of(i)) %>% 
+    db2 <- dplyr::select(db, gene,bin,all_of(i)) %>% 
         rename(score.x=all_of(names(.)[3]), score.y=all_of(names(.)[4])) 
     
     myTtest <- tibble(bin=NA,p.value=NA)
     
     for(t in unique(db2$bin)){
-      x.score <- filter(db2, bin ==t)
-      y.score <- filter(db2, bin ==t)
+      x.score <- dplyr::filter(db2, bin ==t)
+      y.score <- dplyr::filter(db2, bin ==t)
       kk <- suppressMessages(try(get(my_test)(x.score$score.x,y.score$score.y,
                                               alternative = alternative, 
                                               exact=exact, 
@@ -1757,7 +1757,7 @@ try_t_test <- function(db,my_set,my_math ="none",my_test="t.test",padjust="fdr",
       }
       myTtest <- myTtest %>% add_row(bin = t, p.value=kk)
     }
-    myTtest <- myTtest %>% filter(!is.na(bin))
+    myTtest <- myTtest %>% dplyr::filter(!is.na(bin))
     if(padjust != "NO"){
       myTtest <- myTtest %>% mutate(p.value=p.adjust(p.value,method = padjust))
     }
@@ -1813,13 +1813,13 @@ ApplyMath <-
           c(sapply(gene_info[[i]], "[[", 5) != 0)
         mynorm <-
           bind_rows(list_data$gene_info[[i]][truefalse]) %>%
-          select(rnorm, set) %>% mutate(rnorm = as.numeric(rnorm))
+          dplyr::select(rnorm, set) %>% mutate(rnorm = as.numeric(rnorm))
         list_data_frame[[i]] <-
           bind_rows(table_file[truefalse]) %>%
           semi_join(., gene_file[[i]]$use, by = "gene") %>%
           inner_join(., mynorm, by = "set") %>%
           mutate(., set2 = i, score = score / rnorm) %>%
-          select(-rnorm)
+          dplyr::select(-rnorm)
       }
       if (is.null((list_data_frame))) {
         # print("nothing to plot")
@@ -1891,7 +1891,7 @@ ApplyMath <-
       mm <- bind_rows(list_data_frame) %>% rename(set=set2,set2=set)
       mmm <- NULL
       for(i in unique(mm$set2)){
-        mmm[[i]] <- filter(mm, set2==i)
+        mmm[[i]] <- dplyr::filter(mm, set2==i)
         if(length(unique(mmm[[i]]$set))>1){
           LIST_DATA$ttest$use[[i]] <<- bind_rows(try_t_test(mmm[[i]], i,use_tmath,switchttesttype,padjust,
                                                             my_alt, noquote(my_exact), noquote(my_paired)))
@@ -2347,7 +2347,7 @@ MyXSetValues <-
            yBinRange = c(0, 100),
            log_2 = F) {
     tt <- group_by(apply_math, set) %>%
-      filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
+      dplyr::filter(bin %in% xBinRange[1]:xBinRange[2]) %>%
       ungroup() %>%
       summarise(min(value, na.rm = T), max(value, na.rm = T),.groups="drop") %>%
       unlist(., use.names = FALSE)
@@ -3161,7 +3161,7 @@ server <- function(input, output, session) {
     }
     
     shinyjs::enable("startoff")
-    reset("filetable")
+    shinyjs::reset("filetable")
     ff <- names(LIST_DATA$table_file)
     updateSelectInput(session,
                       "selectdataoption",
@@ -3188,7 +3188,7 @@ server <- function(input, output, session) {
     if (!is.null(LD)) {
       LIST_DATA <<- LD
     }
-    reset("filegene1")
+    shinyjs::reset("filegene1")
     updateCheckboxInput(session, "checkboxconvert", value = FALSE)
     updateSelectInput(
       session,
@@ -3224,7 +3224,7 @@ server <- function(input, output, session) {
           input$sliderplotOccupancy
         )
     }
-    reset("filecolor")
+    shinyjs::reset("filecolor")
   })
   
   # update desplay selected item info ----
@@ -3296,7 +3296,7 @@ server <- function(input, output, session) {
         }
         write_lines(new_comments, file)
       } else if (input$radiogroupsave == "Save full Table file"){
-        new_comments <- LIST_DATA$table_file[[input$selectdataoption]] %>% select(-set)
+        new_comments <- LIST_DATA$table_file[[input$selectdataoption]] %>% dplyr::select(-set)
         write_tsv(new_comments, file)
       } else if (input$radiogroupsave == "Save Gene list as bed") {
         new_comments <-
@@ -3305,7 +3305,7 @@ server <- function(input, output, session) {
           sub("-","*",.) %>%  
           sub("(?=[-+])","*",.,perl=TRUE) %>% 
           str_split_fixed(.,"\\*",5) %>% as_tibble() %>% 
-          mutate(score=0) %>% select(V1,V2,V3,V5,score,V4)
+          mutate(score=0) %>% dplyr::select(V1,V2,V3,V5,score,V4)
         write_tsv(new_comments,file,col_names = FALSE)
       } else {
         new_comments <- paste("#", Sys.Date(), "\n# File(s) used:")
@@ -3740,9 +3740,9 @@ server <- function(input, output, session) {
   observeEvent(input$selectttestitem, ignoreInit = T, {
     # print("t.test select")
     if (input$selectttestitem != "none" & !is.null(LIST_DATA$ttest$gene_info)) {
-      mydot <- LIST_DATA$ttest$gene_info %>% filter(set == input$selectttestitem) %>% select(mydot)
-      myline <- LIST_DATA$ttest$gene_info %>% filter(set == input$selectttestitem) %>% select(myline)
-      mycol <- LIST_DATA$ttest$gene_info %>% filter(set == input$selectttestitem) %>% select(mycol)
+      mydot <- LIST_DATA$ttest$gene_info %>% dplyr::filter(set == input$selectttestitem) %>% dplyr::select(mydot)
+      myline <- LIST_DATA$ttest$gene_info %>% dplyr::filter(set == input$selectttestitem) %>% dplyr::select(myline)
+      mycol <- LIST_DATA$ttest$gene_info %>% dplyr::filter(set == input$selectttestitem) %>% dplyr::select(mycol)
       updateSelectInput(session, "selectlinettest", selected = myline)
       updateColourInput(session, "selectcolorttest", value = paste(mycol))
     }
@@ -6626,7 +6626,7 @@ server <- function(input, output, session) {
     )
     gene_list <-
       group_by(LIST_DATA$gene_file[[oldname]]$full, gene) %>%
-      filter(all(between(bin, num[1], num[2]))) %>%
+      dplyr::filter(all(between(bin, num[1], num[2]))) %>%
       distinct(gene) %>%
       ungroup()
     newname <- paste("CDF ", n_distinct(gene_list$gene))
@@ -6666,10 +6666,10 @@ server <- function(input, output, session) {
           n_distinct(df$gene) > 1) {
         tt_name <- pull(distinct(df_options, set))
         tt <-
-          suppressWarnings(ks.test(pull(filter(
+          suppressWarnings(ks.test(pull(dplyr::filter(
             df, set == tt_name[1]
           ), value),
-          pull(filter(
+          pull(dplyr::filter(
             df, set == tt_name[2]
           ), value)))
         if (tt[[2]] == 0) {
@@ -6704,7 +6704,7 @@ server <- function(input, output, session) {
                   names(LIST_DATA$gene_info),
                   value = TRUE))
       df <-
-        select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$full, -bin, -set) %>%
+        dplyr::select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_info))]]$full, -bin, -set) %>%
         mutate(value = round(log2(value), 5)) %>%
         spread(., set2, value)
       # PI EI differenc tool
@@ -6777,7 +6777,7 @@ server <- function(input, output, session) {
                    names(LIST_DATA$gene_file)[oldname] <<- newname
                    names(LIST_DATA$gene_info)[oldname] <<- newname
                    dt <-
-                     select(LIST_DATA$gene_file[[newname]]$full, -bin, -set) %>%
+                     dplyr::select(LIST_DATA$gene_file[[newname]]$full, -bin, -set) %>%
                      spread(., set2, value)
                    LIST_DATA$gene_file[[newname]]$use <<-
                      tibble(gene = dt$gene[input$cdftable_rows_all])
@@ -6813,10 +6813,10 @@ server <- function(input, output, session) {
                        n_distinct(df$gene) > 1) {
                      tt_name <- pull(distinct(df_options, set))
                      tt <-
-                       suppressWarnings(ks.test(pull(filter(
+                       suppressWarnings(ks.test(pull(dplyr::filter(
                          df, set == tt_name[1]
                        ), value),
-                       pull(filter(
+                       pull(dplyr::filter(
                          df, set == tt_name[2]
                        ), value)))
                      if (tt[[2]] == 0) {
@@ -6938,10 +6938,10 @@ server <- function(input, output, session) {
           n_distinct(df$gene) > 1) {
         tt_name <- pull(distinct(df_options, set))
         tt <-
-          suppressWarnings(ks.test(pull(filter(
+          suppressWarnings(ks.test(pull(dplyr::filter(
             df, set == tt_name[1]
           ), value),
-          pull(filter(
+          pull(dplyr::filter(
             df, set == tt_name[2]
           ), value)))
         if (tt[[2]] == 0) {
