@@ -20,7 +20,7 @@ my_packages <- function(x) {
   }
 }
 
-# run load needed pakages using my_pakages(x) ----
+# run load needed packages using my_packages(x) ----
 suppressPackageStartupMessages(my_packages(
   c(
     "devtools",
@@ -456,11 +456,6 @@ LoadTableFile <-
       }
       # shiny progress bar
       setProgress(3, detail = "Checking form problems")
-      # remove genes with no signal
-      zero_genes <-
-        group_by(tablefile, gene) %>% summarise(test = sum(score, na.rm = T),.groups="drop") %>% dplyr::filter(test != 0)
-      tablefile <- semi_join(tablefile, zero_genes, by = "gene")
-      # handling building a list of list varibles existing or first time
       if (file_count > 0) {
         gene_names <-
           semi_join(tablefile, list_data$gene_file[[1]]$use, by = "gene") %>% distinct(gene)
@@ -1821,6 +1816,11 @@ ApplyMath <-
           mutate(., set2 = i, score = score / rnorm) %>%
           dplyr::select(-rnorm)
       }
+      # remove genes with no signal across all plotted files
+      ### add a option?
+      # zero_genes <-
+      #   group_by(list_data_frame[[i]], gene,set) %>% summarise(test = sum(score, na.rm = T),.groups="drop") %>% dplyr::filter(test != 0)
+      # list_data_frame[[i]] <- semi_join(list_data_frame[[i]], zero_genes, by = "gene")
       if (is.null((list_data_frame))) {
         # print("nothing to plot")
         return(NULL)
@@ -1829,7 +1829,7 @@ ApplyMath <-
       # applys math to pared down data file
       if (relative_frequency == "rel gene frequency") {
         list_long_data_frame[[i]] <-
-          (list_data_frame[[i]]) %>%
+          list_data_frame[[i]] %>%
           group_by(set, gene) %>%
           mutate(score = score / sum(score, na.rm = TRUE)) %>%
           ungroup() %>%
@@ -1846,7 +1846,7 @@ ApplyMath <-
           ))
       } else {
         list_long_data_frame[[i]] <-
-          (list_data_frame[[i]]) %>%
+          list_data_frame[[i]] %>%
           group_by(set, bin) %>%
           summarise(value = get(use_math)(score, na.rm = T),y = mean(score),.groups="drop") %>%
           mutate(., set = paste(
