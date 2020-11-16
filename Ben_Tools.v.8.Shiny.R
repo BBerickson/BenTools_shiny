@@ -236,6 +236,7 @@ LoadTableFile <-
       num_bins <-
         count_fields(file_path[x],
                      n_max = 1,
+                     skip = 1,
                      tokenizer = tokenizer_tsv())
       # reads in gene lists file and processes
       if (num_bins == 1 & load_gene_list) {
