@@ -1014,6 +1014,7 @@ SortTop <-
            end_bin,
            num,
            topbottom,
+           my_filter_all,
            mytint = FALSE) {
     if (is.null(file_names)) {
       showModal(modalDialog(
@@ -1060,7 +1061,11 @@ SortTop <-
         dplyr::select(gene,!!nickname) %>%
         slice(num2[1]:num2[2])
       if (lc > 0) {
-        outlist <<- inner_join(outlist, outlist2, by = 'gene')
+        if(my_filter_all){
+          outlist <<- inner_join(outlist, outlist2, by = 'gene')
+        } else{
+          outlist <<- full_join(outlist, outlist2, by = 'gene')
+        }
       } else {
         outlist <<- outlist2
       }
@@ -4827,7 +4832,8 @@ server <- function(input, output, session) {
                      input$slidersortbinrange[1],
                      input$slidersortbinrange[2],
                      input$slidersortpercent,
-                     input$selectsorttop
+                     input$selectsorttop,
+                     input$checkboxfilterall
                    )
                  })
     if (!is_empty(LD$table_file)) {
@@ -7841,6 +7847,8 @@ ui <- dashboardPage(
                 selected = "Middle%"
               )
             )),
+            checkboxInput("checkboxfilterall","Filter if any",value = TRUE),
+            helpText("Filters out gene if any are filtered, else filters if all are filtered"),
             actionButton("actionsorttool", "Sort")
           ),
           div(
