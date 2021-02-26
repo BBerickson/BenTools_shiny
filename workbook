@@ -24,9 +24,17 @@ https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box
 
 use and test:
 
+t.test smaller legend size ... fix n = number new line
+color for t.test line start with black
+fix ttest yaxis ajusting it is missing in generating ... replot
+allow quick color for gene lists
+
+
 add plot all tools, for using DT for gene list filtering??
 
 # if showing gene list replots remove inner join on creating the DT
 # to revert to older libary
 require(devtools)
 install_version(“tidyverse”, version = “1.1.1”)
+
+ggplot custome x.axis colors element_text() can only take 1 color ... not sure how to fix at this time color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
