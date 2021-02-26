@@ -9,22 +9,78 @@ https://rstudio.github.io/shinydashboard/index.html
 https://rdrr.io/cran/shinyWidgets/
 shinyWidgetsGallery()
 
-showNotification(
-        "Files done loading",
-        duration = 2, 
-        closeButton = FALSE
-      )
-
 # data tables
 https://rstudio.github.io/DT/options.html
 https://rstudio.github.io/DT/
 
 https://stackoverflow.com/questions/45462614/how-to-see-if-a-shiny-dashboard-box-is-collapsed-from-the-server-side
 
+Warning: Vectorized input to `element_text()` is not officially supported.
+Results may be unexpected or may change in future versions of ggplot2.
+  making TSS and PA diffrnet colors might be an issue at some point
+    color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])] 
+
 
 use and test:
 
+fix zero_genes option (add min avarage score) to only afect with files to only that are being plotted
+apply y asis values is backwards
+
+t.test smaller legend size ... fix n = number new line
+color for t.test line start with black
+fix ttest yaxis ajusting it is missing in generating ... replot
+allow quick color for gene lists
+
+
 add plot all tools, for using DT for gene list filtering??
+
+# if showing gene list replots remove inner join on creating the DT
+# to revert to older libary
+require(devtools)
+install_version(“tidyverse”, version = “1.1.1”)
+
+ggplot custome x.axis colors element_text() can only take 1 color ... not sure how to fix at this time color = line_list$mycolors[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
+
+# Lines and lables
+fix 4' TSS-TES lines are at first and last bin
+for the lines and colors fun have it look between to find right placement so it colors is based on input lines not drop
+
+boxRatio made from Ratio needs a diffrent location then LIST_DATA$gene_file
+new Ratio - make picker1 a multipicker, add boxplot and gene line plot and get working. devison        defalts and options updated, notes on tool. have a key for up and down file
+
+cluster - add plot cluster picker so easyer to select what is overlapped on plot
+  look at how I handle 0s
+
+cdf - add usage notes, update sliders, devide by 0 option
+
+norm and other divesion defalts bin by bin and inf to NA
+  color crate button
+  can I trurn bin/bin to mean of bins so gene lists work?
+    or remove all together/only apply to varible bin region?
+    add subtraction function
+
+genelist- allow single file loaded
+
+add levels of smoothing
+
+
+
+ remove yellow as a loading color option
+
+loading color file crashes some times ???
+
+allow old style url.files to work .. or warning?
+can I change the order of items in some way and preserve that order for plots? ... change factor levels
+  
+when thinking disable everthing
+
+loading gene lists:
+  change how I handle field count = 1 vs more then one
+  ask which coloum to match on with exmaple of file?
+  ask patern match before quiting?
+
+
+CDF % low high cut off with non-overlapping gene lists crash
 
 # if showing gene list replots remove inner join on creating the DT
 # to revert to older libary
