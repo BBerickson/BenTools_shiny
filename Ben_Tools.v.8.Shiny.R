@@ -1,25 +1,28 @@
 # Created by Benjamin Erickson BBErickson@gmail.com
 
-# keep everthing but plot tab disabled until switch?
+# 
 # 
 # 1 fix cdf, move pickers to boxes like main plot
 # 2 apply y axis is backwards on main plot, EI info body/TSS correct?
-# 3 cdf ... dont have sliders for cdf be reactive, remove top/bottom % slider/function, fix multi genelist crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
-# 4 save bed file have save selcted full gene list not all common genes 
-# 5 add simplifed gene list save option
+# 3 cdf ... dont have sliders for cdf be reactive, remove top/bottom % slider/function, fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
+# 4 save bed file have save selected full gene list not all common genes 
+# 5 add simplified gene list save option
 # 6 ad QC tab see bentools v6 ... per bin/gene 
 # 7 advanced lines and lables in meta data
 # 8 RemoveGeneList observation hides all lists?
 # 9 test LoadColorFile() +/- named files, with gene lists, ... 
 # 10 ratio : add gene name to list name?
-# 
-# 
-# 
-# 
-# 
+# 11 keep everything but plot tab disabled until switch?
+# 12 add stats tab to investigate quality of each sample +some comparisons?
+#   a. bar plot at each bin number of 0's/NA's
+#   b. upper and lower percentile plot (exclude genes with all 0's option, exclude single bin max peak genes???)
+# 13 add to clustering tool peak locations tool 
 # 
 # find and fix TODO
 # look into shinydashboardplus for better box's
+
+# bonus: filter tool for calling real signal using a mix of peak and percentile/ or machine learning project
+# 
 
 print("Bentools V8m Shiny")
 
