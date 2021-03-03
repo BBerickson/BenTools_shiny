@@ -2,10 +2,10 @@
 
 # 
 # 
-# 1 fix cdf, move pickers to boxes like main plot
-# 2 apply y axis is backwards on main plot, EI info body/TSS correct?
+# # 1 consolidate some auto plotting updates starting with Y_Axis_plot
+# 2 EI info body/TSS correct?
 # 3 cdf ... dont have sliders for cdf be reactive, remove top/bottom % slider/function, fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
-# 4 save bed file have save selected full gene list not all common genes 
+# 4 save bed file have save selected full gene list not all common genes, test save subset table file 
 # 5 add simplified gene list save option
 # 6 ad QC tab see bentools v6 ... per bin/gene 
 # 7 advanced lines and lables in meta data
@@ -3165,7 +3165,8 @@ server <- function(input, output, session) {
         }
         write_lines(new_comments, file)
       } else if (input$radiogroupsave == "Save full Table file"){
-        new_comments <- LIST_DATA$table_file %>% dplyr::filter(set == input$selectdataoption)
+        new_comments <- LIST_DATA$table_file %>% dplyr::filter(set == input$selectdataoption) %>% 
+          semi_join(., LIST_DATA$gene_file[[input$selectgenelistoptions]]$use)
         write_tsv(new_comments, file)
       } else if (input$radiogroupsave == "Save Gene list as bed") {
         new_comments <-
@@ -3776,7 +3777,7 @@ server <- function(input, output, session) {
     if (!is.null(reactive_values$Apply_Math) &
         input$checkboxyrange & LIST_DATA$STATE[2] != 2) {
       reactive_values$Y_Axis_numbers <-
-        c(input$numericYRangeHigh, input$numericYRangeLow)
+        c(input$numericYRangeLow,input$numericYRangeHigh)
       reactive_values$Plot_controler <-
         GGplotLineDot(
           reactive_values$Apply_Math,
@@ -8270,6 +8271,7 @@ ui <- dashboardPage(
             title = "CDF tool",
             status = "primary",
             solidHeader = T,
+            collapsible = T,
             width = 12,
             box(title = "Main",
                 width = 6,
@@ -8320,6 +8322,7 @@ ui <- dashboardPage(
               title = "CDF Tables",
               status = "primary",
               solidHeader = T,
+              collapsible = T,
               width = 12,
               actionButton("actioncdfdatatable", "Show gene list(s)"),
               helpText("All filtering applied to gene list usage elsewhere"),
