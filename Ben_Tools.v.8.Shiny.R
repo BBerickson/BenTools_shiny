@@ -2,13 +2,13 @@
 
 # 
 # 
-# # 1 consolidate some auto plotting updates starting with Y_Axis_plot
-# 2 EI info body/TSS correct?
+# 1 
+# 2 
 # 3 cdf ... dont have sliders for cdf be reactive, remove top/bottom % slider/function, fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
 # 4 save bed file have save selected full gene list not all common genes, test save subset table file 
 # 5 add simplified gene list save option
 # 6 ad QC tab see bentools v6 ... per bin/gene 
-# 7 advanced lines and lables in meta data
+# 7 advanced lines and labels in meta data
 # 8 RemoveGeneList observation hides all lists?
 # 9 test LoadColorFile() +/- named files, with gene lists, ... 
 # 10 ratio : add gene name to list name?
@@ -118,7 +118,7 @@ kBrewerList <-
   c("BrBG", "PiYG", "PRGn", "PuOr", "RdBu", "RdGy", "RdYlBu", "RdYlGn", "Spectral")
 
 # lines and labels types ----
-kLinesandlables <- c(
+kLinesandlabels <- c(
   "543 bins 20,20,40",
   "5' 1k 1k 80bins",
   "3' 1k 9k 100bins",
@@ -1521,9 +1521,7 @@ CumulativeDistribution <-
            start1_bin,
            end1_bin,
            start2_bin,
-           end2_bin,
-           bottom_per,
-           top_per) {
+           end2_bin) {
     if (is.null(onoffs)) {
       showModal(modalDialog(
         title = "Information message",
@@ -1537,13 +1535,8 @@ CumulativeDistribution <-
     genelist <- NULL
     for (list_name in names(onoffs)) {
       setProgress(1, detail = paste("dividing one by the other"))
-      gene_count <-
-        n_distinct(list_data$gene_file[[list_name]]$use$gene)
-      num <-
-        c(ceiling(gene_count * bottom_per / 100),
-          ceiling(gene_count * top_per / 100))
       lapply(onoffs[[list_name]], function(j) {
-        # Compleat within gene list and sum regions
+        # Complete within gene list and sum regions
         df <-
           semi_join(dplyr::filter(list_data$table_file, set == j), 
                     list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
@@ -1562,7 +1555,7 @@ CumulativeDistribution <-
           semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
           arrange((value)) %>%
           dplyr::mutate(
-            bin = row_number(),
+            percent_rank = percent_rank(row_number()),
             set = j,
             plot_set = paste(list_name, "-", j),
             value = value
@@ -1578,25 +1571,24 @@ CumulativeDistribution <-
     }
     
     # unlist and binds all together
-    outlist <- bind_rows(outlist)
+    outlist <- bind_rows(outlist) %>% distinct()
     list_data$gene_file <- list_data$gene_file[!str_detect(names(list_data$gene_file),"^CDF")]
     list_data$gene_info <- list_data$gene_info %>% dplyr::filter(!str_detect(gene_list,"^CDF"))
     
     setProgress(2, detail = paste("building list"))
     # removes top and bottom %
-    gene_list <-
-      group_by(outlist, gene) %>% dplyr::filter(all(between(bin, num[1], num[2]))) %>%
-      distinct(gene) %>%
-      ungroup()
-    if (n_distinct(gene_list$gene) > 0) {
+    if (sum(start1_bin, end1_bin) > sum(start2_bin, end2_bin)) {
+      use_header <- "Log2 EI Cumulative plot"
+    } else {
+      use_header <- "Log2 PI Cumulative plot"
+    }
+    if (n_distinct(outlist$gene) > 0) {
       nick_name1 <- paste0("CDF n = ", n_distinct(outlist$gene))
       list_data$gene_file[[nick_name1]]$full <- outlist
-      list_data$gene_file[[nick_name1]]$use <- group_by(outlist, gene) %>% 
-        dplyr::filter(all(between(bin, num[1], num[2]))) %>%
-        distinct() %>%
-        ungroup()
+      list_data$gene_file[[nick_name1]]$use <- outlist %>% select(gene)
       list_data$gene_file[[nick_name1]]$info <-
         paste(
+          use_header,
           "CDF",
           "bins",
           start1_bin,
@@ -1606,10 +1598,6 @@ CumulativeDistribution <-
           start2_bin,
           "to",
           end2_bin,
-          "% filter",
-          bottom_per,
-          "to",
-          top_per,
           "from",
           list_name,
           "gene list",
@@ -1618,11 +1606,6 @@ CumulativeDistribution <-
         )
     } else {
       nick_name1 <- paste("CDF n = 0")
-    }
-    if (sum(start1_bin, end1_bin) > sum(start2_bin, end2_bin)) {
-      use_header <- "Log2 EI Cumulative plot"
-    } else {
-      use_header <- "Log2 PI Cumulative plot"
     }
     print(onoffs[[list_name]])
     list_data$gene_info <- 
@@ -1903,8 +1886,8 @@ YAxisLable <-
     use_y_label
   }
 
-# Sets lines and lables
-LinesLablesListset <- function(body1bin = 20,
+# Sets lines and labels
+LinesLabelsListset <- function(body1bin = 20,
                                body2bin = 40,
                                tssbin = 15,
                                tesbin = 45,
@@ -1913,7 +1896,7 @@ LinesLablesListset <- function(body1bin = 20,
                                everybin = 5,
                                tssname = "TSS",
                                tesname = "pA") {
-  print("lines and lables fun")
+  print("lines and labels fun")
   # I creat this in steps bin 1 to next land mark (TSS TES) then go from there to next land mark until end of bins
   everybp <- everybin * binbp
   if (everybp > 0) {
@@ -2047,7 +2030,7 @@ LinesLablesListset <- function(body1bin = 20,
             by = everybin,
             length.out = (totbins / everybin) + 1)
     }
-    # no bp bin lables
+    # no bp bin labels
   } else {
     if (everybin > 0) {
       use_plot_breaks <-
@@ -2069,11 +2052,11 @@ LinesLablesListset <- function(body1bin = 20,
     use_plot_breaks_labels[!is.na(use_plot_breaks)]
   use_plot_breaks <- use_plot_breaks[!is.na(use_plot_breaks)]
   list(mybrakes = use_plot_breaks,
-       mylables = use_plot_breaks_labels)
+       mylabels = use_plot_breaks_labels)
 }
 
-# Sets plot lines and lables colors
-LinesLablesListPlot <-
+# Sets plot lines and labels colors
+LinesLabelsListPlot <-
   function(body1bin,
            body1color,
            body1line,
@@ -2094,7 +2077,7 @@ LinesLablesListPlot <-
            fontsizey,
            legendsize,
            ttestlinesize) {
-    print("lines and lables plot fun")
+    print("lines and labels plot fun")
     if (length(use_plot_breaks_labels) > 0) {
       mycolors <- rep("black", length(use_plot_breaks))
       use_virtical_line <- c(NA, NA, NA, NA)
@@ -2141,23 +2124,23 @@ LinesLablesListPlot <-
       ),
       mycolors = mycolors,
       mybrakes = use_plot_breaks,
-      mylables = use_plot_breaks_labels,
+      mylabels = use_plot_breaks_labels,
       mysize = c(vlinesize, linesize, fontsizex, fontsizey, legendsize, ttestlinesize)
     )
   }
 
 # lines and labels preset helper
-LinesLablesPreSet <- function(mytype) {
+LinesLabelsPreSet <- function(mytype) {
   # 5|4, 4|3, tss, pA, bp/bin, max bins, every bin
-  if (mytype == kLinesandlables[1]) {
+  if (mytype == kLinesandlabels[1]) {
     tt <- c(20, 40, 15, 45, 100, LIST_DATA$x_plot_range[2], 10)
-  } else if (mytype == kLinesandlables[2]) {
+  } else if (mytype == kLinesandlabels[2]) {
     tt <- c(0, 0, 40, 0, 25, LIST_DATA$x_plot_range[2], 20)
-  } else if (mytype == kLinesandlables[3]) {
+  } else if (mytype == kLinesandlabels[3]) {
     tt <- c(0, 0, 0, 10, 100, LIST_DATA$x_plot_range[2], 10)
-  } else if (mytype == kLinesandlables[4]) {
+  } else if (mytype == kLinesandlabels[4]) {
     tt <- c(0, 0, 5, 0, 50, LIST_DATA$x_plot_range[2], 10)
-  } else if (mytype == kLinesandlables[5]) {
+  } else if (mytype == kLinesandlabels[5]) {
     tt <- c(0,
             0,
             floor(LIST_DATA$x_plot_range[2] * .25),
@@ -2165,7 +2148,7 @@ LinesLablesPreSet <- function(mytype) {
             100,
             LIST_DATA$x_plot_range[2],
             10)
-  } else if (mytype == kLinesandlables[6]) {
+  } else if (mytype == kLinesandlabels[6]) {
     tt <- c(
       0,
       0,
@@ -2175,7 +2158,7 @@ LinesLablesPreSet <- function(mytype) {
       LIST_DATA$x_plot_range[2],
       10
     )
-  } else if (mytype == kLinesandlables[7]) {
+  } else if (mytype == kLinesandlabels[7]) {
     tt <- c(0,
             0,
             0,
@@ -2327,7 +2310,7 @@ GGplotLineDot <-
         ), collapse = ", "), collapse = ", ")) +
         ylab(plot_ttest$ylabTT)+
         scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
-                           labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
+                           labels = line_list$mylabels[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
         theme(axis.title.x = element_text(size =  line_list$mysize[3], vjust = .5)) +
         theme(axis.title.y = element_text(size =  line_list$mysize[4], margin = margin(2, 10, 2, 2))) +
         theme(axis.text.y = element_text(size = line_list$mysize[4],
@@ -2359,7 +2342,7 @@ GGplotLineDot <-
           plot_options$sub
         ), collapse = ", "), collapse = ", ")) +
         scale_x_continuous(breaks = line_list$mybrakes[between(line_list$mybrakes, xBinRange[1], xBinRange[2])],
-                           labels = line_list$mylables[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
+                           labels = line_list$mylabels[between(line_list$mybrakes, xBinRange[1], xBinRange[2])]) +
         theme(axis.title.x = element_text(size =  line_list$mysize[3], vjust = .5)) +
         theme(
           axis.text.x = element_text(
@@ -2432,14 +2415,14 @@ server <- function(input, output, session) {
     pickerfile_controler = "",
     Y_Axis_Lable = NULL,
     Y_Axis_numbers = NULL,
-    Lines_Lables_List = NULL,
+    Lines_Labels_List = NULL,
     Apply_Math = NULL,
     Plot_Options = NULL,
     Plot_controler = NULL,
     Plot_controler_cluster = NULL,
     Plot_controler_ratio = NULL,
     Picker_controler = NULL,
-    Y_Axis_plot = 0,
+    makeplot = 0,
     onoff = list(),
     binset = FALSE
   )
@@ -3012,24 +2995,24 @@ server <- function(input, output, session) {
       print("1st slider and plot lines Ylable")
       reactive_values$binset <- TRUE
       shinyjs::removeClass(selector = "body", class = "sidebar-collapse")
-      # tries to guess lines and lables type
+      # tries to guess lines and labels type
       num_bins <- LIST_DATA$x_plot_range[2]
       if (num_bins == 80 & LIST_DATA$STATE[3] == '543') {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[1])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[1])
       } else if (num_bins == 80 & LIST_DATA$STATE[3] == '5') {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[2])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[2])
       } else if (num_bins <= 60 & LIST_DATA$STATE[3] == '543') {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[3])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[3])
       } else if (num_bins == 205 & LIST_DATA$STATE[3] == '5') {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[4])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[4])
       } else if (LIST_DATA$STATE[3] == '5') {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[5])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[5])
       } else if (LIST_DATA$STATE[3] == '4') {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[6])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[6])
       } else if (LIST_DATA$STATE[3] == '3') {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[7])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[7])
       } else {
-        updateSelectInput(session, "selectlineslables", selected = kLinesandlables[8])
+        updateSelectInput(session, "selectlineslabels", selected = kLinesandlabels[8])
       }
       LIST_DATA$STATE[1] <<- 1
     }
@@ -3089,7 +3072,7 @@ server <- function(input, output, session) {
           input$sliderplotBinRange,
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
+          reactive_values$Lines_Labels_List,
           input$checkboxsmooth, reactive_values$Plot_Options_ttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable,
@@ -3254,7 +3237,7 @@ server <- function(input, output, session) {
               input$sliderplotBinRange,
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
-              reactive_values$Lines_Lables_List,
+              reactive_values$Lines_Labels_List,
               input$checkboxsmooth, reactive_values$Plot_Options_ttest,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable,
@@ -3285,7 +3268,7 @@ server <- function(input, output, session) {
               input$sliderplotBinRange,
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
-              reactive_values$Lines_Lables_List,
+              reactive_values$Lines_Labels_List,
               input$checkboxsmooth, reactive_values$Plot_Options_ttest,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable,
@@ -3329,7 +3312,7 @@ server <- function(input, output, session) {
               input$sliderplotBinRange,
               reactive_values$Plot_Options,
               reactive_values$Y_Axis_numbers,
-              reactive_values$Lines_Lables_List,
+              reactive_values$Lines_Labels_List,
               input$checkboxsmooth, reactive_values$Plot_Options_ttest,
               input$checkboxlog2,
               reactive_values$Y_Axis_Lable,
@@ -3394,7 +3377,6 @@ server <- function(input, output, session) {
                    shinyjs::show("actionmyplotshow")
                    shinyjs::disable("numericYRangeHigh")
                    shinyjs::disable("numericYRangeLow")
-                   shinyjs::disable("checkboxyrange")
                    shinyjs::disable("numericYRangeHighpval")
                    shinyjs::disable("numericYRangeLowpval")
                    LIST_DATA$STATE[2] <<- 2
@@ -3484,28 +3466,20 @@ server <- function(input, output, session) {
     shinyjs::hide("actionmyplotshow")
     shinyjs::enable("numericYRangeHigh")
     shinyjs::enable("numericYRangeLow")
-    shinyjs::enable("checkboxyrange")
     shinyjs::enable("numericYRangeHighpval")
     shinyjs::enable("numericYRangeLowpval")
   })
   
-  # updates y axis limits
+  # updates Apply_Math ----
   observeEvent(reactive_values$Apply_Math, {
-    print("updates y axis limits")
+    print("updates reactive_values$Apply_Math")
     reactive_values$Y_Axis_numbers <-
       MyXSetValues(
         reactive_values$Apply_Math,
         input$sliderplotBinRange,
-        input$sliderplotYRange,
+        c(0,100),
         input$checkboxlog2
       )
-    updateSliderInput(session,
-                      "sliderplotYRange",
-                      value = c(0, 100))
-    # Forces update if y Asis values stay the same
-    if (all(c(0, 100) == input$sliderplotYRange)) {
-      reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
-    }
     my_step <-
       (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
       20
@@ -3517,6 +3491,7 @@ server <- function(input, output, session) {
                        "numericYRangeLow",
                        value = round(min(reactive_values$Y_Axis_numbers), 4),
                        step = my_step)
+    reactive_values$makeplot <- reactive_values$makeplot + 1
   })
   
   # renders plot ----
@@ -3577,32 +3552,6 @@ server <- function(input, output, session) {
                  }
                })
   
-  # y slider is trigger ----
-  observeEvent(input$sliderplotYRange, ignoreInit = T, {
-    print("y slider")
-    if (!is.null(reactive_values$Apply_Math)) {
-      reactive_values$Y_Axis_numbers <-
-        MyXSetValues(
-          reactive_values$Apply_Math,
-          input$sliderplotBinRange,
-          input$sliderplotYRange,
-          input$checkboxlog2
-        )
-      my_step <-
-        (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
-        20
-      updateNumericInput(session,
-                         "numericYRangeHigh",
-                         value = round(max(reactive_values$Y_Axis_numbers), 4),
-                         step = my_step)
-      updateNumericInput(session,
-                         "numericYRangeLow",
-                         value = round(min(reactive_values$Y_Axis_numbers), 4),
-                         step = my_step)
-      reactive_values$Y_Axis_plot <- reactive_values$Y_Axis_plot + 1
-    }
-  })
-  
   # occupancy slider t.test is trigger ----
   observeEvent(input$sliderplotOccupancy, ignoreInit = T, {
     print("y slider")
@@ -3622,7 +3571,7 @@ server <- function(input, output, session) {
           input$sliderplotBinRange,
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
+          reactive_values$Lines_Labels_List,
           input$checkboxsmooth, reactive_values$Plot_Options_ttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable,
@@ -3655,21 +3604,21 @@ server <- function(input, output, session) {
       reactive_values$Plot_Options_ttest <- MakePlotOptionttest(LIST_DATA$ttest,
                                                                 c(round(min(input$numericYRangeLowpval), 4),round(max(input$numericYRangeHighpval), 4)),
                                                                 input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
-      if(reactive_values$Lines_Lables_List$mysize[6] == as.numeric(input$selectttestlinesize)){
+      if(reactive_values$Lines_Labels_List$mysize[6] == as.numeric(input$selectttestlinesize)){
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
-            reactive_values$Lines_Lables_List,
+            reactive_values$Lines_Labels_List,
             input$checkboxsmooth, reactive_values$Plot_Options_ttest,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable,
             input$sliderplotOccupancy
           )
       }else{
-        reactive_values$Lines_Lables_List$mysize[6] <- as.numeric(input$selectttestlinesize)
+        reactive_values$Lines_Labels_List$mysize[6] <- as.numeric(input$selectttestlinesize)
       }
     }
   })
@@ -3750,7 +3699,7 @@ server <- function(input, output, session) {
                        }
                      } 
                      if(!is_empty(list_data_frame) & 
-                        reactive_values$Lines_Lables_List$mysize[6] == as.numeric(input$selectttestlinesize)){
+                        reactive_values$Lines_Labels_List$mysize[6] == as.numeric(input$selectttestlinesize)){
                        reactive_values$Plot_Options_ttest <<- MakePlotOptionttest(ttest,c(round(min(mm), 4),round(max(mm), 4)),
                                                                                   input$selectttestlog,input$hlinettest,input$padjust,input$switchttesttype)
                        reactive_values$Plot_controler <-
@@ -3759,23 +3708,23 @@ server <- function(input, output, session) {
                            input$sliderplotBinRange,
                            reactive_values$Plot_Options,
                            reactive_values$Y_Axis_numbers,
-                           reactive_values$Lines_Lables_List,
+                           reactive_values$Lines_Labels_List,
                            input$checkboxsmooth, reactive_values$Plot_Options_ttest,
                            input$checkboxlog2,
                            reactive_values$Y_Axis_Lable,
                            input$sliderplotOccupancy
                          )
                      }else{
-                       reactive_values$Lines_Lables_List$mysize[6] <- as.numeric(input$selectttestlinesize)
+                       reactive_values$Lines_Labels_List$mysize[6] <- as.numeric(input$selectttestlinesize)
                      }
                    }
                  })
   
-  # y box check box trigger
-  observeEvent(input$checkboxyrange, ignoreInit = T, {
-    print("y numierc plot")
+  # updates plot actionButtonYXrange ----
+  observeEvent(input$actionButtonYXrange, ignoreInit = T, {
+    print("actionButtonYXrange")
     if (!is.null(reactive_values$Apply_Math) &
-        input$checkboxyrange & LIST_DATA$STATE[2] != 2) {
+        input$actionButtonYXrange & LIST_DATA$STATE[2] != 2) {
       reactive_values$Y_Axis_numbers <-
         c(input$numericYRangeLow,input$numericYRangeHigh)
       reactive_values$Plot_controler <-
@@ -3784,14 +3733,13 @@ server <- function(input, output, session) {
           input$sliderplotBinRange,
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
+          reactive_values$Lines_Labels_List,
           input$checkboxsmooth, reactive_values$Plot_Options_ttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable,
           input$sliderplotOccupancy
         )
     }
-    updateCheckboxInput(session, "checkboxyrange", value = FALSE)
     if (LIST_DATA$STATE[2] == 2) {
       my_step <-
         (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
@@ -3808,24 +3756,19 @@ server <- function(input, output, session) {
   })
   
   # plots when bin slider or other triggers is triggered ----
-  observeEvent(
-    c(
-      reactive_values$Lines_Lables_List,
-      input$sliderplotBinRange,
-      reactive_values$Y_Axis_plot
-    ),
+  observeEvent(reactive_values$makeplot,
     ignoreInit = TRUE,
     {
       if (!is.null(reactive_values$Apply_Math) &
           LIST_DATA$STATE[2] != 2) {
-        print("bin slider or L&L making ggplot")
+        print("reactive_values$makeplot plots")
         reactive_values$Plot_controler <-
           GGplotLineDot(
             reactive_values$Apply_Math,
             input$sliderplotBinRange,
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
-            reactive_values$Lines_Lables_List,
+            reactive_values$Lines_Labels_List,
             input$checkboxsmooth, reactive_values$Plot_Options_ttest,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable,
@@ -3835,13 +3778,13 @@ server <- function(input, output, session) {
     }
   )
   
-  # quick lines and lables preset change ----
-  observeEvent(input$selectlineslables, ignoreInit = TRUE, {
-    if (input$selectlineslables == "") {
+  # quick lines and labels preset change ----
+  observeEvent(input$selectlineslabels, ignoreInit = TRUE, {
+    if (input$selectlineslabels == "") {
       return()
     }
-    print("quick Lines & Lables")
-    myset <- LinesLablesPreSet(input$selectlineslables)
+    print("quick Lines & Labels")
+    myset <- LinesLabelsPreSet(input$selectlineslabels)
     updateNumericInput(session, "numericbody1", value = myset[1])
     updateNumericInput(session, "numericbody2", value = myset[2])
     updateNumericInput(session, "numerictss", value = myset[3])
@@ -3884,7 +3827,7 @@ server <- function(input, output, session) {
     }
   )
   
-  # Update lines and lables ----
+  # Update lines and labels ----
   observeEvent(
     c(
       input$numericbody1,
@@ -3898,7 +3841,7 @@ server <- function(input, output, session) {
     ),
     ignoreInit = TRUE,
     {
-      print("observe line and lables")
+      print("observe line and labels")
       myset <- c(
         input$numericbody1,
         input$numericbody2,
@@ -3919,7 +3862,7 @@ server <- function(input, output, session) {
           updateNumericInput(session, "numericlabelspaceing", value = myset[6])
         }
       }
-      Lines_Lables_List <- LinesLablesListset(myset[1],
+      Lines_Labels_List <- LinesLabelsListset(myset[1],
                                               myset[2],
                                               myset[3],
                                               myset[4],
@@ -3928,19 +3871,19 @@ server <- function(input, output, session) {
                                               myset[6],
                                               input$numerictssname,
                                               input$numerictesname)
-      if (input$selectlineslables != "" & LIST_DATA$STATE[2] != 0) {
-        updateSelectInput(session, "selectlineslables", selected = "")
+      if (input$selectlineslabels != "" & LIST_DATA$STATE[2] != 0) {
+        updateSelectInput(session, "selectlineslabels", selected = "")
         my_pos <-
-          suppressWarnings(as.numeric((Lines_Lables_List$mybrakes)))
-        my_label <- Lines_Lables_List$mylables
+          suppressWarnings(as.numeric((Lines_Labels_List$mybrakes)))
+        my_label <- Lines_Labels_List$mylabels
       }
       # set lable and posistion numbers
       updateTextInput(session,
                       "landlnames",
-                      value = paste(Lines_Lables_List$mylables, collapse = " "))
+                      value = paste(Lines_Labels_List$mylabels, collapse = " "))
       updateTextInput(session,
                       "landlposition",
-                      value = paste(Lines_Lables_List$mybrakes , collapse = " "))
+                      value = paste(Lines_Labels_List$mybrakes , collapse = " "))
     }
   )
   
@@ -3967,8 +3910,8 @@ server <- function(input, output, session) {
         my_label <- "none"
         my_pos <- LIST_DATA$x_plot_range[2] * 2
       }
-      reactive_values$Lines_Lables_List <-
-        LinesLablesListPlot(
+      reactive_values$Lines_Labels_List <-
+        LinesLabelsListPlot(
           input$numericbody1,
           input$selectbody1color,
           input$selectbody1line,
@@ -3993,9 +3936,29 @@ server <- function(input, output, session) {
     }
   })
   
-  # action button update lines and lables ----
+  # action button update lines and labels ----
   observeEvent(input$actionlineslabels, ignoreInit = TRUE, {
-    print("action lines and lables")
+    print("action lines and labels")
+    if (!is.null(reactive_values$Apply_Math)) {
+      reactive_values$Y_Axis_numbers <-
+        MyXSetValues(
+          reactive_values$Apply_Math,
+          input$sliderplotBinRange,
+          c(0,100),
+          input$checkboxlog2
+        )
+      my_step <-
+        (max(reactive_values$Y_Axis_numbers) - min(reactive_values$Y_Axis_numbers)) /
+        20
+      updateNumericInput(session,
+                         "numericYRangeHigh",
+                         value = round(max(reactive_values$Y_Axis_numbers), 4),
+                         step = my_step)
+      updateNumericInput(session,
+                         "numericYRangeLow",
+                         value = round(min(reactive_values$Y_Axis_numbers), 4),
+                         step = my_step)
+    }
     my_pos <-
       suppressWarnings(as.numeric(unlist(
         strsplit(input$landlposition, split = "\\s+")
@@ -4014,8 +3977,8 @@ server <- function(input, output, session) {
       updateTextInput(session, "numerictesname", value = "pA")
     }
     
-    reactive_values$Lines_Lables_List <-
-      LinesLablesListPlot(
+    reactive_values$Lines_Labels_List <-
+      LinesLabelsListPlot(
         input$numericbody1,
         input$selectbody1color,
         input$selectbody1line,
@@ -4055,7 +4018,7 @@ server <- function(input, output, session) {
         MyXSetValues(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-          input$sliderplotYRange,
+          c(0,100),
           input$checkboxlog2
         )
       my_step <-
@@ -4075,7 +4038,7 @@ server <- function(input, output, session) {
           input$sliderplotBinRange,
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
+          reactive_values$Lines_Labels_List,
           input$checkboxsmooth, reactive_values$Plot_Options_ttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable,
@@ -4100,7 +4063,7 @@ server <- function(input, output, session) {
         MyXSetValues(
           reactive_values$Apply_Math,
           input$sliderplotBinRange,
-          input$sliderplotYRange,
+          c(0,100),
           input$checkboxlog2
         )
       my_step <-
@@ -4120,7 +4083,7 @@ server <- function(input, output, session) {
           input$sliderplotBinRange,
           reactive_values$Plot_Options,
           reactive_values$Y_Axis_numbers,
-          reactive_values$Lines_Lables_List,
+          reactive_values$Lines_Labels_List,
           input$checkboxsmooth, reactive_values$Plot_Options_ttest,
           input$checkboxlog2,
           reactive_values$Y_Axis_Lable,
@@ -4155,7 +4118,7 @@ server <- function(input, output, session) {
             input$sliderplotBinRange,
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
-            reactive_values$Lines_Lables_List,
+            reactive_values$Lines_Labels_List,
             input$checkboxsmooth, reactive_values$Plot_Options_ttest,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable,
@@ -4195,7 +4158,7 @@ server <- function(input, output, session) {
             input$sliderplotBinRange,
             reactive_values$Plot_Options,
             reactive_values$Y_Axis_numbers,
-            reactive_values$Lines_Lables_List,
+            reactive_values$Lines_Labels_List,
             input$checkboxsmooth, reactive_values$Plot_Options_ttest,
             input$checkboxlog2,
             reactive_values$Y_Axis_Lable,
@@ -5676,7 +5639,7 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
-                         reactive_values$Lines_Lables_List,
+                         reactive_values$Lines_Labels_List,
                          input$checkboxsmoothcluster,reactive_values$Plot_Options_ttest,
                          input$checkboxlog2cluster,
                          isolate(
@@ -5784,7 +5747,7 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
-                         reactive_values$Lines_Lables_List,
+                         reactive_values$Lines_Labels_List,
                          input$checkboxsmoothcluster,reactive_values$Plot_Options_ttest,
                          input$checkboxlog2cluster,
                          isolate(
@@ -5888,7 +5851,7 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
-                         reactive_values$Lines_Lables_List,
+                         reactive_values$Lines_Labels_List,
                          input$checkboxsmoothcluster,reactive_values$Plot_Options_ttest,
                          input$checkboxlog2cluster,
                          isolate(
@@ -5992,7 +5955,7 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          reactive_values$Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
-                         reactive_values$Lines_Lables_List,
+                         reactive_values$Lines_Labels_List,
                          input$checkboxsmoothcluster,reactive_values$Plot_Options_ttest,
                          input$checkboxlog2cluster,
                          isolate(
@@ -6296,7 +6259,7 @@ server <- function(input, output, session) {
                          input$sliderplotBinRange,
                          Plot_Cluster_Options,
                          Y_Axis_Cluster_numbers,
-                         reactive_values$Lines_Lables_List,
+                         reactive_values$Lines_Labels_List,
                          input$checkboxsmoothcluster,reactive_values$Plot_Options_ttest,
                          input$checkboxlog2cluster,
                          isolate(
@@ -6625,7 +6588,7 @@ server <- function(input, output, session) {
           input$sliderplotBinRange,
           reactive_values$Plot_Cluster_Options,
           Y_Axis_Cluster_numbers,
-          reactive_values$Lines_Lables_List,
+          reactive_values$Lines_Labels_List,
           input$checkboxsmoothcluster,reactive_values$Plot_Options_ttest,
           input$checkboxlog2cluster,
           isolate(
@@ -6643,87 +6606,6 @@ server <- function(input, output, session) {
     }
   })
   
-  # CDF percent reactive ----
-  observeEvent(input$slidercdfper, ignoreInit = TRUE, {
-    oldnamenum <- grep("CDF ", names(LIST_DATA$gene_file))
-    if (is_empty(oldnamenum)) {
-      return()
-    }
-    gene_count <-
-      n_distinct(LIST_DATA$gene_file[[oldnamenum]]$full$gene)
-    num <- c(
-      ceiling(gene_count * input$slidercdfper[1] / 100),
-      ceiling(gene_count * input$slidercdfper[2] / 100)
-    )
-    mygene_list <-
-      group_by(LIST_DATA$gene_file[[oldnamenum]]$full, gene) %>%
-      dplyr::filter(all(between(bin, num[1], num[2]))) %>%
-      distinct(gene) %>%
-      ungroup()
-    newname <- paste("CDF ", n_distinct(mygene_list$gene))
-    if (newname != names(LIST_DATA$gene_file)[oldnamenum]) {
-      shinyjs::hide('cdftable')
-      shinyjs::show('actioncdfdatatable')
-      oldname <- names(LIST_DATA$gene_file)[oldnamenum]
-      names(LIST_DATA$gene_file)[oldnamenum] <<- newname
-      LIST_DATA$gene_file[[newname]]$use <<- mygene_list
-      LIST_DATA$gene_info <<- LIST_DATA$gene_info %>% 
-        dplyr::mutate(gene_list=if_else(gene_list == oldname,newname,gene_list))
-      reactive_values$Picker_controler <- 
-        c(names(LIST_DATA$gene_file), distinct(LIST_DATA$gene_info, set)$set)
-      df_options <- LIST_DATA$gene_info %>%
-        dplyr::filter(gene_list ==  newname)%>%
-        dplyr::mutate(set = paste(
-          sub("\n", " ", newname),
-          gsub("(.{20})", "\\1\n", plot_set),
-          sep = '\n'
-        ))
-      if (any(duplicated(df_options$mycol))) {
-        df_options$mycol <-
-          brewer.pal(8, "Set1")[1:n_distinct(df_options$set)]
-      }
-      df <- inner_join(LIST_DATA$gene_file[[newname]]$full,
-                       LIST_DATA$gene_file[[newname]]$use,
-                       by = "gene") %>%
-        dplyr::mutate(set = paste(
-          sub("\n", " ", newname),
-          gsub("(.{20})", "\\1\n", plot_set),
-          sep = '\n'
-        ))
-      use_header <- pull(distinct(df_options, myheader))
-      if (n_groups(group_by(df_options, set)) == 2 &
-          n_distinct(df$gene) > 1) {
-        tt_name <- pull(distinct(df_options, set))
-        tt <-
-          suppressWarnings(ks.test(pull(dplyr::filter(
-            df, set == tt_name[1]
-          ), value),
-          pull(dplyr::filter(
-            df, set == tt_name[2]
-          ), value)))
-        if (tt[[2]] == 0) {
-          use_header <- paste(use_header, "  p-value < 2.2e-16 ")
-        } else {
-          use_header <-
-            paste(use_header, paste("  p-value = ", format(tt[[2]], scientific = TRUE)))
-        }
-      }
-      output$valueboxcdf <- renderValueBox({
-        valueBox(
-          n_distinct(LIST_DATA$gene_file[[newname]]$use),
-          "Gene List 1",
-          icon = icon("list"),
-          color = "green"
-        )
-      })
-      mycdf <- GGplotC(df, df_options, use_header)
-      output$plotcdf <- renderPlot({
-        mycdf
-      })
-      shinyjs::show('plotcdf')
-    }
-  })
-  
   # CDF generate gene list ----
   observeEvent(input$actioncdfdatatable, ignoreInit = TRUE, {
     if (any(grep("CDF ", names(LIST_DATA$gene_file)) > 0)) {
@@ -6733,9 +6615,8 @@ server <- function(input, output, session) {
                   names(LIST_DATA$gene_file),
                   value = TRUE))
       df <-
-        dplyr::select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_file))]]$full, -bin, -set) %>%
-        dplyr::mutate(value = round(log2(value), 5)) %>%
-        spread(., plot_set, value)
+        dplyr::select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_file))]]$full, -value -set) %>%
+        spread(., plot_set, percent_rank -gene)
       # PI EI differenc tool
       if (length(names(df)) == 3) {
         df[paste("\'",
@@ -6927,9 +6808,7 @@ server <- function(input, output, session) {
                        input$sliderbincdf1[1],
                        input$sliderbincdf1[2],
                        input$sliderbincdf2[1],
-                       input$sliderbincdf2[2],
-                       input$slidercdfper[1],
-                       input$slidercdfper[2]
+                       input$sliderbincdf2[2]
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -7139,14 +7018,6 @@ ui <- dashboardPage(
             min = 0,
             max = 80,
             value = c(0, 80)
-          ),
-          sliderInput(
-            "slidercdfper",
-            label = "Select upper and lower %s",
-            post = "%",
-            min = 0,
-            max = 100,
-            value = c(0, 100)
           ),
           actionButton("actioncdftool", "Plot CDF")
         )
@@ -7475,14 +7346,6 @@ ui <- dashboardPage(
                                max = 80,
                                value = c(0, 80)
                              ),
-                             sliderInput(
-                               "sliderplotYRange",
-                               label = "......  Min %  ....... Plot Y height ....... Max %  ......",
-                               min = -20,
-                               max = 120,
-                               post = "%",
-                               value = c(100, 0)
-                             ),
                              fluidRow(
                                column(
                                  4,
@@ -7496,7 +7359,7 @@ ui <- dashboardPage(
                                  2,
                                  style = "padding-top: 8%;",
                                  actionBttn(
-                                   inputId = "checkboxyrange",
+                                   inputId = "actionButtonYXrange",
                                    label = "apply",
                                    style = "unite",
                                    color = "default",
@@ -7550,11 +7413,11 @@ ui <- dashboardPage(
                                style = "padding-left: 25px; display:inline-block;",
                                selectInput(
                                  selectize = T,
-                                 "selectlineslables",
+                                 "selectlineslabels",
                                  width = "200px",
                                  label = "quick set lines and labels",
                                  choices = c("Choose one" = "",
-                                             kLinesandlables)
+                                             kLinesandlabels)
                                )
                              ),
                              column(12,
@@ -7631,7 +7494,7 @@ ui <- dashboardPage(
                              ),
                              helpText("For 543 style 0 > TSS < 5|4 < 4|3 < pA < max bin"),
                              div(
-                               textInput("landlnames", "", label = "Yaxis lables"),
+                               textInput("landlnames", "", label = "Yaxis labels"),
                                textInput("landlposition", "", label = "Yaxis lable position (numbers only)")
                              ),
                              helpText("select buttons for more options"),
