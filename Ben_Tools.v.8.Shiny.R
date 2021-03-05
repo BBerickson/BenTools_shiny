@@ -2,9 +2,9 @@
 
 # 
 # 
-# 1 
-# 2 
-# 3 cdf ... dont have sliders for cdf be reactive, remove top/bottom % slider/function, fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
+# 1 add ability to paste in URL's and meta data for loading data
+# 2 cdf ... fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
+# 3 cdf ... sliders for cdf x plot size, auto hide gene list boxes like main plot
 # 4 save bed file have save selected full gene list not all common genes, test save subset table file 
 # 5 add simplified gene list save option
 # 6 ad QC tab see bentools v6 ... per bin/gene 
@@ -1555,7 +1555,7 @@ CumulativeDistribution <-
           semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
           arrange((value)) %>%
           dplyr::mutate(
-            percent_rank = percent_rank(row_number()),
+            bin = row_number(),
             set = j,
             plot_set = paste(list_name, "-", j),
             value = value
@@ -6615,8 +6615,9 @@ server <- function(input, output, session) {
                   names(LIST_DATA$gene_file),
                   value = TRUE))
       df <-
-        dplyr::select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_file))]]$full, -value -set) %>%
-        spread(., plot_set, percent_rank -gene)
+        dplyr::select(LIST_DATA$gene_file[[grep("CDF ", names(LIST_DATA$gene_file))]]$full, -bin, -set) %>%
+        dplyr::mutate(value=round(log2(value)),5) %>% 
+        tidyr::spread(., plot_set, value)
       # PI EI differenc tool
       if (length(names(df)) == 3) {
         df[paste("\'",
@@ -6688,7 +6689,7 @@ server <- function(input, output, session) {
                    names(LIST_DATA$gene_file)[oldnamenum] <<- newname
                    dt <-
                      dplyr::select(LIST_DATA$gene_file[[newname]]$full, -bin, -set) %>%
-                     spread(., plot_set, value)
+                     tidyr::spread(., plot_set, value)
                    LIST_DATA$gene_file[[newname]]$use <<-
                      tibble(gene = dt$gene[input$cdftable_rows_all])
                    LIST_DATA$gene_info <<- LIST_DATA$gene_info %>% 
