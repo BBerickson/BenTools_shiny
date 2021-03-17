@@ -2,7 +2,7 @@
 
 # 
 # 
-# 1 add ability to paste in URL's and meta data for loading data
+# 1 check on load file combind method, fix all lapply methods, go through each tab update 100%
 # 2 cdf ... fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
 # 3 cdf ... sliders for cdf x plot size, auto hide gene list boxes like main plot
 # 4 save bed file have save selected full gene list not all common genes, test save subset table file 
@@ -7046,7 +7046,7 @@ ui <- dashboardPage(
                                style = "padding: 5px 15px;",
                                fileInput(
                                  "filetable",
-                                 label = "Load table file",
+                                 label = "Load table/URL.txt file",
                                  accept = c('.table'),
                                  multiple = TRUE
                                )
