@@ -3,6 +3,7 @@
 # 
 # 
 # 1 check on load file combind method, fix all lapply methods, go through each tab update 100%
+# t.test is plotting 2X
 # 2 cdf ... fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
 # 3 cdf ... sliders for cdf x plot size, auto hide gene list boxes like main plot
 # 4 save bed file have save selected full gene list not all common genes, test save subset table file 
@@ -11,7 +12,7 @@
 # 7 advanced lines and labels in meta data
 # 8 RemoveGeneList observation hides all lists?
 # 9 test LoadColorFile() +/- named files, with gene lists, ... 
-# 10 ratio : add gene name to list name?
+# 10 ratio : add gene name to list name? ... change up file2 to down file 1 focuse 
 # 11 keep everything but plot tab disabled until switch?
 # 12 add stats tab to investigate quality of each sample +some comparisons?
 #   a. bar plot at each bin number of 0's/NA's
@@ -33,8 +34,8 @@ my_packages <- function(x) {
     if (!require(i , character.only = TRUE)) {
       #  If package was not able to be loaded then re-install
       if(i == "patchwork"){
-        devtools::install_github("thomasp85/patchwork")}
-      else{
+        devtools::install_github("thomasp85/patchwork")
+        }else{
         install.packages(i , dependencies = TRUE)
         print(paste("installing ", i, " : please wait"))
       }
@@ -1193,16 +1194,14 @@ CompareRatios <-
     #remove old info
     list_data$gene_file <- list_data$gene_file[!str_detect(names(list_data$gene_file),"^Ratio_")]
     list_data$gene_info <- list_data$gene_info %>% dplyr::filter(!str_detect(gene_list,"^Ratio_"))
-    
+    if(num < 0){
+      num <- 1/num
+    }
     nick_name <- NULL
     if(num != 0){
-      if(sum(start2_bin,end2_bin) == 0){
-        upratio <- dplyr::filter(outlist[[1]], Ratio > num & Ratio != 0)
-      } else {
-        upratio <- dplyr::filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
-      }
+      upratio <- dplyr::filter(outlist[[1]], Ratio > num)
     } else {
-      upratio <- dplyr::filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
+      upratio <- NULL
     }
     
     if (n_distinct(upratio$gene) > 0) {
@@ -1248,7 +1247,7 @@ CompareRatios <-
                              dplyr::filter(gene_list == names(list_data$gene_file)[1]) %>% 
                              dplyr::mutate(gene_list = nick_name1,
                                            sub =  paste(
-                                             "Ratio_Up_file1",
+                                             "\nRatio_Up_file1",
                                              "fold change cut off",
                                              num,
                                              divzerofix,
@@ -1259,14 +1258,10 @@ CompareRatios <-
                                            plot_set = " ")))
     }
     if(num != 0){
-      if(sum(start2_bin,end2_bin) == 0){
-        upratio <- dplyr::filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
-      } else {
-        upratio <- dplyr::filter(outlist[[1]], Ratio > num & Ratio != 0)
-      }
-    }  else {
-      upratio <- dplyr::filter(outlist[[1]], Ratio > 1 / num & Ratio != 0)
-    } 
+      upratio <- dplyr::filter(outlist[[1]], Ratio < 1 / num & Ratio != 0)
+    } else {
+      upratio <- NULL
+      } 
     if (n_distinct(upratio$gene) > 0) {
       nick_name2 <-
         paste("Ratio_Down_file1\nn =", n_distinct(upratio$gene))
@@ -1514,7 +1509,7 @@ FindGroups <- function(list_data,
   list_data
 }
 
-# Cumulative Distribution data prep "EI"
+# Cumulative Distribution data prep "PI / EI"
 CumulativeDistribution <-
   function(list_data,
            onoffs,
@@ -5275,7 +5270,7 @@ server <- function(input, output, session) {
           valueBox(
             n_distinct(LIST_DATA$gene_file[[grep("Ratio_Down_file1\nn =",
                                                  names(LIST_DATA$gene_file))]]$use$gene),
-            "Ratio Up file2",
+            "Ratio Down file1",
             icon = icon("list"),
             color = "blue"
           )
@@ -5283,7 +5278,7 @@ server <- function(input, output, session) {
       } else{
         output$valueboxratio2 <- renderValueBox({
           valueBox(0,
-                   "Ratio Up file2",
+                   "Ratio Down file1",
                    icon = icon("list"),
                    color = "blue")
         })
@@ -5326,7 +5321,7 @@ server <- function(input, output, session) {
       })
       output$valueboxratio2 <- renderValueBox({
         valueBox(0,
-                 "Ratio Up file2",
+                 "Ratio Down file1",
                  icon = icon("list"),
                  color = "blue")
       })
