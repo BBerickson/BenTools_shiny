@@ -2,22 +2,11 @@
 
 # 
 # 
-# 1 check on load file combind method, fix all lapply methods, go through each tab update 100%
-# t.test is plotting 2X
-# 2 cdf ... fix multi gene list crashing ("Insufficient values in manual scale. 2 needed but only 1 provided.")
-# 3 cdf ... sliders for cdf x plot size, auto hide gene list boxes like main plot
-# 4 save bed file have save selected full gene list not all common genes, test save subset table file 
-# 5 add simplified gene list save option
-# 6 ad QC tab see bentools v6 ... per bin/gene 
-# 7 advanced lines and labels in meta data
-# 8 RemoveGeneList observation hides all lists?
-# 9 test LoadColorFile() +/- named files, with gene lists, ... 
-# 10 ratio : add gene name to list name? ... change up file2 to down file 1 focuse 
-# 11 keep everything but plot tab disabled until switch?
-# 12 add stats tab to investigate quality of each sample +some comparisons?
-#   a. bar plot at each bin number of 0's/NA's
-#   b. upper and lower percentile plot (exclude genes with all 0's option, exclude single bin max peak genes???)
-# 13 add to clustering tool peak locations tool 
+# Go through each tab update 100%
+# 1 load table file screen, load table file function with progress bar
+# 2 load gene list, function, remove load color, save ... functions 
+# 3 brewer list colored, and working function, remove line and dot options (place some where else?)
+# 4 remove files and gene lists
 # 
 # find and fix TODO
 # look into shinydashboardplus for better box's
@@ -1526,49 +1515,41 @@ CumulativeDistribution <-
       ))
       return()
     }
+    # remove old data sets
+    list_data$gene_file <- list_data$gene_file[!str_detect(names(list_data$gene_file),"^CDF")]
+    list_data$gene_info <- list_data$gene_info %>% dplyr::filter(!str_detect(gene_list,"^CDF"))
     outlist <- NULL
-    genelist <- NULL
     for (list_name in names(onoffs)) {
       setProgress(1, detail = paste("dividing one by the other"))
-      lapply(onoffs[[list_name]], function(j) {
         # Complete within gene list and sum regions
-        df <-
-          semi_join(dplyr::filter(list_data$table_file, set == j), 
+      outlist[[list_name]] <-
+          semi_join(dplyr::filter(list_data$table_file, set == onoffs[[list_name]]), 
                     list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
-          group_by(gene) %>%
+          group_by(gene,set) %>%
           summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% ungroup()
-        # calculate diff and change Inf's and 0's to NA's
-        outlist[[paste0(list_name, "-", j)]] <<-
-          transmute(df, gene = gene, value = sum1 / sum2) %>%
-          na_if(Inf) %>% na_if(0)
-        # remove NA's, sort, add row numbers and DF layout
-        outlist[[paste0(list_name, "-", j)]] <<-
-          group_by(outlist[[paste0(list_name, "-", j)]], gene) %>%
-          summarise(test = sum(value),.groups="drop") %>%
+                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% 
+          ungroup() %>% 
+          dplyr::mutate(, value = sum1 / sum2) %>%
+          na_if(Inf) %>% na_if(0) %>% 
+          group_by(., gene,set) %>%
+          dplyr::mutate(test = sum(value)) %>%
+          ungroup() %>% 
           dplyr::filter(!is.na(test)) %>%
-          semi_join(outlist[[paste0(list_name, "-", j)]], ., by = "gene") %>%
-          arrange((value)) %>%
-          dplyr::mutate(
+          group_by(., set) %>%
+          arrange(value) %>%
+          dplyr::transmute(
+            gene=gene,
             bin = row_number(),
-            set = j,
-            plot_set = paste(list_name, "-", j),
+            set = set,
+            plot_set = paste(list_name, "-", set),
             value = value
-          )
-        # if outlist has more then one file in gene list make sure any genes thrown out due NA's is updated
-        if (n_distinct(outlist) > 1) {
-          genelist <<-
-            semi_join(genelist, outlist[[paste0(list_name, "-", j)]], by = "gene")
-        } else {
-          genelist <<- dplyr::select(outlist[[paste0(list_name, "-", j)]], gene)
-        }
-      })
+          ) %>%
+          ungroup()
     }
     
     # unlist and binds all together
     outlist <- bind_rows(outlist) %>% distinct()
-    list_data$gene_file <- list_data$gene_file[!str_detect(names(list_data$gene_file),"^CDF")]
-    list_data$gene_info <- list_data$gene_info %>% dplyr::filter(!str_detect(gene_list,"^CDF"))
+    
     
     setProgress(2, detail = paste("building list"))
     # removes top and bottom %
@@ -1578,7 +1559,7 @@ CumulativeDistribution <-
       use_header <- "Log2 PI Cumulative plot"
     }
     if (n_distinct(outlist$gene) > 0) {
-      nick_name1 <- paste0("CDF n = ", n_distinct(outlist$gene))
+      nick_name1 <- paste0("CDF ", use_header)
       list_data$gene_file[[nick_name1]]$full <- outlist
       list_data$gene_file[[nick_name1]]$use <- outlist %>% select(gene)
       list_data$gene_file[[nick_name1]]$info <-
@@ -1594,15 +1575,15 @@ CumulativeDistribution <-
           "to",
           end2_bin,
           "from",
-          list_name,
-          "gene list",
+          names(onoffs),
+          "gene list(s)",
           paste(distinct(outlist, plot_set), collapse = " "),
           Sys.Date()
         )
     } else {
       nick_name1 <- paste("CDF n = 0")
     }
-    print(onoffs[[list_name]])
+    for (list_name in names(onoffs)) {
     list_data$gene_info <- 
       distinct(bind_rows(list_data$gene_info,
                          list_data$gene_info %>% 
@@ -1617,6 +1598,7 @@ CumulativeDistribution <-
                                          plot_set = paste(list_name, "-", set),
                                          myheader = use_header)))
     setProgress(5, detail = "finishing up")
+    }
     list_data
   }
 
@@ -4291,7 +4273,7 @@ server <- function(input, output, session) {
       shinyjs::hide('plotcdf')
       reactive_values$Apply_Math <- NULL
       shinyjs::addClass(selector = "body", class = "sidebar-collapse")
-      updateCheckboxInput(session, "checkboxremovefile", value = FALSE)
+      updateAwesomeCheckbox(session, "checkboxremovefile", value = FALSE)
     }
     reactive_values$binset <- FALSE
     reactive_values$Picker_controler <- 
@@ -6925,7 +6907,7 @@ ui <- dashboardPage(
             )),
           div(
             style = "margin-bottom: -20px;",
-            checkboxInput("checkboxfilterall","Filter if any",value = TRUE)
+            awesomeCheckbox("checkboxfilterall","Filter if any",value = TRUE)
           ),
           div(
             style = "margin-bottom: -30px;",
@@ -7151,7 +7133,7 @@ ui <- dashboardPage(
                       ),
                       column(
                         4,
-                        checkboxInput("checkboxremovefile",
+                        awesomeCheckbox("checkboxremovefile",
                                       "remove all files and restart", value = FALSE)
                       )
                       ),
@@ -7389,8 +7371,8 @@ ui <- dashboardPage(
                                  selected = "none"
                                )
                              ),
-                             column(4, checkboxInput("checkboxsmooth", label = "smooth"), 
-                                    checkboxInput("checkboxlog2", label = "log2")),
+                             column(4, awesomeCheckbox("checkboxsmooth", label = "smooth"), 
+                                    awesomeCheckbox("checkboxlog2", label = "log2")),
                              column(8, 
                                     selectInput("myMath",
                                                 label = " ",
@@ -7916,7 +7898,7 @@ ui <- dashboardPage(
                         label = "Select numerator Bin Range:",
                         min = 1,
                         max = 80,
-                        value = c(0, 0)
+                        value = c(1, 1)
                       )
                     ),
                     column(
@@ -7931,7 +7913,7 @@ ui <- dashboardPage(
                     )
                   ),
                   actionButton("actionratiotool", "Get fold changes"),
-                  checkboxInput(
+                  awesomeCheckbox(
                     "checkratiozero",
                     label = "replace 0 with min/2",
                     value = FALSE
@@ -7952,7 +7934,7 @@ ui <- dashboardPage(
                   collapsible = TRUE,
                   collapsed = TRUE,
                   withSpinner(plotOutput("plotratio"), type = 4),
-                  checkboxInput("checkboxoutlierratio",
+                  awesomeCheckbox("checkboxoutlierratio",
                                 label = "remove outliers",
                                 value = FALSE),
                   numericInput(inputId = 'textboxmaxratio',
@@ -8067,8 +8049,8 @@ ui <- dashboardPage(
                 choices = c("none", "relative frequency", "rel gene frequency"),
                 selected = "none"
               ),
-              checkboxInput("checkboxsmoothcluster", label = "smooth"),
-              checkboxInput("checkboxlog2cluster", label = "log2")
+              awesomeCheckbox("checkboxsmoothcluster", label = "smooth"),
+              awesomeCheckbox("checkboxlog2cluster", label = "log2")
             )
           ),
           box(
