@@ -9,11 +9,10 @@ https://rstudio.github.io/shinydashboard/index.html
 https://rdrr.io/cran/shinyWidgets/
 shinyWidgetsGallery()
 
-showNotification(
-        "Files done loading",
-        duration = 2, 
-        closeButton = FALSE
-      )
+library(shiny)
+library(shinydashboard)
+library(shinydashboardPlus)
+shinydashboardPlusGallery()
 
 # data tables
 https://rstudio.github.io/DT/options.html
