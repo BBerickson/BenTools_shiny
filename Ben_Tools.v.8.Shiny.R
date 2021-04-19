@@ -1506,6 +1506,7 @@ CumulativeDistribution <-
            end1_bin,
            start2_bin,
            end2_bin) {
+    print("cdf function")
     if (is.null(onoffs)) {
       showModal(modalDialog(
         title = "Information message",
@@ -1529,7 +1530,7 @@ CumulativeDistribution <-
           summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
                     sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% 
           ungroup() %>% 
-          dplyr::mutate(, value = sum1 / sum2) %>%
+          dplyr::mutate(., value = sum1 / sum2) %>%
           na_if(Inf) %>% na_if(0) %>% 
           group_by(., gene,set) %>%
           dplyr::mutate(test = sum(value)) %>%
