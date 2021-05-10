@@ -38,18 +38,19 @@ LIST_DATA <<- list(
   gene_file = NULL,
   # holds $Compleat genes from files and $gene file(s)
   gene_info = NULL,
-  # for holding metaa data gene file(s) [c("gene_list", "set", "dot", "line", "color", plot?, nrom)]
+  # for holding meta data gene file(s) [c("gene_list", "set", "color", plot?, legend)]
   ttest = NULL,
   # t.test results $use is for numbers $gene_info for holding plotting options
   clust = NULL,
   # Cluster holder
   x_plot_range = c(0, 0),
-  STATE = c(0, 0) # flow control,
+  STATE = c(0, 0, 5) # flow control,
   # [1] 1 = at least one file has been loaded and lets reactive fill in info
   #
   # [2] 0 = first time switching tab auto plotting
   #     1 = hidden plot button, reactive for plot enabled
   #     2 = on/off reactive picker changed, shows plot button, reactive for plot disabled
+  # [3] line and label type i.e. 5, 4, 3, 543
 )
 
 # Brewer color sets to be available ----
@@ -206,7 +207,8 @@ LoadTableFile <-
       }
       
       if (is.na(my_color[x])) {
-        my_color[x] <- sample(suppressWarnings(brewer.pal(11, sample(kBrewerList, size=1)))%>% grep("#FF",.,value = T,invert = T),size = 1)
+        my_color[x] <- sample(suppressWarnings(brewer.pal(11, sample(kBrewerList, size=1))) %>% 
+                                grep("#FF",.,value = T,invert = T),size = 1)
       } else {
         my_color[x] <- RgbToHex(my_color[x], convert = "hex")
       }
