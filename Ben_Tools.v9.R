@@ -1,6 +1,13 @@
 # Created by Benjamin Erickson BBErickson@gmail.com
 
-# set observeEvents for all items, don't forget to close sidebar, icon size/color?
+# load/save data tab
+#   load other gene list
+#   remove gene list (exclued Main list)
+#   reset app
+#   save gene lists, options for list, bed, tool
+# data options and QC tab
+# plot tab
+# set observeEvents for all items, icon size/color?
 # work on adding other boxes and sizes and functions
 
 # program for loading packages ----
@@ -139,12 +146,38 @@ LoadTableFile <-
     # tests if loading a file with a list of address to remote files, requires .url.txt in file name
     for (i in seq_along(file_name)) {
       if (str_detect(file_name[i], ".url.txt")) {
+        num_col <-
+          try(count_fields(file_path[i],
+                           n_max = 1,
+                           skip = 1,
+                           tokenizer = tokenizer_delim(" ")),silent = T)
+        if ("try-error" %in% class(num_col)) {
+          showModal(modalDialog(
+            title = "Information message",
+            paste(file_name[i], "cant find file to load"),
+            size = "s",
+            easyClose = TRUE
+          ))
+          next()
+        }
+        if(num_col > 1){
+          col_names <- c("file","type","nick","color")
+          col_types <- cols(file=col_character(),
+                           type=col_character(),
+                           nick=col_character(),
+                           color=col_character())
+        } else {
+          col_names <- c("file")
+          col_types <- cols(file=col_character())
+        }
         meta_data <- suppressMessages(read_delim(file_path[i],delim = " ", 
-                                                 col_names = c("file","type","nick","color"),
-                                                 col_types = cols(file=col_character(),
-                                                                  type=col_character(),
-                                                                  nick=col_character(),
-                                                                  color=col_character())))
+                                                 col_names = col_names,
+                                                 col_types = col_types))
+        if(num_col == 1){
+          meta_data <-  meta_data %>% mutate(type = NA,
+                                             nick = NA,
+                                             color = NA)
+        }
         my_remote_file <- c(my_remote_file, meta_data$file)
         my_color <- c(my_color, meta_data$color) 
         legend_nickname <- c(legend_nickname, str_replace(meta_data$nick,"\\.","_")) 
@@ -154,7 +187,7 @@ LoadTableFile <-
         } else {
           file_path <- NULL
         }
-      }else {
+      } else {
         my_color <- c(my_color, NA)
         legend_nickname <- c(legend_nickname, last(str_split(file_name[i],"/",simplify = T)) %>% 
                                str_remove(., ".table")) %>% str_replace("\\.","_")
@@ -335,6 +368,152 @@ LoadTableFile <-
     return(list_data)
   }
 
+# reads in 1 column gene list file(s), tests, fills out info and returns list_data
+LoadGeneFile <-
+  function(file_path,
+           file_name,
+           list_data) {
+    my_remote_file <- NULL
+    legend_nickname <- NULL
+    if(length(list_data$table_file) < 1){
+      print("needed  or does shiny handle? add message?")
+      return(list_data)
+    }
+    # shiny progress bar
+    setProgress(1, detail = "start gathering information on file(s)")
+    # tests if loading a file with a list of address to remote files, requirs .url.txt in file name
+    for (i in seq_along(file_name)) {
+      if (str_detect(file_name[i], ".url.txt")) {
+        meta_data <- suppressMessages(read_delim(file_path[i],delim = " ",col_names = FALSE))
+        my_remote_file <- c(my_remote_file, meta_data$file)
+        if(i > 1){
+          file_path[i] <- NULL
+        } else {
+          file_path <- NULL
+        }
+      }
+    }
+    if (!is.null(my_remote_file)) {
+      file_path <- c(file_path, my_remote_file)
+    }
+    # shiny progress bar
+    setProgress(2, detail = "downloading/reading in file")
+    # loop thourgh each item in file_path
+    for (x in seq_along(file_path)) {
+      # createing nickname
+      legend_nickname[x] <- last(str_split(file_name[x],"/",simplify = T)) %>% 
+        str_remove(., ".txt") %>% str_replace("\\.","_")
+      # checks if file with same nickname has already been loaded
+      if (legend_nickname[x] %in% names(list_data$gene_file)) {
+        showModal(modalDialog(
+          title = "Information message",
+          paste(file_name[x], "has already been loaded"),
+          size = "s",
+          easyClose = TRUE
+        ))
+        next()
+      }
+      # gets number of columns in file, used to guess how to deal with file
+      #  and checks if file exits
+      num_col <-
+        try(count_fields(file_path[x],
+                         n_max = 1,
+                         skip = 1,
+                         tokenizer = tokenizer_tsv()),silent = T)
+      if ("try-error" %in% class(num_col)) {
+        showModal(modalDialog(
+          title = "Information message",
+          paste(file_name[x], "cant find file to load"),
+          size = "s",
+          easyClose = TRUE
+        ))
+        next
+      }
+      if(num_col == 1){
+        #normal gene list
+        col_names <- c("gene")
+      } else {
+        showModal(
+          modalDialog(
+            title = "I dont know how to load this file",
+            "I expected a 1 colunm file",
+            size = "s",
+            easyClose = TRUE
+          )
+        )
+        next()
+      }
+      # reads in file
+      tablefile <-
+        suppressMessages(read_tsv(file_path[x],
+                                  comment = "#",
+                                  col_names = col_names)) %>%
+        distinct(gene)
+      # shiny progress bar
+      setProgress(3, detail = "Checking form problems")
+      # checks gene list is a subset of what has been loaded
+      gene_names <-
+        semi_join(tablefile, list_data$gene_file[[1]]$use, by = "gene") %>% distinct(gene)
+      # test data is compatible with already loaded data
+      if (n_distinct(gene_names$gene) == 0) {
+        showModal(
+          modalDialog(
+            title = "Information message",
+            " couldn't find a exact match, checking for partial match ",
+            size = "s",
+            easyClose = TRUE
+          )
+        )
+        # tries to grep lists and find matches
+        # shiny progress bar
+        setProgress(4, detail = "looking for gene name matches")
+        tablefile <-
+          distinct(tibble(gene = str_subset(
+            list_data$gene_file[[1]]$use$gene, tablefile$gene
+          )))
+        if (n_distinct(tablefile$gene) == 0) {
+          showModal(
+            modalDialog(
+              title = "Information message",
+              " No genes found after pattern matching search",
+              size = "s",
+              easyClose = TRUE
+            )
+          )
+          return()
+        }
+        showModal(
+          modalDialog(
+            title = "Information message",
+            " Don't forget to save the gene list for future use",
+            size = "s",
+            easyClose = TRUE
+          )
+        )
+      }
+      # adds full n count to nickname
+      my_name <- paste0(legend_nickname[x], "\nn = ", n_distinct(tablefile$gene))
+      # preps meta data
+      gene_info <- list_data$gene_info %>% 
+        dplyr::filter(gene_list == names(list_data$gene_file)[1]) %>% 
+        dplyr::mutate(gene_list = my_name, sub = " ", onoff = "0",
+                      plot_set = " ")
+      # shiny progress bar
+      setProgress(5, detail = "building data and adding list")
+      # saves data in list of lists
+      list_data$gene_file[[my_name]]$use <- distinct(tablefile, gene)
+      list_data$gene_file[[my_name]]$full <- tablefile
+      list_data$gene_file[[my_name]]$info <-
+        paste("Loaded gene list from file",
+              legend_nickname[x],
+              Sys.Date())
+      list_data$gene_info <- bind_rows(list_data$gene_info, gene_info)
+      
+      setProgress(6, detail = "done with this file")
+    }
+    return(list_data)
+  }
+
 # server ----
 server <- function(input, output, session) {
   output$user <- renderUser({
@@ -409,6 +588,33 @@ server <- function(input, output, session) {
     removeCssClass(selector = "a[data-value='cdftool']", class = "inactiveLink")
   })
   
+  
+  # loads gene list file ----
+  observeEvent(input$filegene1, {
+    print("load gene file")
+    withProgress(message = 'Calculation in progress',
+                 detail = 'This may take a while...',
+                 value = 0,
+                 {
+                   # load info, update select boxes, switching works and chaning info and ploting
+                   LD <- LoadGeneFile(
+                     input$filegene1$datapath,
+                     input$filegene1$name,
+                     LIST_DATA
+                   )
+                 })
+    if (!is.null(LD)) {
+      LIST_DATA <<- LD
+    }
+    shinyjs::reset("filegene1")
+    updateSelectInput(
+      session,
+      "selectgenelistoptions",
+      choices = names(LIST_DATA$gene_file),
+      selected = last(names(LIST_DATA$gene_file))
+    )
+  })
+  
 }
 
 # UI -----
@@ -471,60 +677,15 @@ ui <- dashboardPage(
                   ),
                   actionButton("BttnNewColor", "Set color same as Compleat")
                 ),
+                fileInput("filegene1",
+                          label = "Load gene list",
+                          accept = c('.txt'),
                 fluidRow(align="center",
                          pickerInput("selectgenelistoptions", "", 
                             width = 300, choices = "Compleat"),
                 actionButton("actionremovegene", "Remove Gene list"))
               )
               ))
-              # hidden(div(
-              #   id = "startoff",
-                
-                # box(
-                #   title = "File Options",
-                #   solidHeader = T,
-                #   width = 12,
-                #   box(
-                #     title =  "Set Plot Color Options",
-                #     width = 4,
-                #     status = "navy",
-                #     solidHeader = T,
-                #     fluidRow(
-                #       box(
-                #         width = 12,
-                #         status = "info",
-                #         background = "light-blue",
-                #         colourInput("colourhex", "Select color HEX"),
-                #         tags$hr(),
-                #         textInput("textrgbtohex", "RGB"),
-                #         actionButton("actionmyrgb", "Update HEX color")
-                #       )
-                #     ),
-                #     selectInput("selectdot", "Select dot type", choices = kDotOptions),
-                #     selectInput("selectline", "Select line type", choices = kLineOptions)
-                #   ),
-                #   box(
-                #     title =  "Set Plot Options",
-                #     width = 8,
-                #     status = "navy",
-                #     solidHeader = T,
-                #     selectInput("selectdataoption", "", choices = "Load data file"),
-                #     fluidRow(column(
-                #       4, actionButton("actionremovefile", "Remove File(s)")
-                #     ),
-                #     column(
-                #       4,
-                #       awesomeCheckbox("checkboxremovefile",
-                #                       "remove all files and restart", value = FALSE)
-                #     )
-                #     ),
-                #     tags$hr(style = "color: #2e6da4; background-color: #2e6da4; border-color: #2e6da4;"),
-                #     textInput("textnickname", "Update Nickname"),
-                #     actionButton("actionoptions", "Set Nickname"),
-                #     helpText("Need to press to update")
-                #   )
-              #   )
-              # ))
       ),
       tabItem(tabName = "qcOptions",
               box(status = "purple",
