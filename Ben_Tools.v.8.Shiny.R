@@ -615,7 +615,7 @@ MakeNormFile <-
     if(nchar(nickname)<1){
       nickname <- paste(nom, addfiles, dnom,sep = " ")
     }
-    # applies custome norm factor(s)
+    # applies custom norm factor(s)
     my_sel <- list_data$gene_info %>% 
       dplyr::filter(gene_list == names(list_data$gene_file)[1]) %>% 
       dplyr::filter(set == nom | set== dnom)
@@ -663,11 +663,11 @@ MakeNormFile <-
       ) %>% na_if(Inf)
     }
     # output test
-    if (sum(is.na(new_gene_list$score)) > 1) {
+    if (n_distinct(new_gene_list$gene) < 1) {
       showModal(
         modalDialog(
           title = "Information message",
-          " No genes in left, try replacing Inf and/or bin by bin",
+          " No genes left, try replacing Inf and/or bin by bin",
           size = "s",
           easyClose = TRUE
         )
