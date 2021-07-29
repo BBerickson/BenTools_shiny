@@ -521,7 +521,7 @@ server <- function(input, output, session) {
   output$user <- renderUser({
     dashboardUser(
       name = "BenTools V9.a", 
-      image = "https://scontent-den4-1.xx.fbcdn.net/v/t1.6435-1/45791244_10217878289252358_1224105918908596224_n.jpg?_nc_cat=104&ccb=1-3&_nc_sid=7206a8&_nc_ohc=xBluQRu0PkAAX8FYD0X&_nc_ht=scontent-den4-1.xx&oh=d3403edbc08de6d92ca15e6d508ac958&oe=6091B67A", 
+      image = "",
       title = "Benjamin Erickson",
       subtitle = "BBErickson@gmail.com"
     )
@@ -673,7 +673,7 @@ ui <- dashboardPage(
                   icon = icon("palette"),
                   width = 50,
                   pickerInput(inputId = "kbrewer",
-                              label = "color brewer theme", 
+                              label = "color brewer theme",
                               choices = c("select", kBrewerList),
                               selected = "select"
                   ),
@@ -681,13 +681,13 @@ ui <- dashboardPage(
                 ),
                 fileInput("filegene1",
                           label = "Load gene list",
-                          accept = c('.txt'),
+                          accept = c('.txt')),
                 fluidRow(align="center",
-                         pickerInput("selectgenelistoptions", "", 
+                         pickerInput("selectgenelistoptions", "",
                             width = 300, choices = "Compleat"),
                 actionButton("actionremovegene", "Remove Gene list"))
-              )
-              ))
+              
+              )))
       ),
       tabItem(tabName = "qcOptions",
               box(status = "purple",
