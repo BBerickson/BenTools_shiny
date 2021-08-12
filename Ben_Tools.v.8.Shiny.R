@@ -2193,9 +2193,6 @@ GGplotLineDot <-
            use_y_label,
            plot_occupancy) {
     print("ggplot")
-    use_col <- `names<-`(plot_options$mycol, plot_options$set) 
-    use_dot <- `names<-`(plot_options$mydot, plot_options$set) 
-    use_line <- `names<-`(plot_options$myline, plot_options$set)
     legend_space <- lengths(strsplit(sort(plot_options$set), "\n")) / 1.1
     if (use_log2) {
       gp <-
@@ -2236,9 +2233,9 @@ GGplotLineDot <-
     gp <- gp +
       geom_point(stroke = .001) +
       scale_size_manual(values = plot_options$mysizedot) +
-      scale_color_manual(values = use_col) +
-      scale_shape_manual(values = use_dot) +
-      scale_linetype_manual(values = use_line) +
+      scale_color_manual(values = plot_options$mycol) +
+      scale_shape_manual(values = plot_options$mydot) +
+      scale_linetype_manual(values = plot_options$myline) +
       ylab(use_y_label) +
       geom_vline(
         data = line_list$myline,
@@ -2255,13 +2252,7 @@ GGplotLineDot <-
             panel.grid.major = element_blank()) +
       theme(axis.title.y = element_text(size =  line_list$mysize[4] + 4, margin = margin(2, 10, 2, 2))) +
       theme(axis.text.y = element_text(size = line_list$mysize[4],
-                                       face = 'bold')) +
-      theme(
-        legend.title = element_blank(),
-        legend.key = element_rect(size = line_list$mysize[5] / 2, color = 'white'),
-        legend.key.height = unit(legend_space, "line"),
-        legend.text = element_text(size = line_list$mysize[5], face = 'bold')
-      )
+                                       face = 'bold')) 
     if(!is_empty(LIST_DATA$ttest)){
       use_col_tt <- plot_ttest$options_main_tt$mycol
       use_line_tt <- plot_ttest$options_main_tt$myline
