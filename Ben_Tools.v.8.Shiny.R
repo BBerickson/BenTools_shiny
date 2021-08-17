@@ -2193,6 +2193,7 @@ GGplotLineDot <-
            use_y_label,
            plot_occupancy) {
     print("ggplot")
+    list_long_data_frame$set <- factor(list_long_data_frame$set, levels = plot_options$set)
     legend_space <- lengths(strsplit(sort(plot_options$set), "\n")) / 1.1
     if (use_log2) {
       gp <-
