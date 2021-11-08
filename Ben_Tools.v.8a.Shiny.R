@@ -405,6 +405,8 @@ LoadTableFile <-
             # settings for reading in bedGraph file style
           } else if (num_bins == 3) {
             col_names <- c("gene", "bin", "score")
+          } else if (num_bins == 4) {
+            col_names <- c("gene", "bin", "score", "set")
           } else {
             showModal(
               modalDialog(
