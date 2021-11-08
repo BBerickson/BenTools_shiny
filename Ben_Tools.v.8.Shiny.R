@@ -6868,9 +6868,9 @@ ui <- dashboardPage(
         )
       )),
       menuItem("Load Data", tabName = "loaddata", icon = icon("file")),
-      menuItem("Norm data", tabName = "filenorm", icon = icon("files-o")),
-      menuItem("Plot", tabName = "mainplot", icon = icon("area-chart")),
-      menuItem("Gene Lists", tabName = "genelists", icon = icon("gears")),
+      menuItem("Norm data", tabName = "filenorm", icon = icon("file-alt")),
+      menuItem("Plot", tabName = "mainplot", icon = icon("chart-area")),
+      menuItem("Gene Lists", tabName = "genelists", icon = icon("cogs")),
       hidden(
         div(
           style = "padding-left: 15%;",
@@ -6885,7 +6885,7 @@ ui <- dashboardPage(
           )
         )
       ),
-      menuItem("Filter Tool", tabName = "sorttool", icon = icon("gears")),
+      menuItem("Filter Tool", tabName = "sorttool", icon = icon("cogs")),
       hidden(
         div(
           style = "padding-left: 15%;",
@@ -6921,7 +6921,7 @@ ui <- dashboardPage(
           )
         )
       ),
-      menuItem("Ratio Tool", tabName = "ratiotool", icon = icon("gears")),
+      menuItem("Ratio Tool", tabName = "ratiotool", icon = icon("cogs")),
       hidden(
         div(
           style = "padding-left: 15%;",
@@ -6951,7 +6951,7 @@ ui <- dashboardPage(
         )
       ),
       
-      menuItem("Cluster Tools", tabName = "clustertool", icon = icon("gears")),
+      menuItem("Cluster Tools", tabName = "clustertool", icon = icon("cogs")),
       hidden(
         div(
           style = "padding-left: 15%;",
@@ -6972,7 +6972,7 @@ ui <- dashboardPage(
           )
         )
       ),
-      menuItem("CDF Tools", tabName = "cdftool", icon = icon("gears")),
+      menuItem("CDF Tools", tabName = "cdftool", icon = icon("cogs")),
       hidden(
         div(
           style = "padding-left: 15%;",
@@ -7213,7 +7213,7 @@ ui <- dashboardPage(
                     actionButton(
                       "actionmyplot",
                       "Update Plot",
-                      icon = icon("area-chart"),
+                      icon = icon("chart-area"),
                       style = "color: #fff; background-color: #337ab7; border-color: #2e6da4;"
                     )
                   )
@@ -7489,7 +7489,7 @@ ui <- dashboardPage(
                                      choices = c("dotted", "solid"),
                                      selected = "dotted"
                                    ),
-                                   icon = icon("sliders"),
+                                   icon = icon("sliders-h"),
                                    status = "success",
                                    tooltip = tooltipOptions(title = "TSS Options")
                                  )
@@ -7511,7 +7511,7 @@ ui <- dashboardPage(
                                      choices = c("dotted", "solid"),
                                      selected = "solid"
                                    ),
-                                   icon = icon("sliders"),
+                                   icon = icon("sliders-h"),
                                    tooltip = tooltipOptions(title = "5|4 Options")
                                  )
                                ),
@@ -7532,7 +7532,7 @@ ui <- dashboardPage(
                                      choices = c("dotted", "solid"),
                                      selected = "solid"
                                    ),
-                                   icon = icon("sliders"),
+                                   icon = icon("sliders-h"),
                                    tooltip = tooltipOptions(title = "4|3 Options")
                                  )
                                ),
@@ -7553,7 +7553,7 @@ ui <- dashboardPage(
                                      choices = c("dotted", "solid"),
                                      selected = "dotted"
                                    ),
-                                   icon = icon("sliders"),
+                                   icon = icon("sliders-h"),
                                    status = "danger",
                                    tooltip = tooltipOptions(title = "TES Options")
                                  )
@@ -7587,7 +7587,7 @@ ui <- dashboardPage(
                                      max = 30,
                                      step = 1
                                    ),
-                                   icon = icon("sliders"),
+                                   icon = icon("sliders-h"),
                                    status = "warning",
                                    tooltip = tooltipOptions(title = "Font Options")
                                  )
@@ -7613,7 +7613,7 @@ ui <- dashboardPage(
                                      max = 20,
                                      step = 1
                                    ),
-                                   icon = icon("sliders"),
+                                   icon = icon("sliders-h"),
                                    status = "warning",
                                    tooltip = tooltipOptions(title = "Line Options")
                                  )
