@@ -1449,7 +1449,8 @@ FindClusters <- function(list_data,
                          list_name,
                          clusterfile,
                          start_bin,
-                         end_bin) {
+                         end_bin,
+                         usegenevalue) {
   if (clusterfile == "") {
     showModal(modalDialog(
       title = "Information message",
@@ -1460,13 +1461,21 @@ FindClusters <- function(list_data,
     return(NULL)
   }
   setProgress(1, detail = paste("gathering data"))
-  df <-
-    semi_join(dplyr::filter(list_data$table_file, set == clusterfile), 
-              list_data$gene_file[[list_name]]$use, by = 'gene') 
-  setProgress(2, detail = "hierarchical clustering using ward method")
-  list_data$clust <- list()
-  list_data$clust$cm <-
-    hclust.vector(as.data.frame(spread(df, bin, score))[, c((start_bin:end_bin) + 2)], method = "ward")
+  if(usegenevalue & list_name == "CDF Log2 PI Cumulative plot"){
+    df <- list_data$gene_file[[list_name]]$full %>% filter(set == clusterfile)
+    df2 <- list_data$gene_file[[list_name]]$full %>% filter(set != clusterfile)
+    df <- inner_join(df,df2,by=c("gene")) %>% mutate(value = value.x/value.y)
+    list_data$clust$cm <- hclust.vector(df$value, method = "ward")
+    
+  } else {
+    df <-
+      semi_join(dplyr::filter(list_data$table_file, set == clusterfile), 
+                list_data$gene_file[[list_name]]$use, by = 'gene') 
+    setProgress(2, detail = "hierarchical clustering using ward method")
+    list_data$clust <- list()
+    list_data$clust$cm <-
+      hclust.vector(as.data.frame(spread(df, bin, score))[, c((start_bin:end_bin) + 2)], method = "ward")
+  }
   list_data$clust$use <- distinct(df, gene)
   list_data
 }
@@ -1833,7 +1842,7 @@ MakePlotOptionttest <- function(list_data, Y_Axis_TT,my_ttest_log,hlineTT,pajust
   return(list_data_frame)
 }
 
-# Sets y lable fix
+# Sets y label fix
 YAxisLable <-
   function(use_math = "mean",
            relative_frequency = "none",
@@ -5990,7 +5999,8 @@ server <- function(input, output, session) {
                        input$selectclusterfile,
                        input$pickerclusterfile,
                        input$sliderbincluster[1],
-                       input$sliderbincluster[2]
+                       input$sliderbincluster[2],
+                       input$usegenevalue
                      )
                  })
     if (!is_empty(LD$table_file)) {
@@ -8010,6 +8020,7 @@ ui <- dashboardPage(
                 value = c(1, 80)
               )
             )),
+            checkboxInput("usegenevalue",value = F,label = "test for CDF clustering"),
             actionButton("actionclustertool", "Get clusters"),
             actionButton("actiongroupstool", "Get groups")
           ),
