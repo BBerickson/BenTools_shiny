@@ -6778,6 +6778,7 @@ server <- function(input, output, session) {
                ignoreInit = TRUE,
                ignoreNULL = TRUE,
                {
+                 kk <<- input$cdftable_rows_all
                  newname <- paste("CDF n =", length(input$cdftable_rows_all))
                  oldname <- grep("CDF ", names(LIST_DATA$gene_info))
                  if (newname != names(LIST_DATA$gene_info)[oldname] &
@@ -6785,11 +6786,9 @@ server <- function(input, output, session) {
                    # print("cdf filter $use")
                    names(LIST_DATA$gene_file)[oldname] <<- newname
                    names(LIST_DATA$gene_info)[oldname] <<- newname
-                   dt <-
-                     dplyr::select(LIST_DATA$gene_file[[newname]]$full, -bin, -set) %>%
-                     spread(., set2, value)
+                   
                    LIST_DATA$gene_file[[newname]]$use <<-
-                     tibble(gene = dt$gene[input$cdftable_rows_all])
+                     distinct(LIST_DATA$gene_file[[newname]]$full,gene)[input$cdftable_rows_all,]
                    reactive_values$Picker_controler <- 
                      c(names(LIST_DATA$gene_file), names(LIST_DATA$table_file))
                    df_options <-
