@@ -1463,8 +1463,8 @@ FindClusters <- function(list_data,
   setProgress(1, detail = paste("gathering data"))
   if(usegenevalue & list_name == "CDF Log2 PI Cumulative plot"){
     df <- list_data$gene_file[[list_name]]$full %>% filter(set == clusterfile)
-    df2 <- list_data$gene_file[[list_name]]$full %>% filter(set != clusterfile)
-    df <- inner_join(df,df2,by=c("gene")) %>% mutate(value = value.x/value.y)
+    # df2 <- list_data$gene_file[[list_name]]$full %>% filter(set != clusterfile)
+    # df <- inner_join(df,df2,by=c("gene")) %>% mutate(value = value.x/value.y)
     list_data$clust$cm <- hclust.vector(df$value, method = "ward")
     
   } else {
