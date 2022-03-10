@@ -281,12 +281,15 @@ LoadTableFile <-
         } else if (n_distinct(gene_names$gene) == 0 & convert) {
           # shiny progress bar
           setProgress(2, detail = "looking for gene name matches")
-          gene_names <-
-            distinct(tibble(gene = grep(
-              paste(tablefile$gene, collapse = "|"),
-              pull(distinct(list_data$gene_file[[1]]$use)),
-              value = T
-            )))
+          if(str_detect(tablefile$gene[1],"_")){
+            gene_names <-
+              map(paste0(";", tablefile$gene,"\\|"), str_subset, string = list_data$gene_file[[1]]$use$gene) 
+          } else{
+            gene_names <-
+              map(paste0("\\|", tablefile$gene,"$"), str_subset, string = list_data$gene_file[[1]]$use$gene) 
+          }
+          
+          gene_names <- distinct(tibble(gene = unlist(gene_names)))
           if (n_distinct(gene_names$gene) == 0) {
             showModal(
               modalDialog(
@@ -378,8 +381,29 @@ LoadTableFile <-
           ))
           next()
         }
-        # guesses file is in wide Huynmin Kim .table style
-        if (num_bins > 6) {
+        # matrix file
+        if(length(grep(".matrix.gz", file_name[x])) == 1){
+          num_bins <-
+            count_fields(file_path[x],
+                         n_max = 1,
+                         skip = 1,
+                         tokenizer = tokenizer_tsv())
+          tablefile <- suppressMessages(
+            read_tsv(
+              file_path[x],
+              comment = "#",
+              col_names = c("chr", "start", "end","gene", "value", "sign", 1:(num_bins - 6)),
+              skip = 1)) %>%
+            dplyr::select(-chr, -start, -end, -sign, -value) %>% 
+            gather(., bin, score, 2:(num_bins-5)) %>%
+            dplyr::mutate(bin = as.numeric(bin),
+                          score = as.numeric(score),
+                          set = legend_nickname[x]) %>%
+            na_if(Inf) %>%
+            replace_na(list(score = 0)) %>% 
+            distinct(gene,bin,.keep_all = T)
+        }else if (num_bins > 6) {
+          # guesses file is in wide Huynmin Kim .table style
           # shiny progress bar
           setProgress(2, detail = "loading wide file")
           tablefile <- suppressMessages(
@@ -1630,8 +1654,8 @@ CumulativeDistribution <-
         df <-
           semi_join(list_data$table_file[[j]], list_data$gene_file[[list_name]]$use, by = 'gene') %>%
           group_by(gene) %>%
-          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% ungroup()
+          summarise(sum1 = mean(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = mean(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% ungroup()
         # calculate diff and change Inf's and 0's to NA's
         outlist[[paste0(list_name, "-", j)]] <<-
           transmute(df, gene = gene, value = sum1 / sum2) %>%
@@ -2570,7 +2594,7 @@ GGplotC <-
         legend.key = element_rect(size = 5, color = 'white'),
         legend.key.height = unit(legend_space, "line"),
         legend.text = element_text(size = 10)
-      )
+      ) 
     suppressMessages(print(gp))
     return(suppressMessages(gp))
   }

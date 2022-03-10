@@ -489,9 +489,8 @@ LoadGeneFile <-
         # shiny progress bar
         setProgress(4, detail = "looking for gene name matches")
         tablefile <-
-          distinct(tibble(gene = str_subset(
-            list_data$gene_file[[1]]$use$gene, tablefile$gene
-          )))
+          map(tablefile$gene, str_subset, string = list_data$gene_file[[1]]$use$gene) 
+          tablefile <- distinct(tibble(gene = unlist(tablefile)))
         if (n_distinct(tablefile$gene) == 0) {
           showModal(
             modalDialog(
@@ -1537,8 +1536,8 @@ CumulativeDistribution <-
           semi_join(dplyr::filter(list_data$table_file, set == onoffs[[list_name]]), 
                     list_data$gene_file[[list_name]]$use, by = 'gene') %>% 
           group_by(gene,set) %>%
-          summarise(sum1 = sum(score[start1_bin:end1_bin],	na.rm = T),
-                    sum2 = sum(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% 
+          summarise(sum1 = mean(score[start1_bin:end1_bin],	na.rm = T),
+                    sum2 = mean(score[start2_bin:end2_bin],	na.rm = T),.groups="drop") %>% 
           ungroup() %>% 
           dplyr::mutate(., value = sum1 / sum2) %>%
           na_if(Inf) %>% na_if(0) %>% 
